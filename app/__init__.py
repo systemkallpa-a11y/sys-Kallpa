@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from flask import Flask
 import os
 import logging
@@ -11,9 +12,11 @@ except ImportError:
     pass  # dotenv no instalado, continuar sin él
 
 def create_app():
-    app = Flask(__name__, template_folder='templates', static_folder='static')
+    app = Flask(__name__, template_folder='templates', static_folder='static', static_url_path='/static')
     
-    # Configure session - usar variable de entorno en producción
+    # Forzar UTF-8 para todas las respuestas
+    app.config['JSON_AS_ASCII'] = False
+    app.config['BABEL_DEFAULT_LOCALE'] = 'es'
     app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
     
     # Configurar cookies para evitar problemas de compresión
@@ -54,5 +57,14 @@ def create_app():
     app.register_blueprint(settings_bp)
     app.register_blueprint(help_bp)
     app.register_blueprint(auth_bp)
+    
+    # Asegurar que todas las respuestas HTML tengan charset UTF-8
+    @app.after_request
+    def set_utf8_charset(response):
+        if 'Content-Type' in response.headers:
+            content_type = response.headers['Content-Type']
+            if 'text/html' in content_type and 'charset' not in content_type:
+                response.headers['Content-Type'] = content_type + '; charset=utf-8'
+        return response
     
     return app

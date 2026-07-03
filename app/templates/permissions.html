@@ -125,56 +125,6 @@ Administra los accesos y roles de los usuarios del sistema
                 <input type="text" id="inputBuscarUsuario" placeholder="Buscar por nombre, email, documento, usuario..." class="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all text-sm">
             </div>
         </div>
-
-        <!-- Filtros avanzados (colapsables) -->
-        <div class="mb-4">
-            <button id="btnMostrarFiltrosAvanzados" class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-3">
-                <i class="fas fa-sliders-h"></i>
-                <span>Filtros Avanzados</span>
-                <i class="fas fa-chevron-down transition-transform" id="iconoFiltros"></i>
-            </button>
-
-            <!-- Panel de filtros avanzados -->
-            <div id="panelFiltrosAvanzados" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-800">
-                
-                <!-- Filtro Estado -->
-                <div>
-                    <label class="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-2">Estado</label>
-                    <select id="filtroEstado" class="w-full px-3 py-2.5 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-600 focus:outline-none text-sm transition-colors">
-                        <option value="">Todos</option>
-                        <option value="Activo">Activos</option>
-                        <option value="Inactivo">Inactivos</option>
-                    </select>
-                </div>
-
-                <!-- Filtro Rol -->
-                <div>
-                    <label class="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-2">Rol</label>
-                    <select id="filtroRol" class="w-full px-3 py-2.5 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-600 focus:outline-none text-sm transition-colors">
-                        <option value="">Todos</option>
-                    </select>
-                </div>
-
-                <!-- Filtro Area -->
-                <div>
-                    <label class="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-2">Área</label>
-                    <select id="filtroArea" class="w-full px-3 py-2.5 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-600 focus:outline-none text-sm transition-colors">
-                        <option value="">Todos</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <!-- Botones de acción (Buscar y Limpiar) -->
-        <div class="flex gap-3 justify-end">
-            <button id="btnLimpiarFiltros" class="px-5 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-800 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors text-sm font-medium">
-                <i class="fas fa-times mr-2"></i>Limpiar
-            </button>
-            <button id="btnBuscarUsuarios" class="flex items-center gap-2 px-6 py-2.5 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors text-sm font-medium">
-                <i class="fas fa-search"></i>
-                <span>Buscar</span>
-            </button>
-        </div>
     </section>
 
     <!-- ========== SECCIÓN 4: TABLA DE USUARIOS ========== -->
@@ -337,7 +287,38 @@ Administra los accesos y roles de los usuarios del sistema
         </div>
     </div>
 </div>
+<!-- Modal Conceder Accesos -->
+<div id="modalConcederAccesos" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden border border-gray-200 dark:border-slate-800">
+        <!-- Header Modal -->
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 z-10">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+                <i class="fas fa-key mr-2 text-gray-600 dark:text-gray-400"></i>
+                Conceder Accesos - <span id="usuarioAccesoNombre" class="text-purple-600">Usuario</span>
+            </h3>
+            <button id="btnCerrarModalAccesos" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
 
+        <!-- Body Modal - Scrollable -->
+        <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+            <div id="menusList" class="space-y-4">
+                <!-- Los menús y submenús se cargarán aquí -->
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 border-t border-gray-200 dark:border-slate-800 flex gap-3 justify-end sticky bottom-0 bg-white dark:bg-slate-900">
+            <button id="btnCancelarAccesos" class="px-6 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-800 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors text-sm font-medium">
+                Cancelar
+            </button>
+            <button id="btnGuardarAccesos" class="px-6 py-2.5 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors text-sm font-medium">
+                <i class="fas fa-save mr-2"></i>Guardar Accesos
+            </button>
+        </div>
+    </div>
+</div>
 
 <div id="modalNuevoUsuario" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden border border-gray-200 dark:border-slate-800">
@@ -541,16 +522,289 @@ Administra los accesos y roles de los usuarios del sistema
         cargarMenus();
     });
 
-    // Toggle filtros avanzados
-    document.getElementById('btnMostrarFiltrosAvanzados').addEventListener('click', function() {
-        const panel = document.getElementById('panelFiltrosAvanzados');
-        const icon = document.getElementById('iconoFiltros');
-        panel.classList.toggle('hidden');
-        icon.style.transform = panel.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+    // ============================================================
+    // CARGAR DATOS DE USUARIOS EN LA TABLA
+    // ============================================================
+    function cargarUsuarios() {
+        console.log('Cargando usuarios...');
+        
+        fetch('/api/usuarios-asesores')
+            .then(res => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json();
+            })
+            .then(data => {
+                console.log('Datos recibidos:', data);
+                
+                if (data.success && data.data) {
+                    const usuarios = data.data;
+                    const tbody = document.getElementById('tablaUsuariosBody');
+                    const totalUsuariosSpan = document.getElementById('totalUsuariosCount');
+                    const usuariosVisiblesSpan = document.getElementById('usuariosVisibles');
+                    
+                    // Actualizar contador total
+                    totalUsuariosSpan.textContent = usuarios.length;
+                    usuariosVisiblesSpan.textContent = usuarios.length;
+                    
+                    // Limpiar tabla
+                    tbody.innerHTML = '';
+                    
+                    // Llenar tabla con datos
+                    usuarios.forEach(usuario => {
+                        const row = document.createElement('tr');
+                        row.className = 'hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors';
+                        
+                        // Determinar color de estado
+                        const estadoClass = usuario.estado === 'Activo' 
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+                        
+                        row.innerHTML = `
+                            <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">${usuario.num_documento || '-'}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${usuario.usuario || '-'}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${usuario.email || '-'}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${usuario.nombre_rol || '-'}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${usuario.nombre_area || '-'}</td>
+                            <td class="px-6 py-4 text-sm">
+                                <span class="px-3 py-1 rounded-full text-xs font-medium ${estadoClass}">
+                                    ${usuario.estado || '-'}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-sm">
+                                <div class="flex gap-2">
+                                    <button class="btn-conceder-accesos p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title="Conceder Accesos" data-documento="${usuario.num_documento || ''}">
+                                        <i class="fas fa-key"></i>
+                                    </button>
+                                    <button class="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                        
+                        tbody.appendChild(row);
+                        
+                        // Agregar evento al botón de conceder accesos
+                        row.querySelector('.btn-conceder-accesos').addEventListener('click', function() {
+                            const documento = this.dataset.documento;
+                            abrirModalConcederAccesos(documento, usuario);
+                        });
+                    });
+                    
+                    // Cargar estadísticas
+                    actualizarEstadisticas(usuarios);
+                } else {
+                    console.error('Error en la respuesta:', data.message);
+                    document.getElementById('tablaUsuariosBody').innerHTML = 
+                        '<tr><td colspan="7" class="px-6 py-8 text-center text-red-500">Error al cargar usuarios</td></tr>';
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                document.getElementById('tablaUsuariosBody').innerHTML = 
+                    '<tr><td colspan="7" class="px-6 py-8 text-center text-red-500">Error de conexión</td></tr>';
+            });
+    }
+
+    // ============================================================
+    // ACTUALIZAR ESTADÍSTICAS
+    // ============================================================
+    function actualizarEstadisticas(usuarios) {
+        if (!usuarios || usuarios.length === 0) return;
+        
+        const total = usuarios.length;
+        const activos = usuarios.filter(u => u.estado === 'Activo').length;
+        const inactivos = usuarios.filter(u => u.estado === 'Inactivo').length;
+        
+        // Contar roles únicos
+        const rolesUnicos = new Set(usuarios.map(u => u.id_rol).filter(r => r));
+        
+        // Actualizar elementos
+        document.getElementById('estadisticaTotalUsuarios').textContent = total;
+        document.getElementById('estadisticaActivosUsuarios').textContent = activos;
+        document.getElementById('porcentajeActivosUsuarios').textContent = 
+            total > 0 ? Math.round((activos / total) * 100) + '%' : '0%';
+        document.getElementById('estadisticaInactivos').textContent = inactivos;
+        document.getElementById('porcentajeInactivos').textContent = 
+            total > 0 ? Math.round((inactivos / total) * 100) + '%' : '0%';
+        document.getElementById('estadisticaRoles').textContent = rolesUnicos.size;
+        document.getElementById('porcentajeRoles').textContent = 
+            total > 0 ? Math.round((rolesUnicos.size / total) * 100) + '%' : '0%';
+    }
+
+    // ============================================================
+    // MODAL CONCEDER ACCESOS
+    // ============================================================
+    
+    let usuarioActualAccesos = null;
+    
+    function abrirModalConcederAccesos(documento, usuario) {
+        console.log('Abriendo modal de accesos para:', documento, usuario);
+        usuarioActualAccesos = documento;
+        
+        document.getElementById('usuarioAccesoNombre').textContent = usuario.usuario || documento;
+        document.getElementById('modalConcederAccesos').classList.remove('hidden');
+        
+        // Cargar menús disponibles
+        cargarMenusParaAccesos(documento);
+    }
+    
+    function cargarMenusParaAccesos(documento) {
+        console.log('Cargando menús para asignar accesos a:', documento);
+        
+        // Primero obtener TODOS los menús disponibles (sin filtrar permisos)
+        fetch('/api/menus/todos')
+            .then(res => res.json())
+            .then(todosLosMenus => {
+                if (todosLosMenus.success && todosLosMenus.data) {
+                    // Luego obtener permisos actuales del usuario
+                    fetch(`/api/menus/usuario/${documento}`)
+                        .then(res => res.json())
+                        .then(menusData => {
+                            // menusData contiene solo los permisos que tiene el usuario
+                            const permisosActuales = {};
+                            if (menusData.success && menusData.data) {
+                                menusData.data.forEach(menu => {
+                                    menu.submenus.forEach(submenu => {
+                                        permisosActuales[submenu.id_submenu] = true;
+                                    });
+                                });
+                            }
+                            // Renderizar con TODOS los menús pero marcando los que ya tiene permisos
+                            renderizarAccesosTodos(todosLosMenus.data, permisosActuales);
+                        })
+                        .catch(err => {
+                            console.warn('No hay permisos previos, mostrando todos sin marcar:', err);
+                            renderizarAccesosTodos(todosLosMenus.data, {});
+                        });
+                }
+            })
+            .catch(err => console.error('Error cargando menús:', err));
+    }
+    
+    function renderizarAccesosTodos(todos_menus, permisosActuales) {
+        const container = document.getElementById('menusList');
+        container.innerHTML = '';
+        
+        // Renderizar cada menú con sus submenús
+        todos_menus.forEach(menu => {
+            if (menu.submenus && menu.submenus.length > 0) {
+                const menuDiv = document.createElement('div');
+                menuDiv.className = 'border border-gray-200 dark:border-slate-800 rounded-lg p-4';
+                
+                menuDiv.innerHTML = `
+                    <h4 class="font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                        <i class="fas fa-folder mr-2 text-purple-600"></i>
+                        ${menu.nombre_menu}
+                    </h4>
+                    <div class="space-y-2" id="menu-${menu.id_menu}">
+                        <!-- Submenús se agregarán aquí -->
+                    </div>
+                `;
+                
+                container.appendChild(menuDiv);
+                
+                // Agregar checkboxes para cada submenú
+                const submenuContainer = menuDiv.querySelector(`#menu-${menu.id_menu}`);
+                menu.submenus.forEach(submenu => {
+                    const checked = permisosActuales[submenu.id_submenu] || false;
+                    const label = document.createElement('label');
+                    label.className = 'flex items-center cursor-pointer p-2 rounded hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors';
+                    label.innerHTML = `
+                        <input type="checkbox" class="submenu-checkbox" data-id="${submenu.id_submenu}" ${checked ? 'checked' : ''} 
+                            class="w-4 h-4 text-purple-600 rounded border-gray-300 dark:border-slate-700 focus:ring-purple-600 dark:focus:ring-purple-600">
+                        <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">${submenu.nombre_submenu}</span>
+                    `;
+                    submenuContainer.appendChild(label);
+                });
+            }
+        });
+    }
+    
+    // Cerrar modal
+    document.getElementById('btnCerrarModalAccesos').addEventListener('click', () => {
+        document.getElementById('modalConcederAccesos').classList.add('hidden');
+    });
+    
+    document.getElementById('btnCancelarAccesos').addEventListener('click', () => {
+        document.getElementById('modalConcederAccesos').classList.add('hidden');
+    });
+    
+    // Guardar accesos
+    document.getElementById('btnGuardarAccesos').addEventListener('click', () => {
+        if (!usuarioActualAccesos) return;
+        
+        // Recolectar todos los checkboxes seleccionados
+        const checkboxes = document.querySelectorAll('#menusList .submenu-checkbox');
+        const submenus = [];
+        
+        checkboxes.forEach(checkbox => {
+            submenus.push({
+                id_submenu: parseInt(checkbox.dataset.id),
+                permitido: checkbox.checked ? 1 : 0
+            });
+        });
+        
+        console.log('Guardando accesos para', usuarioActualAccesos, submenus);
+        
+        // Llamar a la API para guardar
+        fetch('/api/asignar-multiples-submenus-usuario', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                num_documento: usuarioActualAccesos,
+                submenus: submenus
+            })
+        })
+        .then(res => res.json())
+        .then(result => {
+            if (result.success) {
+                alert('Accesos guardados exitosamente');
+                document.getElementById('modalConcederAccesos').classList.add('hidden');
+            } else {
+                alert('Error: ' + result.message);
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            alert('Error al guardar accesos');
+        });
     });
 
-    // Inicializar página (placeholder)
-    console.log('Página de Permisos y Roles cargada');
+    // ============================================================
+    // BÚSQUEDA EN TIEMPO REAL
+    // ============================================================
+    document.getElementById('inputBuscarUsuario').addEventListener('keyup', function() {
+        const filtro = this.value.toLowerCase();
+        const filas = document.getElementById('tablaUsuariosBody').querySelectorAll('tr');
+        let visibles = 0;
+        
+        filas.forEach(fila => {
+            const texto = fila.textContent.toLowerCase();
+            if (texto.includes(filtro)) {
+                fila.style.display = '';
+                visibles++;
+            } else {
+                fila.style.display = 'none';
+            }
+        });
+        
+        document.getElementById('usuariosVisibles').textContent = visibles;
+    });
+
+    // Inicializar página - Cargar datos al abrir la página
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Inicializando página de Permisos y Roles');
+        cargarUsuarios();
+        cargarMenus();
+    });
+    
+    // Si el script se ejecuta después del DOMContentLoaded, llamar directamente
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', cargarUsuarios);
+    } else {
+        cargarUsuarios();
+    }
 </script>
 
 {% endblock %}

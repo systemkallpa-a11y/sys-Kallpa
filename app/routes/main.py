@@ -59,7 +59,8 @@ from app.funciones.permissions import (
     crear_submenu_api,
     listar_permisos_rol_api,
     asignar_multiples_submenus_usuario_api,
-    obtener_menus_usuario_api
+    obtener_menus_usuario_api,
+    obtener_todos_menus_y_submenus_api
 )
 
 # Decorador para requerir autenticación
@@ -86,6 +87,7 @@ def dashboard():
     return render_template('dashboard.html')
 
 @main_bp.route('/clients')
+@main_bp.route('/clientes')
 @login_required
 def clients():
     """Página de gestión de clientes"""
@@ -100,6 +102,7 @@ def simulador():
 
 
 @main_bp.route('/register-user', methods=['GET', 'POST'])
+@main_bp.route('/registrar-usuario', methods=['GET', 'POST'])
 @login_required
 def register_user():
     """Página para registrar nuevos usuarios del sistema"""
@@ -781,6 +784,40 @@ def settings():
     return render_template('settings.html')
 
 
+@main_bp.route('/api/imagen/proyecto/<nombre_archivo>', methods=['GET'])
+def obtener_imagen_proyecto(nombre_archivo):
+    """Sirve imágenes de proyectos directamente desde la app"""
+    from flask import send_from_directory
+    from pathlib import Path
+    from urllib.parse import unquote
+    
+    try:
+        # Decodificar URL (convierte %20 a espacio, etc.)
+        nombre_archivo = unquote(nombre_archivo)
+        
+        proyectos_dir = Path(__file__).parent.parent / 'static' / 'images' / 'Proyectos'
+        
+        # Seguridad: validar que no intenten acceder a otras rutas
+        if '..' in nombre_archivo or '/' in nombre_archivo:
+            return {'error': 'Acceso denegado'}, 403
+        
+        archivo_ruta = proyectos_dir / nombre_archivo
+        
+        if not archivo_ruta.exists():
+            return {'error': f'Archivo no encontrado: {nombre_archivo}'}, 404
+        
+        return send_from_directory(str(proyectos_dir), nombre_archivo)
+    
+    except Exception as e:
+        return {'error': str(e)}, 500
+
+
+@main_bp.route('/permisos-y-roles')
+@login_required
+def permisos_y_roles():
+    """Página de administración de permisos y roles de usuarios - Alias para permisos-roles"""
+    return render_template('permissions.html')
+
 @main_bp.route('/permisos-roles')
 @login_required
 def permisos_roles():
@@ -791,6 +828,13 @@ def permisos_roles():
 # ============================================================================
 # RUTAS PARA GESTIÓN DE MENÚS Y PERMISOS
 # ============================================================================
+
+@main_bp.route('/api/menus/usuario/<num_documento>', methods=['GET'])
+@login_required
+def api_menus_usuario(num_documento):
+    """API para obtener menús y permisos de un usuario específico"""
+    return obtener_menus_usuario_api(num_documento)
+
 
 @main_bp.route('/api/menus/crear', methods=['POST'])
 @login_required
@@ -806,6 +850,13 @@ def api_listar_menus():
     return listar_menus_api()
 
 
+@main_bp.route('/api/menus/todos', methods=['GET'])
+@login_required
+def api_obtener_todos_menus():
+    """API para obtener TODOS los menús y submenús (para asignación de accesos)"""
+    return obtener_todos_menus_y_submenus_api()
+
+
 @main_bp.route('/api/submenus/crear', methods=['POST'])
 @login_required
 def api_crear_submenu():
@@ -818,6 +869,13 @@ def api_crear_submenu():
 def api_listar_permisos_rol(id_rol):
     """API para obtener permisos de un rol"""
     return listar_permisos_rol_api(id_rol)
+
+
+@main_bp.route('/api/asignar-multiples-submenus-usuario', methods=['POST'])
+@login_required
+def api_asignar_multiples_submenus():
+    """API para asignar múltiples submenús a un usuario"""
+    return asignar_multiples_submenus_usuario_api()
 
 
 # ============================================================================

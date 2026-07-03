@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-
 # -*- coding: utf-8 -*-
-
 """
 
 Funciones para gestion de usuarios y asesores
@@ -32,6 +30,13 @@ import re
 
 from .funGeneral import get_db_connection, hash_password
 
+def safe_print(*args, **kwargs):
+    """Print con manejo de encoding para evitar UnicodeEncodeError"""
+    try:
+        print(*args, **kwargs)
+    except:
+        pass  # Ignorar errores de encoding en logs
+
 
 
 
@@ -47,7 +52,7 @@ def register_asesor_api():
 
         print("=" * 80)
 
-        print("DEBUG: Datos recibidos en el servidor:")
+        # print("DEBUG: Datos recibidos en el servidor:")
 
         # Log de data omitido - puede contener caracteres especiales
 
@@ -75,15 +80,19 @@ def register_asesor_api():
 
         
 
-        print(f"DEBUG: Documento jerarquia (padre): {num_documento_creador}")
+        # print(f"DEBUG: Documento jerarquia (padre): {num_documento_creador}")
 
         if num_documento_creador is None:
 
-            print("DEBUG: Sin padre - sera nivel 0 (nivel mas alto en jerarquia)")
+            # print("DEBUG: Sin padre - sera nivel 0 (nivel mas alto en jerarquia)")
+
+            pass
 
         else:
 
-            print(f"DEBUG: Con padre {num_documento_creador} - sera un subnivel")
+            # print(f"DEBUG: Con padre {num_documento_creador} - sera un subnivel")
+
+            pass
 
         
 
@@ -123,21 +132,21 @@ def register_asesor_api():
 
         
 
-        print(f"DEBUG: Datos procesados:")
+        # print(f"DEBUG: Datos procesados:")
 
-        print(f"  num_documento: '{num_documento}'")
+        # print(f"  num_documento: '{num_documento}'")
 
-        print(f"  email: '{email}'")
+        # print(f"  email: '{email}'")
 
-        # Omitidos apellidos del log por codificación ASCII
+        # Omitidos apellidos del log por codificacion ASCII
 
-        print(f"  fecha_nacimiento: '{fecha_nacimiento}'")
+        # print(f"  fecha_nacimiento: '{fecha_nacimiento}'")
 
-        print(f"  estado_civil: '{estado_civil}'")
+        # print(f"  estado_civil: '{estado_civil}'")
 
-        print(f"  email: '{email}'")
+        # print(f"  email: '{email}'")
 
-        print(f"  genero: '{genero}'")
+        # print(f"  genero: '{genero}'")
 
         # Log omitido - puede contener caracteres especiales
 
@@ -151,15 +160,15 @@ def register_asesor_api():
 
         if not all([num_documento, nombres, apellido_paterno, email, rol_nombre, cargo_nombre]):
 
-            print("  ERROR: Faltan campos requeridos")
+            # print("  ERROR: Faltan campos requeridos")
 
-            print(f"  num_documento: {bool(num_documento)}")
+            # print(f"  num_documento: {bool(num_documento)}")
 
-            print(f"  email: {bool(email)}")
+            # print(f"  email: {bool(email)}")
 
-            # Omitido apellido_paterno del log por codificación ASCII
+            # Omitido apellido_paterno del log por codificacion ASCII
 
-            print(f"  email: {bool(email)}")
+            # print(f"  email: {bool(email)}")
 
             # Log omitido - puede contener caracteres especiales
 
@@ -211,74 +220,60 @@ def register_asesor_api():
 
             
 
-            print(f"DEBUG: Password hash generado")
+            # print(f"DEBUG: Password hash generado")
 
             
 
-            # Obtener datos de ubicación geográfica (Departamento, Provincia, Distrito)
-            departamento = ''
-            provincia = ''
-            distrito = ''
+            # Obtener datos de ubicacion geografica (Departamento, Provincia, Distrito)
+            # Ahora el frontend envia: departamento_nombre, provincia_nombre, distrito_nombre
+            departamento = data.get('departamento_nombre', data.get('departamento', '')).strip().upper()
+            provincia = data.get('provincia_nombre', data.get('provincia', '')).strip().upper()
+            distrito = data.get('distrito_nombre', data.get('distrito', '')).strip().upper()
             
-            # Si viene id_distrito (número), buscar los nombres en la BD
-            id_distrito = data.get('id_distrito', '')
-            
-            if id_distrito:
-                try:
-                    id_distrito = int(id_distrito)
-                    # Buscar en la BD los nombres de Departamento, Provincia y Distrito
-                    conexion_temp = get_db_connection()
-                    if conexion_temp:
-                        cursor_temp = conexion_temp.cursor(dictionary=True)
-                        
-                        query_temp = """
-                            SELECT 
-                                dep.nombre AS departamento,
-                                prov.nombre AS provincia,
-                                d.nombre AS distrito
-                            FROM TblDistritos d
-                            INNER JOIN TblProvincias prov ON d.id_provincia = prov.id_provincia
-                            INNER JOIN TblDepartamentos dep ON prov.id_departamento = dep.id_departamento
-                            WHERE d.id_distrito = %s
-                        """
-                        cursor_temp.execute(query_temp, (id_distrito,))
-                        resultado = cursor_temp.fetchone()
-                        cursor_temp.close()
-                        conexion_temp.close()
-                        
-                        if resultado:
-                            departamento = resultado['departamento'].strip().upper()
-                            provincia = resultado['provincia'].strip().upper()
-                            distrito = resultado['distrito'].strip().upper()
-                            print(f"DEBUG: Ubicación desde id_distrito {id_distrito}: {departamento}, {provincia}, {distrito}")
-                        else:
-                            print(f"  ERROR: ID de distrito no encontrado: {id_distrito}")
-                            return {'success': False, 'message': 'ID de distrito no válido'}, 400
-                    else:
-                        print("  ERROR: No se pudo conectar a la BD para buscar distrito")
-                        return {'success': False, 'message': 'Error de conexión a la BD'}, 500
-                except ValueError:
-                    print(f"  ERROR: ID de distrito no es un numero valido: {id_distrito}")
-                    return {'success': False, 'message': 'ID de distrito debe ser un numero valido'}, 400
-            else:
-                # Si no viene id_distrito, intentar obtener los nombres directamente
-                departamento = data.get('departamento', '').strip().upper()
-                provincia = data.get('provincia', '').strip().upper()
-                distrito = data.get('distrito', '').strip().upper()
+            # print(f"DEBUG: Ubicacion recibida - Depto: {departamento}, Prov: {provincia}, Dist: {distrito}")
             
             if not all([departamento, provincia, distrito]):
 
-                print("  ERROR: Faltan datos de ubicación")
+                # print("  ERROR: Faltan datos de ubicación")
 
                 return {'success': False, 'message': 'Departamento, Provincia y Distrito son requeridos'}, 400
 
             
             # Obtener area_resumen desde los datos
             area_resumen = data.get('area_resumen', '').strip()
-            if not area_resumen:
-                area_resumen = 'Ventas'  # Valor por defecto
+            id_area = data.get('id_area', '').strip()
             
-            print(f"DEBUG: area_resumen: {area_resumen}")
+            if not area_resumen and id_area:
+                # Si no viene el nombre del area, buscarlo en la BD usando el ID
+                try:
+                    conexion_area = get_db_connection()
+                    if conexion_area:
+                        cursor_area = conexion_area.cursor(dictionary=True)
+                        cursor_area.execute("SELECT nombre_resumen FROM TblAreas WHERE id_area = %s AND estado = 'Activo' LIMIT 1", (int(id_area),))
+                        resultado_area = cursor_area.fetchone()
+                        cursor_area.close()
+                        conexion_area.close()
+                        
+                        if resultado_area:
+                            area_resumen = resultado_area['nombre_resumen'].strip()
+                            try:
+                                print(f"DEBUG: Area obtenida desde ID {id_area}: {area_resumen}")
+                            except:
+                                pass
+                        else:
+                            area_resumen = 'Ventas'
+                    else:
+                        area_resumen = 'Ventas'
+                except Exception as e:
+                    try:
+                        print(f"DEBUG: Error al buscar area: {e}")
+                    except:
+                        pass
+                    area_resumen = 'Ventas'
+            elif not area_resumen:
+                area_resumen = 'Ventas'
+            
+            # print(f"DEBUG: area_resumen final: {area_resumen}")
 
             # Llamar al Stored Procedure
 
@@ -291,27 +286,27 @@ def register_asesor_api():
                 SELECT @p_usuario as usuario, @p_registrado as registrado, @p_mensaje as mensaje
             """
 
-            print(f"DEBUG: Llamando al SP con parametros:")
-            print(f"1. num_documento: {num_documento}")
-            print(f"2. tipo_documento: {tipo_documento}")
-            print(f"3. nombres: {nombres}")
-            print(f"4. apellido_paterno: {apellido_paterno}")
-            print(f"5. apellido_materno: {apellido_materno}")
-            print(f"6. fecha_nacimiento: {fecha_nacimiento}")
-            print(f"7. estado_civil: {estado_civil}")
-            print(f"8. email: {email}")
-            print(f"9. celular: {celular}")
-            print(f"10. numero_emergencia: {numero_emergencia}")
-            print(f"11. direccion: {direccion}")
-            print(f"12. departamento: {departamento}")
-            print(f"13. provincia: {provincia}")
-            print(f"14. distrito: {distrito}")
-            print(f"15. genero: {genero}")
-            print(f"16. password_hash: [HASH]")
-            print(f"17. rol_nombre: {rol_nombre}")
-            print(f"18. cargo_nombre: {cargo_nombre}")
-            print(f"19. area_resumen: {area_resumen}")
-            print(f"20. num_documento_creador: {num_documento_creador}")
+            # print(f"DEBUG: Llamando al SP con parametros:")
+            # print(f"1. num_documento: {num_documento}")
+            # print(f"2. tipo_documento: {tipo_documento}")
+            # print(f"3. nombres: {nombres}")
+            # print(f"4. apellido_paterno: {apellido_paterno}")
+            # print(f"5. apellido_materno: {apellido_materno}")
+            # print(f"6. fecha_nacimiento: {fecha_nacimiento}")
+            # print(f"7. estado_civil: {estado_civil}")
+            # print(f"8. email: {email}")
+            # print(f"9. celular: {celular}")
+            # print(f"10. numero_emergencia: {numero_emergencia}")
+            # print(f"11. direccion: {direccion}")
+            # print(f"12. departamento: {departamento}")
+            # print(f"13. provincia: {provincia}")
+            # print(f"14. distrito: {distrito}")
+            # print(f"15. genero: {genero}")
+            # print(f"16. password_hash: [HASH]")
+            # print(f"17. rol_nombre: {rol_nombre}")
+            # print(f"18. cargo_nombre: {cargo_nombre}")
+            # print(f"19. area_resumen: {area_resumen}")
+            # print(f"20. num_documento_creador: {num_documento_creador}")
 
             cursor.execute(query, (
                 num_documento, tipo_documento, nombres, apellido_paterno, apellido_materno,
@@ -343,7 +338,7 @@ def register_asesor_api():
                 
 
                 # Log omitido - results puede contener caracteres especiales
-                print(f"DEBUG: Resultados del SP recibidos: {len(results)} registros")
+                # print(f"DEBUG: Resultados del SP recibidos: {len(results)} registros")
 
                 result = results[-1] if results else None
 
@@ -357,11 +352,11 @@ def register_asesor_api():
 
             
 
-            print(f"DEBUG: Respuesta del SP:")
+            # print(f"DEBUG: Respuesta del SP:")
 
-            print(f"  registrado: {result.get('registrado') if result else 'None'}")
+            # print(f"  registrado: {result.get('registrado') if result else 'None'}")
 
-            print(f"  mensaje: {result.get('mensaje') if result else 'None'}")
+            # print(f"  mensaje: {result.get('mensaje') if result else 'None'}")
 
             
 
@@ -373,7 +368,7 @@ def register_asesor_api():
 
             if not result:
 
-                print("  ERROR: No se obtuvo respuesta del SP")
+                # print("  ERROR: No se obtuvo respuesta del SP")
 
                 return {'success': False, 'message': 'Error al registrar el asesor. No se obtuvo respuesta del stored procedure.'}, 500
 
@@ -386,19 +381,19 @@ def register_asesor_api():
 
             
 
-            print(f"DEBUG: Procesando respuesta:")
+            # print(f"DEBUG: Procesando respuesta:")
 
-            print(f"  usuario generado: {usuario_generado}")
+            # print(f"  usuario generado: {usuario_generado}")
 
-            print(f"  registrado: {registrado} (tipo: {type(registrado)})")
+            # print(f"  registrado: {registrado} (tipo: {type(registrado)})")
 
-            print(f"  mensaje recibido (tipo: {type(mensaje).__name__})")
+            # print(f"  mensaje recibido (tipo: {type(mensaje).__name__})")
 
             
 
             if registrado == 1:
 
-                print(f"  EXITO: Asesor registrado")
+                # print(f"  EXITO: Asesor registrado")
 
                 return {
 
@@ -424,7 +419,7 @@ def register_asesor_api():
 
                     
 
-                print(f"  ERROR del SP: {mensaje_error}")
+                # print(f"  ERROR del SP: {mensaje_error}")
 
                 return {'success': False, 'message': mensaje_error}, 400
 
@@ -644,7 +639,7 @@ def update_asesor_api():
 
         print("=" * 80)
 
-        print("DEBUG: Datos recibidos para actualizacion:")
+        # print("DEBUG: Datos recibidos para actualizacion:")
 
         # Log de data omitido - puede contener caracteres especiales
 
@@ -716,7 +711,7 @@ def update_asesor_api():
 
         print(f"  email: '{email}'")
 
-        # Omitidos apellidos del log por codificación ASCII
+        # Omitidos apellidos del log por codificacion ASCII
 
         print(f"  fecha_nacimiento: '{fecha_nacimiento}'")
 
