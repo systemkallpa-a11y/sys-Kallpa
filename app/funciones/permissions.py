@@ -602,8 +602,8 @@ def asignar_multiples_submenus_usuario_api():
             
             print(f"[PASO 1] ✓ Usuario encontrado")
             
-            # Convertir submenús a JSON
-            submenus_json = json.dumps(submenus)
+            # Convertir submenús a JSON con ensure_ascii=False para UTF-8
+            submenus_json = json.dumps(submenus, ensure_ascii=False)
             print(f"[PASO 2] Convertiendo a JSON...")
             print(f"[DEBUG] JSON: {submenus_json}")
             
@@ -635,7 +635,7 @@ def asignar_multiples_submenus_usuario_api():
             
             print(f"[ÉXITO] Operación completada\n")
             
-            # Retornar éxito con detalles
+            # Retornar éxito con detalles (jsonify ya maneja UTF-8 correctamente)
             return jsonify({
                 'success': True,
                 'message': f'Permisos asignados exitosamente al usuario {num_documento}',
@@ -652,10 +652,14 @@ def asignar_multiples_submenus_usuario_api():
             print(f"[ERROR] Excepción: {str(e)}")
             import traceback
             traceback.print_exc()
-            return jsonify({'success': False, 'message': f'Error al asignar permisos: {str(e)}'}), 500
+            # Asegurar que el mensaje de error también sea UTF-8
+            error_message = str(e).encode('utf-8', errors='replace').decode('utf-8')
+            return jsonify({'success': False, 'message': f'Error al asignar permisos: {error_message}'}), 500
         
     except Exception as e:
         print(f"[ERROR] General: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'success': False, 'message': f'Error general: {str(e)}'}), 500
+        # Asegurar que el mensaje de error también sea UTF-8
+        error_message = str(e).encode('utf-8', errors='replace').decode('utf-8')
+        return jsonify({'success': False, 'message': f'Error general: {error_message}'}), 500
