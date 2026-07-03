@@ -697,10 +697,38 @@ Administra y da seguimiento a tus contactos y clientes
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Fuente de Contacto
+                            </label>
+                            <select name="id_fuente_contacto" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 focus:border-gray-400 dark:focus:border-slate-600 focus:outline-none transition-colors text-sm">
+                                <option value="">Seleccionar...</option>
+                                <!-- Opciones se cargarán dinámicamente -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Proyecto de Interés
+                            </label>
+                            <select name="id_proyecto" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 focus:border-gray-400 dark:focus:border-slate-600 focus:outline-none transition-colors text-sm">
+                                <option value="">Seleccionar...</option>
+                                <!-- Opciones se cargarán dinámicamente -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Estado Prospección
                             </label>
                             <select name="id_estado_prospeccion" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 focus:border-gray-400 dark:focus:border-slate-600 focus:outline-none transition-colors text-sm">
                                 <option value="">Seleccionar...</option>
+                                <!-- Opciones se cargarán dinámicamente -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Tipo de Compra
+                            </label>
+                            <select name="id_tipo_compra" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 focus:border-gray-400 dark:focus:border-slate-600 focus:outline-none transition-colors text-sm">
+                                <option value="">Seleccionar...</option>
+                                <!-- Opciones se cargarán dinámicamente -->
                             </select>
                         </div>
                         <div>
@@ -714,12 +742,12 @@ Administra y da seguimiento a tus contactos y clientes
                                 <option value="Urgente">Urgente</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="mt-4">
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Observaciones
-                        </label>
-                        <textarea name="observaciones" rows="3" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 focus:border-gray-400 dark:focus:border-slate-600 focus:outline-none transition-colors text-sm resize-none" placeholder="Notas adicionales sobre el cliente..."></textarea>
+                        <div class="md:col-span-3">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Observaciones
+                            </label>
+                            <textarea name="observaciones" rows="3" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 focus:border-gray-400 dark:focus:border-slate-600 focus:outline-none transition-colors text-sm resize-none" placeholder="Notas adicionales sobre el cliente..."></textarea>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -958,7 +986,7 @@ async function cargarDatosSelectores() {
             const selectFuente = document.querySelector('select[name="id_fuente_contacto"]');
             selectFuente.innerHTML = '<option value="">Seleccionar...</option>';
             fuentes.forEach(f => {
-                selectFuente.innerHTML += `<option value="${f.id}">${f.nombre}</option>`;
+                selectFuente.innerHTML += `<option value="${f.id_fuente_contacto}">${f.nombre}</option>`;
             });
         }
 
@@ -969,19 +997,23 @@ async function cargarDatosSelectores() {
             const selectProyecto = document.querySelector('select[name="id_proyecto"]');
             selectProyecto.innerHTML = '<option value="">Seleccionar...</option>';
             proyectos.forEach(p => {
-                selectProyecto.innerHTML += `<option value="${p.id}">${p.nombre}</option>`;
+                selectProyecto.innerHTML += `<option value="${p.id_proyecto}">${p.nombre}</option>`;
             });
         }
 
         // Cargar estados de prospección
         const respEstados = await fetch('/api/estados-prospeccion');
         if (respEstados.ok) {
-            const estados = await respEstados.json();
+            const respData = await respEstados.json();
+            // Extraer el array de la respuesta
+            const estados = respData.data || respData || [];
             const selectEstado = document.querySelector('select[name="id_estado_prospeccion"]');
             selectEstado.innerHTML = '<option value="">Seleccionar...</option>';
-            estados.forEach(e => {
-                selectEstado.innerHTML += `<option value="${e.id}">${e.nombre}</option>`;
-            });
+            if (Array.isArray(estados)) {
+                estados.forEach(e => {
+                    selectEstado.innerHTML += `<option value="${e.id_estado_prospeccion}">${e.nombre}</option>`;
+                });
+            }
         }
 
         // Cargar tipos de compra
@@ -991,7 +1023,7 @@ async function cargarDatosSelectores() {
             const selectTipo = document.querySelector('select[name="id_tipo_compra"]');
             selectTipo.innerHTML = '<option value="">Seleccionar...</option>';
             tipos.forEach(t => {
-                selectTipo.innerHTML += `<option value="${t.id}">${t.nombre}</option>`;
+                selectTipo.innerHTML += `<option value="${t.id_tipo_compra}">${t.nombre}</option>`;
             });
         }
     } catch (error) {
@@ -1451,11 +1483,48 @@ async function cargarClienteParaEditar(numDocumento) {
             }
             
             // Llenar campos de Gestión Comercial
-            // Cargar Estados de Prospección
-            await cargarEstadosProspeccionEditar();
-            form.querySelector('[name="id_estado_prospeccion"]').value = cliente.id_estado_prospeccion || '';
+            // Cargar todas las opciones de dropdowns comerciales
+            await cargarDatosSelectoresEditar();
+            
+            // Asignar Fuentes de Contacto
+            if (cliente.id_fuente_contacto) {
+                form.querySelector('[name="id_fuente_contacto"]').value = cliente.id_fuente_contacto;
+            }
+            
+            // Asignar Proyecto de Interés
+            if (cliente.id_proyecto) {
+                form.querySelector('[name="id_proyecto"]').value = cliente.id_proyecto;
+            }
+            
+            // Asignar Estado de Prospección por NOMBRE
+            if (cliente.estado_prospeccion) {
+                const selectEstado = form.querySelector('[name="id_estado_prospeccion"]');
+                // Buscar la opción con ese nombre (puede estar en mayúsculas o minúsculas)
+                for (let option of selectEstado.options) {
+                    if (option.text.toUpperCase() === cliente.estado_prospeccion.toUpperCase()) {
+                        selectEstado.value = option.value;
+                        console.log('Estado prospección asignado:', option.text, 'valor:', option.value);
+                        break;
+                    }
+                }
+            }
+            
+            // Asignar Tipo de Compra
+            if (cliente.id_tipo_compra) {
+                form.querySelector('[name="id_tipo_compra"]').value = cliente.id_tipo_compra;
+            }
+            
+            // Asignar Prioridad
             form.querySelector('[name="prioridad"]').value = cliente.prioridad || 'Media';
+            
+            // Asignar Observaciones
             form.querySelector('[name="observaciones"]').value = cliente.observaciones || '';
+            
+            // Scroll modal al inicio
+            const modalBody = modal.querySelector('.p-6.overflow-y-auto');
+            if (modalBody) {
+                modalBody.scrollTop = 0;
+            }
             
             // Mostrar modal
             modal.classList.remove('hidden');
@@ -1584,6 +1653,67 @@ async function cargarEstadosProspeccionEditar() {
         }
     } catch (error) {
         console.error('Error al cargar estados:', error);
+    }
+}
+
+async function cargarDatosSelectoresEditar() {
+    try {
+        // Cargar fuentes de contacto
+        const respFuentes = await fetch('/api/fuentes-contacto');
+        if (respFuentes.ok) {
+            const fuentes = await respFuentes.json();
+            const selectFuente = document.querySelector('#formEditarCliente [name="id_fuente_contacto"]');
+            if (selectFuente) {
+                selectFuente.innerHTML = '<option value="">Seleccionar...</option>';
+                fuentes.forEach(f => {
+                    selectFuente.innerHTML += `<option value="${f.id_fuente_contacto}">${f.nombre}</option>`;
+                });
+            }
+        }
+
+        // Cargar proyectos
+        const respProyectos = await fetch('/api/proyectos');
+        if (respProyectos.ok) {
+            const proyectos = await respProyectos.json();
+            const selectProyecto = document.querySelector('#formEditarCliente [name="id_proyecto"]');
+            if (selectProyecto) {
+                selectProyecto.innerHTML = '<option value="">Seleccionar...</option>';
+                proyectos.forEach(p => {
+                    selectProyecto.innerHTML += `<option value="${p.id_proyecto}">${p.nombre}</option>`;
+                });
+            }
+        }
+
+        // Cargar estados de prospección
+        const respEstados = await fetch('/api/estados-prospeccion');
+        if (respEstados.ok) {
+            const respData = await respEstados.json();
+            const estados = respData.data || respData || [];
+            const selectEstado = document.querySelector('#formEditarCliente [name="id_estado_prospeccion"]');
+            if (selectEstado) {
+                selectEstado.innerHTML = '<option value="">Seleccionar...</option>';
+                if (Array.isArray(estados)) {
+                    estados.forEach(e => {
+                        selectEstado.innerHTML += `<option value="${e.id_estado_prospeccion}">${e.nombre}</option>`;
+                    });
+                }
+            }
+        }
+
+        // Cargar tipos de compra
+        const respTipos = await fetch('/api/tipos-compra');
+        if (respTipos.ok) {
+            const tipos = await respTipos.json();
+            const selectTipo = document.querySelector('#formEditarCliente [name="id_tipo_compra"]');
+            if (selectTipo) {
+                selectTipo.innerHTML = '<option value="">Seleccionar...</option>';
+                tipos.forEach(t => {
+                    selectTipo.innerHTML += `<option value="${t.id_tipo_compra}">${t.nombre}</option>`;
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error al cargar datos de selectores:', error);
     }
 }
 

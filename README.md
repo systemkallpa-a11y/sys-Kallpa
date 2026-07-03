@@ -19,8 +19,6 @@ KallMax es un sistema de gestión para corredores inmobiliarios que incluye:
 - Gestión de usuarios y asesores
 - Sistema de autenticación
 - Gestión de clientes
-- Calendario de actividades
-- Dashboard de analíticas
 - Sistema de tareas
 
 ---

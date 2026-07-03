@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-
+{# -*- coding: utf-8 -*- #}
 {% block title %}Gestionar Usuarios - KallMax{% endblock %}
 
 {% block header_title %}
@@ -761,6 +761,12 @@
         // Mostrar modal con loading
         modal.classList.remove('hidden');
         
+        // Scroll al inicio del modal
+        const modalContent = modal.querySelector('.bg-white');
+        if (modalContent) {
+            modalContent.scrollTop = 0;
+        }
+        
         try {
             // Cargar datos del asesor
             const response = await fetch(`/api/asesor/${numDocumento}`);
@@ -1118,6 +1124,13 @@
     btnAbrirModal.addEventListener('click', async function() {
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
+        
+        // Scroll al inicio del modal
+        const modalContent = modal.querySelector('.bg-white');
+        if (modalContent) {
+            modalContent.scrollTop = 0;
+        }
+        
         cargarDepartamentos(); // Cargar departamentos cuando se abre el modal
         
         // Establecer valores por defecto para Área y Cargo
@@ -1383,19 +1396,33 @@
         const formData = new FormData(formModal);
         const datos = Object.fromEntries(formData);
         
+        // REMOVER los IDs que vinieron de FormData - solo queremos NOMBRES
+        delete datos.id_area;
+        delete datos.id_cargo;
+        delete datos.id_departamento;
+        delete datos.id_distrito;
+        delete datos.id_provincia;
+        delete datos.id_rol;
+        
         // NUEVO: Agregar campo de jerarquía
         const numDocumentoJerarquia = document.getElementById('num_documento_jerarquia').value.trim();
         datos.num_documento_jerarquia = numDocumentoJerarquia;
         
-        // NUEVO: Agregar los NOMBRES de distrito, rol y cargo
+        // NUEVO: Agregar los NOMBRES de departamento, provincia, distrito, rol, cargo y área
         // Obtener el texto seleccionado de cada dropdown
+        const departamentoSelect = document.getElementById('select-departamento');
+        const provinciaSelect = document.getElementById('select-provincia');
         const distritoSelect = document.getElementById('select-distrito');
         const rolSelect = document.getElementById('select-rol');
         const cargoSelect = document.getElementById('select-cargo');
+        const areaSelect = document.getElementById('select-area');
         
+        datos.departamento_nombre = departamentoSelect.options[departamentoSelect.selectedIndex]?.text || '';
+        datos.provincia_nombre = provinciaSelect.options[provinciaSelect.selectedIndex]?.text || '';
         datos.distrito_nombre = distritoSelect.options[distritoSelect.selectedIndex]?.text || '';
         datos.rol_nombre = rolSelect.options[rolSelect.selectedIndex]?.text || '';
         datos.cargo_nombre = cargoSelect.options[cargoSelect.selectedIndex]?.text || '';
+        datos.area_resumen = areaSelect.options[areaSelect.selectedIndex]?.text || '';
         
         // Validación: Asegurarse de que se seleccionaron
         if (!datos.distrito_nombre || datos.distrito_nombre.includes('--')) {
@@ -1410,6 +1437,11 @@
         
         if (!datos.cargo_nombre || datos.cargo_nombre.includes('--')) {
             alert('Por favor selecciona un Cargo válido');
+            return;
+        }
+        
+        if (!datos.area_resumen || datos.area_resumen.includes('--')) {
+            alert('Por favor selecciona un Área válida');
             return;
         }
         

@@ -63,12 +63,21 @@ def insertar_cliente_api():
         # Log seguro sin caracteres especiales que puedan causar problemas
         current_app.logger.info(f"Cliente a insertar - Doc: {num_documento}, Email: {email}")
         
-        # Convertir valores vacios a None
-        id_fuente_contacto = int(id_fuente_contacto) if id_fuente_contacto else None
-        id_proyecto = int(id_proyecto) if id_proyecto else None
-        id_estado_prospeccion = int(id_estado_prospeccion) if id_estado_prospeccion else None
-        id_tipo_compra = int(id_tipo_compra) if id_tipo_compra else None
-        id_distrito = int(id_distrito) if id_distrito else None
+        # Convertir valores vacios/undefined a None
+        def safe_int(value):
+            """Convierte valor a int de forma segura, retorna None si es vacío o 'undefined'"""
+            if not value or value == 'undefined' or value == '':
+                return None
+            try:
+                return int(value)
+            except (ValueError, TypeError):
+                return None
+        
+        id_fuente_contacto = safe_int(id_fuente_contacto)
+        id_proyecto = safe_int(id_proyecto)
+        id_estado_prospeccion = safe_int(id_estado_prospeccion)
+        id_tipo_compra = safe_int(id_tipo_compra)
+        id_distrito = safe_int(id_distrito)
         
         connection = get_db_connection()
         if not connection:
