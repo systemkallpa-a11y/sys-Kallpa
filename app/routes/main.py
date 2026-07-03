@@ -63,6 +63,16 @@ from app.funciones.permissions import (
     obtener_todos_menus_y_submenus_api
 )
 
+# Importar funciones de recursos digitales
+from app.funciones.recursos_digitales import (
+    listar_recursos_api as listar_recursos_api_func,
+    crear_recurso_api as crear_recurso_api_func,
+    obtener_recurso_api as obtener_recurso_api_func,
+    actualizar_recurso_api as actualizar_recurso_api_func,
+    eliminar_recurso_api as eliminar_recurso_api_func,
+    incrementar_descargas_api as incrementar_descargas_api_func
+)
+
 # Decorador para requerir autenticación
 def login_required(f):
     """Decorador para proteger rutas que requieren autenticación"""
@@ -99,6 +109,12 @@ def simulador():
     """Página de simulador de ventas de terrenos"""
     return render_template('simulador.html')
 
+
+@main_bp.route('/recursos-digitales')
+@login_required
+def recursos_digitales():
+    """Página de recursos digitales - repositorio de información"""
+    return render_template('recursos_digitales.html')
 
 
 @main_bp.route('/register-user', methods=['GET', 'POST'])
@@ -958,3 +974,49 @@ def api_asignar_multiples_submenus_usuario():
 def api_obtener_menus_usuario(num_documento):
     """API para obtener menús consolidados que un usuario puede ver"""
     return obtener_menus_usuario_api(num_documento)
+
+
+# ============================================================================
+# RUTAS PARA GESTIÓN DE RECURSOS DIGITALES
+# ============================================================================
+
+@main_bp.route('/api/recursos-digitales', methods=['GET'])
+@login_required
+def api_listar_recursos():
+    """API para listar recursos digitales con filtros"""
+    return listar_recursos_api_func()
+
+
+@main_bp.route('/api/recursos-digitales', methods=['POST'])
+@login_required
+def api_crear_recurso():
+    """API para crear un nuevo recurso digital"""
+    return crear_recurso_api_func()
+
+
+@main_bp.route('/api/recursos-digitales/<int:id_recurso>', methods=['GET'])
+@login_required
+def api_obtener_recurso(id_recurso):
+    """API para obtener detalles de un recurso específico"""
+    return obtener_recurso_api_func(id_recurso)
+
+
+@main_bp.route('/api/recursos-digitales/<int:id_recurso>', methods=['PUT'])
+@login_required
+def api_actualizar_recurso(id_recurso):
+    """API para actualizar un recurso digital"""
+    return actualizar_recurso_api_func(id_recurso)
+
+
+@main_bp.route('/api/recursos-digitales/<int:id_recurso>', methods=['DELETE'])
+@login_required
+def api_eliminar_recurso(id_recurso):
+    """API para eliminar (desactivar) un recurso digital"""
+    return eliminar_recurso_api_func(id_recurso)
+
+
+@main_bp.route('/api/recursos-digitales/<int:id_recurso>/descargas', methods=['PUT'])
+@login_required
+def api_incrementar_descargas(id_recurso):
+    """API para incrementar contador de descargas de un recurso"""
+    return incrementar_descargas_api_func(id_recurso)
