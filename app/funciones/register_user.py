@@ -61,9 +61,17 @@ def register_asesor_api():
 
         
 
-        # Si no se proporciono documento de jerarquia, usar NULL (sera nivel 0 - sin padre)
+        # Si no se proporciono documento de jerarquia, usar el usuario logueado como padre
 
-        num_documento_creador = num_documento_jerarquia if num_documento_jerarquia else None
+        if num_documento_jerarquia:
+
+            num_documento_creador = num_documento_jerarquia
+
+        else:
+
+            # Obtener del usuario logueado en session
+
+            num_documento_creador = session.get('user_num_documento', None)
 
         
 
@@ -106,12 +114,8 @@ def register_asesor_api():
         
 
         # NUEVO: Obtener NOMBRES en lugar de IDs
-
-        distrito_nombre = data.get('distrito_nombre', '').strip().upper()
-
-        rol_nombre = data.get('rol_nombre', '').strip().upper()
-
-        cargo_nombre = data.get('cargo_nombre', '').strip().upper()
+        rol_nombre = data.get('rol_nombre', '').strip()
+        cargo_nombre = data.get('cargo_nombre', '').strip()
 
         
 
@@ -201,33 +205,7 @@ def register_asesor_api():
 
             
 
-            # Generar usuario automaticamente
-
-            primera_letra_nombre = nombres[0].lower() if nombres else ''
-
-            apellido_pat_lower = apellido_paterno.lower() if apellido_paterno else ''
-
-            
-
-            if apellido_materno:
-
-                primera_letra_mat = apellido_materno[0].lower()
-
-            else:
-
-                primera_letra_mat = ''
-
-            
-
-            usuario = f"{primera_letra_nombre}{apellido_pat_lower}{primera_letra_mat}"
-
-            
-
-            # Log omitido - usuario puede contener caracteres del apellido
-
-            
-
-            # La contrasena es el num_documento
+            # La contraseña es el num_documento
 
             password_hash = hash_password(num_documento)
 
@@ -237,102 +215,109 @@ def register_asesor_api():
 
             
 
-            # Obtener el ID del distrito seleccionado y convertir a integer
+            # Obtener datos de ubicación geográfica (Departamento, Provincia, Distrito)
+            departamento = ''
+            provincia = ''
+            distrito = ''
+            
+            # Si viene id_distrito (número), buscar los nombres en la BD
+            id_distrito = data.get('id_distrito', '')
+            
+            if id_distrito:
+                try:
+                    id_distrito = int(id_distrito)
+                    # Buscar en la BD los nombres de Departamento, Provincia y Distrito
+                    conexion_temp = get_db_connection()
+                    if conexion_temp:
+                        cursor_temp = conexion_temp.cursor(dictionary=True)
+                        
+                        query_temp = """
+                            SELECT 
+                                dep.nombre AS departamento,
+                                prov.nombre AS provincia,
+                                d.nombre AS distrito
+                            FROM TblDistritos d
+                            INNER JOIN TblProvincias prov ON d.id_provincia = prov.id_provincia
+                            INNER JOIN TblDepartamentos dep ON prov.id_departamento = dep.id_departamento
+                            WHERE d.id_distrito = %s
+                        """
+                        cursor_temp.execute(query_temp, (id_distrito,))
+                        resultado = cursor_temp.fetchone()
+                        cursor_temp.close()
+                        conexion_temp.close()
+                        
+                        if resultado:
+                            departamento = resultado['departamento'].strip().upper()
+                            provincia = resultado['provincia'].strip().upper()
+                            distrito = resultado['distrito'].strip().upper()
+                            print(f"DEBUG: Ubicación desde id_distrito {id_distrito}: {departamento}, {provincia}, {distrito}")
+                        else:
+                            print(f"  ERROR: ID de distrito no encontrado: {id_distrito}")
+                            return {'success': False, 'message': 'ID de distrito no válido'}, 400
+                    else:
+                        print("  ERROR: No se pudo conectar a la BD para buscar distrito")
+                        return {'success': False, 'message': 'Error de conexión a la BD'}, 500
+                except ValueError:
+                    print(f"  ERROR: ID de distrito no es un numero valido: {id_distrito}")
+                    return {'success': False, 'message': 'ID de distrito debe ser un numero valido'}, 400
+            else:
+                # Si no viene id_distrito, intentar obtener los nombres directamente
+                departamento = data.get('departamento', '').strip().upper()
+                provincia = data.get('provincia', '').strip().upper()
+                distrito = data.get('distrito', '').strip().upper()
+            
+            if not all([departamento, provincia, distrito]):
 
-            distrito_id = data.get('id_distrito', '')
+                print("  ERROR: Faltan datos de ubicación")
+
+                return {'success': False, 'message': 'Departamento, Provincia y Distrito son requeridos'}, 400
 
             
-
-            # Validar y convertir distrito_id a entero
-
-            try:
-
-                distrito_id = int(distrito_id) if distrito_id else None
-
-                if distrito_id is None:
-
-                    print("  ERROR: ID de distrito no valido")
-
-                    return {'success': False, 'message': 'ID de distrito requerido'}, 400
-
-            except ValueError:
-
-                print(f"  ERROR: ID de distrito no es un numero valido: {distrito_id}")
-
-                return {'success': False, 'message': 'ID de distrito debe ser un numero valido'}, 400
-
+            # Obtener area_resumen desde los datos
+            area_resumen = data.get('area_resumen', '').strip()
+            if not area_resumen:
+                area_resumen = 'Ventas'  # Valor por defecto
             
+            print(f"DEBUG: area_resumen: {area_resumen}")
 
             # Llamar al Stored Procedure
 
             query = """
-
-                CALL sp_RegistrarAsesorPorNombre(
-
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
-
-                    %s, %s, %s, %s, %s,
-
-                    @p_registrado, @p_mensaje
-
+                CALL sp_RegistrarAsesor(
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s,
+                    @p_usuario, @p_registrado, @p_mensaje
                 );
-
-                SELECT @p_registrado as registrado, @p_mensaje as mensaje
-
+                SELECT @p_usuario as usuario, @p_registrado as registrado, @p_mensaje as mensaje
             """
 
-            
-
             print(f"DEBUG: Llamando al SP con parametros:")
-
-            print(f"  1. num_documento: {num_documento}")
-
-            print(f"  2. tipo_documento: {tipo_documento}")
-
-            print(f"  3-5. nombres y apellidos: [OMITIDO]")
-
-            # Omitidos apellidos del log por codificación ASCII
-
-            # Omitidos apellidos del log por codificación ASCII
-
-            print(f"  6. fecha_nacimiento: {fecha_nacimiento}")
-
-            print(f"  7. estado_civil: {estado_civil}")
-
-            print(f"  8. email: {email}")
-
-            print(f"  9. celular: {celular}")
-
-            print(f"  10. numero_emergencia: {numero_emergencia}")
-
-            print(f"  11. direccion: [OMITIDO]")
-
-            print(f"  12. id_distrito: {distrito_id}")
-
-            print(f"  13. genero: {genero}")
-
-            print(f"  14. usuario: [OMITIDO]")
-
-            print(f"  15. password_hash: [HASH]")
-
-            print(f"  16. rol_nombre: [OMITIDO]")
-
-            print(f"  17. cargo_nombre: [OMITIDO]")
-
-            print(f"  18. num_documento_creador: {num_documento_creador}")
-
-            
+            print(f"1. num_documento: {num_documento}")
+            print(f"2. tipo_documento: {tipo_documento}")
+            print(f"3. nombres: {nombres}")
+            print(f"4. apellido_paterno: {apellido_paterno}")
+            print(f"5. apellido_materno: {apellido_materno}")
+            print(f"6. fecha_nacimiento: {fecha_nacimiento}")
+            print(f"7. estado_civil: {estado_civil}")
+            print(f"8. email: {email}")
+            print(f"9. celular: {celular}")
+            print(f"10. numero_emergencia: {numero_emergencia}")
+            print(f"11. direccion: {direccion}")
+            print(f"12. departamento: {departamento}")
+            print(f"13. provincia: {provincia}")
+            print(f"14. distrito: {distrito}")
+            print(f"15. genero: {genero}")
+            print(f"16. password_hash: [HASH]")
+            print(f"17. rol_nombre: {rol_nombre}")
+            print(f"18. cargo_nombre: {cargo_nombre}")
+            print(f"19. area_resumen: {area_resumen}")
+            print(f"20. num_documento_creador: {num_documento_creador}")
 
             cursor.execute(query, (
-
                 num_documento, tipo_documento, nombres, apellido_paterno, apellido_materno,
-
                 fecha_nacimiento, estado_civil,
-
-                email, celular, numero_emergencia, direccion, distrito_id, genero,
-
-                usuario, password_hash, rol_nombre, cargo_nombre, num_documento_creador
-
+                email, celular, numero_emergencia, direccion, departamento, provincia, distrito, genero,
+                password_hash, rol_nombre, cargo_nombre, area_resumen, num_documento_creador
             ))
 
             
@@ -397,10 +382,13 @@ def register_asesor_api():
             registrado = result.get('registrado')
 
             mensaje = result.get('mensaje')
+            usuario_generado = result.get('usuario')
 
             
 
             print(f"DEBUG: Procesando respuesta:")
+
+            print(f"  usuario generado: {usuario_generado}")
 
             print(f"  registrado: {registrado} (tipo: {type(registrado)})")
 
@@ -418,7 +406,7 @@ def register_asesor_api():
 
                     'message': 'Asesor registrado exitosamente!',
 
-                    'usuario': usuario,
+                    'usuario': usuario_generado,
 
                     'contrasena': num_documento
 
@@ -712,11 +700,9 @@ def update_asesor_api():
 
         
 
-        distrito_nombre = data.get('distrito_nombre', '').strip().upper()
+        rol_nombre = data.get('rol_nombre', '').strip()
 
-        rol_nombre = data.get('rol_nombre', '').strip().upper()
-
-        cargo_nombre = data.get('cargo_nombre', '').strip().upper()
+        cargo_nombre = data.get('cargo_nombre', '').strip()
 
         
 
@@ -1161,7 +1147,7 @@ def delete_asesor_api(num_documento):
 
 def get_usuarios_asesores():
 
-    """Obtener listado de usuarios asesores - SOLO USA SP (sin respaldo)"""
+    """Obtener listado de usuarios asesores usando SP"""
 
     try:
 
@@ -1185,8 +1171,6 @@ def get_usuarios_asesores():
 
         current_app.logger.info("Ejecutando SP: sp_ListarAsesores()")
 
-        print("DEBUG: Ejecutando SP sp_ListarAsesores...")
-
         
 
         cursor.execute("CALL sp_ListarAsesores()")
@@ -1203,13 +1187,11 @@ def get_usuarios_asesores():
 
         current_app.logger.info(f"  Se obtuvieron {len(usuarios)} asesores del SP")
 
-        print(f"DEBUG:   Se obtuvieron {len(usuarios)} asesores con SP")
-
         
 
         if usuarios and len(usuarios) > 0:
 
-            current_app.logger.info(f"Primer asesor: {usuarios[0].get('usuario', 'N/A')}")
+            current_app.logger.info(f"Primer asesor: {usuarios[0]}")
 
         
 

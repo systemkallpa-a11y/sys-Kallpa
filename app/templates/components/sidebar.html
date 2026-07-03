@@ -26,106 +26,20 @@
         <div class="mt-4 h-1 w-full bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 rounded-full opacity-50 group-hover:opacity-75 transition-opacity"></div>
     </a>
 
-    <!-- Navigation Menu -->
-    <nav class="flex-1 overflow-y-auto px-4 py-6">
+    <!-- Navigation Menu - Cargará dinámicamente -->
+    <nav class="flex-1 overflow-y-auto px-4 py-6" id="navbar-menu">
         
         <!-- MENU Section -->
         <div class="mb-6">
             <h3 class="px-4 mb-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                 MENÚ
             </h3>
-            <div class="space-y-1">
-                <!-- Ventas con Submenú -->
-                <div class="menu-item-group">
-                    <button class="toggle-submenu flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all duration-200 group {% if request.endpoint == 'main.clients' %}bg-[#4D148C] text-white shadow-lg shadow-[#4D148C]/30{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800{% endif %}">
-                        <i class="fas fa-chart-line w-5 text-center {% if request.endpoint == 'main.clients' %}text-white{% else %}text-gray-400 group-hover:text-[#4D148C]{% endif %} transition-colors"></i>
-                        <span class="ml-3">Ventas</span>
-                        <i class="fas fa-chevron-down ml-auto transition-transform duration-300 {% if request.endpoint == 'main.clients' %}rotate-180{% endif %} text-gray-400"></i>
-                    </button>
-                    <!-- Submenú de Ventas -->
-                    <div class="submenu {% if request.endpoint == 'main.clients' %}{% else %}hidden{% endif %} pl-4 space-y-1 mt-1">
-                        <a href="{{ url_for('main.clients') }}" class="flex items-center w-full px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'main.clients' %}bg-[#4D148C]/20 text-[#4D148C] dark:bg-[#4D148C]/30 dark:text-[#4D148C]{% else %}text-gray-600 dark:text-gray-400 hover:bg-[#4D148C]/10 dark:hover:bg-[#4D148C]/30 hover:text-[#4D148C] dark:hover:text-[#4D148C]{% endif %}">
-                            <i class="fas fa-users w-4 text-center {% if request.endpoint == 'main.clients' %}text-[#4D148C]{% else %}text-gray-400 group-hover:text-[#4D148C]{% endif %} transition-colors"></i>
-                            <span class="ml-3">Clientes</span>
-                            <span class="ml-auto px-2 py-0.5 text-xs font-semibold rounded-full {% if request.endpoint == 'main.clients' %}bg-[#4D148C]/30 text-[#4D148C]{% else %}bg-gray-200 dark:bg-slate-800 text-gray-600 dark:text-gray-400{% endif %}">156</span>
-                            {% if request.endpoint == 'main.clients' %}
-                            <i class="fas fa-check ml-1 text-xs"></i>
-                            {% endif %}
-                        </a>
-                        <a href="{{ url_for('main.simulador') }}" class="flex items-center w-full px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'main.simulador' %}bg-[#4D148C]/20 text-[#4D148C] dark:bg-[#4D148C]/30 dark:text-[#4D148C]{% else %}text-gray-600 dark:text-gray-400 hover:bg-[#4D148C]/10 dark:hover:bg-[#4D148C]/30 hover:text-[#4D148C] dark:hover:text-[#4D148C]{% endif %}">
-                            <i class="fas fa-calculator w-4 text-center {% if request.endpoint == 'main.simulador' %}text-[#4D148C]{% else %}text-gray-400 group-hover:text-[#4D148C]{% endif %} transition-colors"></i>
-                            <span class="ml-3">Simulador</span>
-                            {% if request.endpoint == 'main.simulador' %}
-                            <i class="fas fa-check ml-1 text-xs"></i>
-                            {% endif %}
-                        </a>
-                    </div>
-                </div>
-                
-                <a href="/analytics" class="flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all duration-200 group {% if request.endpoint == 'analytics.analytics_page' %}bg-[#4D148C] text-white shadow-lg shadow-[#4D148C]/30{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800{% endif %}">
-                    <i class="fas fa-chart-bar w-5 text-center {% if request.endpoint == 'analytics.analytics_page' %}text-white{% else %}text-gray-400 group-hover:text-[#4D148C]{% endif %} transition-colors"></i>
-                    <span class="ml-3">Reportes</span>
-                    {% if request.endpoint == 'analytics.analytics_page' %}
-                    <i class="fas fa-check ml-auto"></i>
-                    {% endif %}
-                </a>
-                
-                <a href="/calendar" class="flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all duration-200 group {% if request.endpoint == 'calendar.calendar_page' %}bg-[#4D148C] text-white shadow-lg shadow-[#4D148C]/30{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800{% endif %}">
-                    <i class="fas fa-calendar w-5 text-center {% if request.endpoint == 'calendar.calendar_page' %}text-white{% else %}text-gray-400 group-hover:text-[#4D148C]{% endif %} transition-colors"></i>
-                    <span class="ml-3">Calendario</span>
-                    {% if request.endpoint == 'calendar.calendar_page' %}
-                    <i class="fas fa-check ml-auto"></i>
-                    {% endif %}
-                </a>
+            <!-- Los menús se cargarán aquí dinámicamente -->
+            <div id="menu-container" class="space-y-1">
+                <!-- Cargando... -->
+                <div class="px-4 py-2 text-sm text-gray-500">Cargando menús...</div>
             </div>
         </div>
-
-        <!-- GENERAL Section -->
-        <div class="mb-6">
-            <h3 class="px-4 mb-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                GENERAL
-            </h3>
-            <div class="space-y-1">
-                <!-- Configuración con Submenú -->
-                <div class="menu-item-group">
-                    <button class="toggle-submenu flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all duration-200 group text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
-                        <i class="fas fa-cog w-5 text-center text-gray-400 group-hover:text-[#4D148C] transition-colors"></i>
-                        <span class="ml-3">Configuración</span>
-                        <i class="fas fa-chevron-down ml-auto transition-transform duration-300 text-gray-400"></i>
-                    </button>
-                    <!-- Submenú -->
-                    <div class="submenu hidden pl-4 space-y-1 mt-1">
-                        <a href="/register-user" class="flex items-center w-full px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group text-gray-600 dark:text-gray-400 hover:bg-[#4D148C]/10 dark:hover:bg-[#4D148C]/30 hover:text-[#4D148C] dark:hover:text-[#4D148C]">
-                            <i class="fas fa-user-plus w-4 text-center text-gray-400 group-hover:text-[#4D148C] transition-colors"></i>
-                            <span class="ml-3">Registrar Usuario</span>
-                        </a>
-                        <a href="/settings" class="flex items-center w-full px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group text-gray-600 dark:text-gray-400 hover:bg-[#4D148C]/10 dark:hover:bg-[#4D148C]/30 hover:text-[#4D148C] dark:hover:text-[#4D148C]">
-                            <i class="fas fa-sliders-h w-4 text-center text-gray-400 group-hover:text-[#4D148C] transition-colors"></i>
-                            <span class="ml-3">Parámetros</span>
-                        </a>
-                        <a href="/permisos-roles" class="flex items-center w-full px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group text-gray-600 dark:text-gray-400 hover:bg-[#4D148C]/10 dark:hover:bg-[#4D148C]/30 hover:text-[#4D148C] dark:hover:text-[#4D148C]">
-                            <i class="fas fa-shield-alt w-4 text-center text-gray-400 group-hover:text-[#4D148C] transition-colors"></i>
-                            <span class="ml-3">Permisos y Roles</span>
-                        </a>
-                        <a href="/security" class="flex items-center w-full px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group text-gray-600 dark:text-gray-400 hover:bg-[#4D148C]/10 dark:hover:bg-[#4D148C]/30 hover:text-[#4D148C] dark:hover:text-[#4D148C]">
-                            <i class="fas fa-lock w-4 text-center text-gray-400 group-hover:text-[#4D148C] transition-colors"></i>
-                            <span class="ml-3">Seguridad</span>
-                        </a>
-                    </div>
-                </div>
-                
-                <a href="/help" class="flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all duration-200 group {% if request.endpoint == 'help.help_page' %}bg-[#4D148C] text-white shadow-lg shadow-[#4D148C]/30{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800{% endif %}">
-                    <i class="fas fa-question-circle w-5 text-center {% if request.endpoint == 'help.help_page' %}text-white{% else %}text-gray-400 group-hover:text-[#4D148C]{% endif %} transition-colors"></i>
-                    <span class="ml-3">Ayuda</span>
-                    {% if request.endpoint == 'help.help_page' %}
-                    <i class="fas fa-check ml-auto"></i>
-                    {% endif %}
-                </a>
-            </div>
-        </div>
-
-        <!-- Status Badge -->
-        <!-- Removido: No necesario -->
     </nav>
 
     <!-- Footer with Logout -->
@@ -146,4 +60,186 @@
 
 <!-- Mobile Sidebar Overlay -->
 <div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/50 z-40 md:hidden"></div>
+
+<!-- Script para cargar menús dinámicamente -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Obtener el documento del usuario desde la sesión
+    const userDocumento = "{{ session.get('user_documento', '') }}";
+    
+    if (!userDocumento) {
+        console.error('Usuario no identificado en la sesión');
+        return;
+    }
+    
+    console.log('Cargando menús para usuario:', userDocumento);
+    
+    // Cargar menús desde la API
+    fetch(`/api/menus/usuario/${userDocumento}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Menús recibidos:', data);
+            
+            if (data.success && data.data) {
+                renderMenus(data.data);
+            } else {
+                console.error('Error en la respuesta de API:', data);
+                document.getElementById('menu-container').innerHTML = 
+                    '<div class="px-4 py-2 text-sm text-red-500">Error al cargar menús</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error cargando menús:', error);
+            document.getElementById('menu-container').innerHTML = 
+                '<div class="px-4 py-2 text-sm text-red-500">Error de conexión</div>';
+        });
+});
+
+// Función para renderizar dinámicamente los menús
+function renderMenus(menus) {
+    const container = document.getElementById('menu-container');
+    container.innerHTML = ''; // Limpiar contenedor
+    
+    if (!menus || menus.length === 0) {
+        container.innerHTML = '<div class="px-4 py-2 text-sm text-gray-500">Sin menús disponibles</div>';
+        return;
+    }
+    
+    menus.forEach((menu, menuIndex) => {
+        console.log(`[DEBUG] Procesando menú: ${menu.nombre_menu}`);
+        console.log(`  Submenús: ${menu.submenus ? menu.submenus.length : 0}`);
+        
+        if (menu.submenus) {
+            menu.submenus.forEach(sm => {
+                console.log(`    - ${sm.nombre_submenu}: permitido=${sm.permitido} (tipo: ${typeof sm.permitido})`);
+            });
+        }
+        
+        // Filtrar submenús que tienen permiso = 1
+        const submenusPermitidos = menu.submenus ? menu.submenus.filter(sm => parseInt(sm.permitido) === 1) : [];
+        
+        console.log(`  Submenús permitidos después del filtro: ${submenusPermitidos.length}`);
+        
+        // Solo mostrar menú si tiene submenús con permiso
+        if (submenusPermitidos.length === 0) {
+            console.log(`  ✗ IGNORANDO: No hay submenús con permiso`);
+            return; // No mostrar este menú si no hay submenús con permiso
+        }
+        
+        console.log(`  ✓ MOSTRANDO: Menú ${menu.nombre_menu} con ${submenusPermitidos.length} submenús permitidos`);
+        
+        // Crear el grupo del menú
+        const menuGroup = document.createElement('div');
+        menuGroup.className = 'menu-item-group';
+        
+        // Verificar si hay submenús
+        if (menu.submenus && menu.submenus.length > 0) {
+            
+            // Crear botón toggle para el menú
+            const button = document.createElement('button');
+            button.className = `toggle-submenu flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all duration-200 group text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800`;
+            button.innerHTML = `
+                <i class="fas fa-${getIconForMenu(menu.nombre_menu)} w-5 text-center text-gray-400 group-hover:text-[#4D148C] transition-colors"></i>
+                <span class="ml-3">${menu.nombre_menu}</span>
+                <i class="fas fa-chevron-down ml-auto transition-transform duration-300 text-gray-400"></i>
+            `;
+            
+            // Crear contenedor de submenús
+            const submenuContainer = document.createElement('div');
+            submenuContainer.className = 'submenu hidden pl-4 space-y-1 mt-1';
+            
+            // Agregar submenús con permiso
+            menu.submenus.forEach(submenu => {
+                if (submenu.permitido === 1) {
+                    const submenuLink = document.createElement('a');
+                    // Generar ruta desde el nombre si no existe
+                    const ruta = submenu.ruta || `/${submenu.nombre_submenu.toLowerCase().replace(/\s+/g, '-')}`;
+                    submenuLink.href = ruta;
+                    submenuLink.className = `flex items-center w-full px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group text-gray-600 dark:text-gray-400 hover:bg-[#4D148C]/10 dark:hover:bg-[#4D148C]/30 hover:text-[#4D148C] dark:hover:text-[#4D148C]`;
+                    submenuLink.innerHTML = `
+                        <i class="fas fa-${submenu.icono || 'circle'} w-4 text-center text-gray-400 group-hover:text-[#4D148C] transition-colors"></i>
+                        <span class="ml-3">${submenu.nombre_submenu}</span>
+                    `;
+                    submenuContainer.appendChild(submenuLink);
+                }
+            });
+            
+            menuGroup.appendChild(button);
+            menuGroup.appendChild(submenuContainer);
+        } else {
+            // Si no hay submenús, crear link directo
+            const link = document.createElement('a');
+            link.href = menu.ruta || '#';
+            link.className = `flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all duration-200 group text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800`;
+            link.innerHTML = `
+                <i class="fas fa-${getIconForMenu(menu.nombre_menu)} w-5 text-center text-gray-400 group-hover:text-[#4D148C] transition-colors"></i>
+                <span class="ml-3">${menu.nombre_menu}</span>
+            `;
+            menuGroup.appendChild(link);
+        }
+        
+        container.appendChild(menuGroup);
+    });
+    
+    // Re-inicializar los event listeners para los toggles
+    initializeSubmenuToggle();
+}
+
+// Función auxiliar para obtener iconos según el nombre del menú
+function getIconForMenu(nombreMenu) {
+    const menuIcons = {
+        'ventas': 'chart-line',
+        'tareas': 'tasks',
+        'proyectos': 'building',
+        'equipo': 'users',
+        'configuración': 'cog',
+        'permisos': 'lock',
+        'ayuda': 'question-circle',
+        'reportes': 'chart-bar',
+        'calendario': 'calendar',
+        'clientes': 'users',
+        'simulador': 'calculator'
+    };
+    
+    const key = nombreMenu.toLowerCase();
+    return menuIcons[key] || 'bars';
+}
+
+// Función para inicializar los toggles de submenú
+function initializeSubmenuToggle() {
+    const toggleButtons = document.querySelectorAll('.toggle-submenu');
+    
+    toggleButtons.forEach(button => {
+        // Remover listeners anteriores
+        button.removeEventListener('click', handleToggleClick);
+        // Agregar nuevo listener
+        button.addEventListener('click', handleToggleClick);
+    });
+}
+
+function handleToggleClick(e) {
+    e.preventDefault();
+    
+    const menuItemGroup = this.closest('.menu-item-group');
+    const submenu = menuItemGroup.querySelector('.submenu');
+    const chevronIcon = this.querySelector('.fa-chevron-down');
+    
+    if (submenu) {
+        // Toggle submenu visibility
+        submenu.classList.toggle('hidden');
+        
+        // Rotate chevron icon
+        if (chevronIcon) {
+            chevronIcon.style.transform = submenu.classList.contains('hidden') 
+                ? 'rotate(0deg)' 
+                : 'rotate(180deg)';
+        }
+    }
+}
+</script>
 
