@@ -1,0 +1,194 @@
+<!-- ========================================================================
+COMPONENTE: Timeline Visual de Flujo de Aprobación
+Descripción: Muestra el progreso del flujo con círculos verdes/grises
+Uso: Para mostrar en la columna "Aprobado/Rechazado por" de la tabla
+======================================================================== -->
+
+<!-- CSS para el componente -->
+<style>
+.flujo-timeline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+}
+
+.flujo-step {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.flujo-circle {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.flujo-circle.aprobado {
+    background-color: #22c55e;
+    color: white;
+}
+
+.flujo-circle.rechazado {
+    background-color: #ef4444;
+    color: white;
+}
+
+.flujo-circle.pendiente {
+    background-color: #e5e7eb;
+    color: #6b7280;
+    border: 2px solid #d1d5db;
+}
+
+.flujo-connector {
+    width: 16px;
+    height: 2px;
+    background-color: #e5e7eb;
+}
+
+.flujo-connector.completed {
+    background-color: #22c55e;
+}
+
+.flujo-tooltip {
+    position: relative;
+}
+
+.flujo-tooltip:hover .tooltip-content {
+    display: block;
+}
+
+.tooltip-content {
+    display: none;
+    position: absolute;
+    top: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1f2937;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+    z-index: 10;
+}
+</style>
+
+<!-- Función JavaScript para generar el componente -->
+<script>
+/**
+ * Genera el componente visual del flujo de aprobación
+ * @param {Array} pasos - Array con los pasos del flujo
+ * @param {string} estadoRequerimiento - Estado actual del requerimiento
+ * @returns {string} HTML del componente visual
+ */
+function generarFlujoVisual(pasos, estadoRequerimiento) {
+    if (!pasos || pasos.length === 0) {
+        return '<span class="text-gray-500 text-xs">Sin flujo</span>';
+    }
+    
+    let html = '<div class="flujo-timeline">';
+    
+    pasos.forEach((paso, index) => {
+        // Determinar estado del círculo
+        let circleClass = 'pendiente';
+        let icon = '';
+        
+        if (paso.estado === 'APROBADO') {
+            circleClass = 'aprobado';
+            icon = '✓';
+        } else if (paso.estado === 'RECHAZADO') {
+            circleClass = 'rechazado';
+            icon = '✗';
+        } else {
+            icon = index + 1; // Número del paso
+        }
+        
+        // Agregar paso
+        html += `
+            <div class="flujo-step">
+                <div class="flujo-circle ${circleClass} flujo-tooltip" title="${paso.nombre_paso} - ${paso.estado}">
+                    ${icon}
+                    <div class="tooltip-content">
+                        ${paso.nombre_paso}<br>
+                        ${paso.estado}
+                        ${paso.fecha_aprobacion ? '<br>' + new Date(paso.fecha_aprobacion).toLocaleDateString('es-PE') : ''}
+                    </div>
+                </div>
+        `;
+        
+        // Agregar conector (excepto en el último paso)
+        if (index < pasos.length - 1) {
+            const connectorClass = paso.estado === 'APROBADO' ? 'completed' : '';
+            html += `<div class="flujo-connector ${connectorClass}"></div>`;
+        }
+        
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    
+    // Agregar información del último aprobador
+    const ultimoAprobador = pasos.reverse().find(p => p.estado === 'APROBADO' || p.estado === 'RECHAZADO');
+    if (ultimoAprobador && ultimoAprobador.nombre_aprobador) {
+        html += `<div class="text-xs text-gray-600 mt-1">${ultimoAprobador.nombre_aprobador}</div>`;
+    }
+    
+    return html;
+}
+
+/**
+ * Obtiene los pasos del flujo para un requerimiento específico
+ * @param {number} idRequerimiento - ID del requerimiento
+ * @returns {Promise<Array>} Array con los pasos del flujo
+ */
+async function obtenerPasosFlujo(idRequerimiento) {
+    try {
+        const response = await fetch(`/api/requerimientos/flujo/${idRequerimiento}`);
+        const data = await response.json();
+        return data.success ? data.data : [];
+    } catch (error) {
+        console.error('Error obteniendo pasos del flujo:', error);
+        return [];
+    }
+}
+</script>
+
+<!-- Ejemplo de uso en la tabla -->
+<!--
+<script>
+// En la función que renderiza las filas de requerimientos:
+async function renderizarRequerimientos(requerimientos) {
+    const tbody = document.getElementById('requerimientos-lista');
+    
+    const filasHTML = await Promise.all(requerimientos.map(async (req) => {
+        const pasosFlujo = await obtenerPasosFlujo(req.id_requerimiento);
+        const flujoVisual = generarFlujoVisual(pasosFlujo, req.estado);
+        
+        return `
+            <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${req.id_requerimiento}</td>
+                <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">${req.codigo}</td>
+                <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${req.descripcion}</td>
+                <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${req.cantidad}</td>
+                <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${req.solicitante}</td>
+                <td class="px-6 py-4 text-sm"><span class="px-2 py-1 rounded-full text-xs font-semibold ${getEstadoBadge(req.estado)}">${req.estado}</span></td>
+                <td class="px-6 py-4">${flujoVisual}</td>
+                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">${new Date(req.fecha_creacion).toLocaleDateString('es-PE')}</td>
+                <td class="px-6 py-4 text-sm flex gap-2">
+                    <!-- botones de acciones -->
+                </td>
+            </tr>
+        `;
+    }));
+    
+    tbody.innerHTML = filasHTML.join('');
+}
+</script>
+-->

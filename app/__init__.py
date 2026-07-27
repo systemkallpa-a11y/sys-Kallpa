@@ -21,11 +21,14 @@ def create_app():
     
     # Configurar cookies para evitar problemas de compresión
     app.config['SESSION_COOKIE_HTTPONLY'] = True
-    app.config['SESSION_COOKIE_SECURE'] = True
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
+    # En desarrollo local sin HTTPS, permitir cookies HTTP
+    app.config['SESSION_COOKIE_SECURE'] = False  # HTTP local
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_COOKIE_AGE'] = 3600  # 1 hora
     app.config['COMPRESS_RESPONSE'] = False
-    app.config['ENV'] = 'production'
-    app.config['FLASK_ENV'] = 'production'
+    # No usar modo production para desarrollo local
+    # app.config['ENV'] = 'production'
+    # app.config['FLASK_ENV'] = 'production'
     app.config['PRESERVE_CONTEXT_ON_EXCEPTION'] = False
     app.config['JSON_SORT_KEYS'] = False
     
@@ -48,15 +51,15 @@ def create_app():
         app.logger.setLevel(logging.INFO)
         app.logger.info('KallMax Application startup')
     
-    # Register blueprints
-    from app.routes import main_bp, tasks_bp, team_bp, settings_bp, help_bp, auth_bp
+    # Register blueprints - Solo lo necesario para Kallpa
+    from app.routes import main_bp, auth_bp
+    from app.routes.presupuesto_pdf import pdf_bp
+    from app.routes.empresa_logo import logo_bp
     
     app.register_blueprint(main_bp)
-    app.register_blueprint(tasks_bp)
-    app.register_blueprint(team_bp)
-    app.register_blueprint(settings_bp)
-    app.register_blueprint(help_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(pdf_bp)
+    app.register_blueprint(logo_bp)
     
     # Asegurar que todas las respuestas HTML tengan charset UTF-8
     @app.after_request

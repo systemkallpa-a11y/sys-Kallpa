@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
+    <!-- Topbar -->
+    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
+        <div class="px-6 py-4 flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Usuarios y Accesos</h1>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Administra los accesos de usuarios a menús y submenús</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="p-6">
+        <!-- Tabla de Usuarios y Accesos -->
+        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Usuario</th>
+                        <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Nombre Completo</th>
+                        <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Cargo</th>
+                        <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Empresa</th>
+                        <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Menús</th>
+                        <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Submenús</th>
+                        <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Estado</th>
+                        <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="usuarios-accesos-lista" class="divide-y divide-gray-200 dark:divide-slate-700">
+                    <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                        <td colspan="8" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-spinner fa-spin mr-2"></i>Cargando usuarios...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<!-- Modal: Editar Accesos del Usuario -->
+<div id="modal-editar-accesos" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <!-- Header -->
+        <div class="sticky top-0 bg-gradient-to-r from-slate-600 to-slate-700 text-white px-8 py-6 flex items-center justify-between border-b-2 border-slate-700">
+            <div>
+                <h2 id="modal-titulo-editar" class="text-2xl font-bold">Editar Accesos</h2>
+                <p id="modal-subtitulo-editar" class="text-slate-200 text-sm mt-1"></p>
+            </div>
+            <button onclick="cerrarModalEditarAccesos()" class="text-white hover:text-gray-200 transition-colors p-2 hover:bg-slate-700 rounded-lg">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+
+        <!-- Contenido -->
+        <form id="form-editar-accesos" class="p-8 space-y-6">
+            <input type="hidden" id="num_documento_editar" value="">
+
+            <!-- Sección: Menús y Submenús -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-folder-open text-slate-600 dark:text-slate-400"></i>
+                    Selecciona Accesos
+                </h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Marca las casillas para conceder acceso a menús y submenús
+                </p>
+
+                <!-- Contenedor de Menús -->
+                <div id="container-menus" class="space-y-4">
+                    <!-- Se llena dinámicamente con JavaScript -->
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="flex gap-3 justify-end pt-4 border-t border-gray-200 dark:border-slate-700">
+                <button type="button" onclick="cerrarModalEditarAccesos()" class="px-6 py-2.5 border-2 border-gray-300 dark:border-slate-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+                    <i class="fas fa-times mr-2"></i>Cancelar
+                </button>
+                <button type="submit" class="px-6 py-2.5 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg">
+                    <i class="fas fa-save mr-2"></i>Guardar Cambios
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Cargar datos de usuarios y accesos
+    document.addEventListener('DOMContentLoaded', function() {
+        cargarUsuariosAccesos();
+    });
+
+    async function cargarUsuariosAccesos() {
+        try {
+            const response = await fetch('/api/usuarios-accesos/obtener');
+            const result = await response.json();
+            
+            if (result.success) {
+                mostrarUsuariosAccesos(result.data);
+            } else {
+                console.error('Error:', result.error);
+            }
+        } catch (error) {
+            console.error('Error al cargar usuarios:', error);
+        }
+    }
+
+    function mostrarUsuariosAccesos(usuarios) {
+        const tabla = document.getElementById('usuarios-accesos-lista');
+        tabla.innerHTML = '';
+        
+        usuarios.forEach(usuario => {
+            const fila = document.createElement('tr');
+            fila.className = 'hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors';
+            fila.innerHTML = `
+                <td class="px-6 py-4">
+                    <span class="font-semibold text-gray-900 dark:text-gray-100">${usuario.usuario}</span>
+                </td>
+                <td class="px-6 py-4 text-gray-600 dark:text-gray-400">
+                    ${usuario.nombre_completo}
+                </td>
+                <td class="px-6 py-4 text-gray-600 dark:text-gray-400">
+                    ${usuario.cargo_nombre || '-'}
+                </td>
+                <td class="px-6 py-4 text-gray-600 dark:text-gray-400">
+                    ${usuario.empresa_nombre || '-'}
+                </td>
+                <td class="px-6 py-4">
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold bg-slate-100 dark:bg-slate-900/30 text-slate-800 dark:text-slate-300">
+                        <i class="fas fa-folder"></i>
+                        ${usuario.total_menus_acceso}
+                    </span>
+                </td>
+                <td class="px-6 py-4">
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold bg-slate-100 dark:bg-slate-900/30 text-slate-800 dark:text-slate-300">
+                        <i class="fas fa-file"></i>
+                        ${usuario.total_submenus_acceso}
+                    </span>
+                </td>
+                <td class="px-6 py-4">
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold ${usuario.estado === 'ACTIVO' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'}">
+                        <i class="fas ${usuario.estado === 'ACTIVO' ? 'fa-check-circle' : 'fa-times-circle'}"></i>
+                        ${usuario.estado}
+                    </span>
+                </td>
+                <td class="px-6 py-4 space-x-2">
+                    <button onclick="editarAccesosUsuario(${usuario.num_documento})" class="text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300 transition-colors inline-flex items-center gap-1 px-3 py-1 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded">
+                        <i class="fas fa-edit"></i>
+                        <span class="text-sm">Editar</span>
+                    </button>
+                </td>
+            `;
+            tabla.appendChild(fila);
+        });
+    }
+
+    async function editarAccesosUsuario(numDocumento) {
+        console.log('Editar accesos del usuario:', numDocumento);
+        
+        // Cargar datos del usuario
+        const responseUsuarios = await fetch('/api/usuarios-accesos/obtener');
+        const resultUsuarios = await responseUsuarios.json();
+        
+        if (!resultUsuarios.success) return;
+        
+        const usuario = resultUsuarios.data.find(u => u.num_documento === numDocumento);
+        if (!usuario) return;
+        
+        // Cargar menús y submenús
+        const responseMenus = await fetch('/api/menus-submenus/obtener');
+        const resultMenus = await responseMenus.json();
+        
+        if (!resultMenus.success) return;
+        
+        // Cargar accesos actuales del usuario
+        const responseAccesos = await fetch(`/api/usuarios-accesos/${numDocumento}`);
+        const resultAccesos = await responseAccesos.json();
+        
+        const accesoActual = resultAccesos.success ? resultAccesos.data : [];
+        
+        console.log('[EDITAR_ACCESOS] Accesos actuales cargados:');
+        accesoActual.forEach((acceso, idx) => {
+            console.log(`  Acceso #${idx+1}:`, {
+                id_menu: acceso.id_menu,
+                menu_nombre: acceso.menu_nombre,
+                id_submenu: acceso.id_submenu,
+                submenu_nombre: acceso.submenu_nombre,
+                tipo_acceso: acceso.tipo_acceso
+            });
+        });
+        
+        // Llenar modal
+        document.getElementById('num_documento_editar').value = numDocumento;
+        document.getElementById('modal-titulo-editar').textContent = `Editar Accesos de: ${usuario.nombre_completo}`;
+        document.getElementById('modal-subtitulo-editar').textContent = `Usuario: ${usuario.usuario} | Documento: ${numDocumento}`;
+        
+        // Renderizar menús y submenús
+        const containerMenus = document.getElementById('container-menus');
+        containerMenus.innerHTML = '';
+        
+        resultMenus.data.forEach(menu => {
+            const divMenu = document.createElement('div');
+            divMenu.className = 'border-2 border-gray-200 dark:border-slate-700 rounded-lg p-4 bg-gray-50 dark:bg-slate-800';
+            divMenu.innerHTML = `
+                <div class="flex items-start gap-3 mb-3">
+                    <input type="checkbox" 
+                           id="menu_${menu.id_menu}" 
+                           class="checkbox-menu mt-1 cursor-pointer"
+                           data-menu-id="${menu.id_menu}"
+                           data-menu-nombre="${menu.nombre}"
+                           onchange="toggleMenuCheckbox(${menu.id_menu}, this.checked)">
+                    <label for="menu_${menu.id_menu}" class="flex-1 cursor-pointer">
+                        <div class="flex items-center gap-2">
+                            <i class="fas ${menu.icono} text-slate-600 dark:text-slate-400"></i>
+                            <span class="font-bold text-gray-900 dark:text-white">${menu.nombre}</span>
+                        </div>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Marcar/desmarcar todos los submenús</p>
+                    </label>
+                </div>
+                
+                <!-- Submenús -->
+                <div class="ml-6 space-y-2 mt-3 pt-3 border-t border-gray-300 dark:border-slate-600" id="submenus_${menu.id_menu}">
+            `;
+            
+            // Agregar submenús
+            const submenus = resultMenus.submenus.filter(sm => sm.id_menu === menu.id_menu);
+            
+            // Verificar si el menú padre debe estar marcado
+            // (si TODOS sus submenús están marcados)
+            const todosSubmenusMarcados = submenus.length > 0 && submenus.every(sm => 
+                accesoActual.some(a => a.id_menu === menu.id_menu && a.id_submenu === sm.id_submenu)
+            );
+            
+            submenus.forEach(submenu => {
+                const accesoSubmenu = accesoActual.some(a => 
+                    a.id_menu === menu.id_menu && a.id_submenu === submenu.id_submenu
+                );
+                
+                divMenu.innerHTML += `
+                    <div class="flex items-start gap-3">
+                        <input type="checkbox" 
+                               id="submenu_${menu.id_menu}_${submenu.id_submenu}" 
+                               class="checkbox-submenu submenu-menu-${menu.id_menu} mt-1 cursor-pointer"
+                               data-menu-id="${menu.id_menu}"
+                               data-menu-nombre="${menu.nombre}"
+                               data-submenu-id="${submenu.id_submenu}"
+                               data-submenu-nombre="${submenu.nombre}"
+                               ${accesoSubmenu ? 'checked' : ''}
+                               onchange="actualizarMenuCheckbox(${menu.id_menu})">
+                        <label for="submenu_${menu.id_menu}_${submenu.id_submenu}" class="flex-1 cursor-pointer">
+                            <div class="flex items-center gap-2 text-sm">
+                                <i class="fas ${submenu.icono} text-slate-600 dark:text-slate-400"></i>
+                                <span class="text-gray-700 dark:text-gray-300">${submenu.nombre}</span>
+                            </div>
+                        </label>
+                    </div>
+                `;
+            });
+            
+            divMenu.innerHTML += `
+                </div>
+            `;
+            
+            containerMenus.appendChild(divMenu);
+            
+            // Marcar el checkbox del menú si todos sus submenús están marcados
+            if (todosSubmenusMarcados) {
+                setTimeout(() => {
+                    document.getElementById(`menu_${menu.id_menu}`).checked = true;
+                }, 0);
+            }
+        });
+        
+        // Mostrar modal
+        document.getElementById('modal-editar-accesos').classList.remove('hidden');
+    }
+
+    function toggleMenuCheckbox(menuId, isChecked) {
+        // Cuando marcas el menú padre, marca/desmarca TODOS sus submenús
+        const submenus = document.querySelectorAll(`.submenu-menu-${menuId}`);
+        submenus.forEach(checkbox => {
+            checkbox.checked = isChecked;
+        });
+    }
+    
+    function actualizarMenuCheckbox(menuId) {
+        // Cuando cambias un submenú, actualiza el estado del menú padre
+        const submenus = document.querySelectorAll(`.submenu-menu-${menuId}`);
+        const menuCheckbox = document.getElementById(`menu_${menuId}`);
+        
+        // Contar cuántos submenús están marcados
+        const submenusMarcados = Array.from(submenus).filter(cb => cb.checked).length;
+        
+        // Si TODOS están marcados, marcar el padre
+        if (submenusMarcados === submenus.length && submenus.length > 0) {
+            menuCheckbox.checked = true;
+        } else {
+            menuCheckbox.checked = false;
+        }
+    }
+
+    function cerrarModalEditarAccesos() {
+        document.getElementById('modal-editar-accesos').classList.add('hidden');
+        document.getElementById('form-editar-accesos').reset();
+    }
+
+    // Manejar envío del formulario
+    document.getElementById('form-editar-accesos').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const numDocumento = parseInt(document.getElementById('num_documento_editar').value);
+        const accesos = [];
+        
+        console.log('[GUARDAR_ACCESOS] Iniciando recopilación de accesos...');
+        
+        // Recopilar todos los submenús marcados
+        document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+            // Solo procesar submenús (no el menú padre)
+            if (checkbox.classList.contains('checkbox-submenu')) {
+                const menuNombre = checkbox.getAttribute('data-menu-nombre');
+                const submenuNombre = checkbox.getAttribute('data-submenu-nombre');
+                
+                accesos.push({
+                    menu_nombre: menuNombre,
+                    submenu_nombre: submenuNombre
+                });
+                
+                console.log(`[GUARDAR_ACCESOS] Agregando: ${menuNombre} > ${submenuNombre}`);
+            }
+        });
+        
+        console.log('[GUARDAR_ACCESOS] Accesos a guardar (final):', accesos);
+        
+        // Guardar accesos en BD
+        try {
+            const response = await fetch('/api/usuarios-accesos/guardar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    num_documento: numDocumento,
+                    accesos: accesos
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('Accesos guardados exitosamente');
+                cerrarModalEditarAccesos();
+                cargarUsuariosAccesos();  // Recargar tabla
+            } else {
+                alert('Error: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error al guardar accesos:', error);
+            alert('Error al guardar accesos');
+        }
+    });
+</script>
+
+{% endblock %}

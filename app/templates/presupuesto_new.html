@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
+    <!-- Topbar -->
+    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
+        <div class="px-6 py-4 flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Gestión de Presupuestos</h1>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Administra los presupuestos con materiales y servicios</p>
+            </div>
+            <button id="btn-crear-presupuesto" class="flex items-center gap-2 px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg">
+                <i class="fas fa-plus"></i>
+                <span>Crear Presupuesto</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="p-6">
+        <!-- Tabla de Presupuestos -->
+        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table id="tabla-presupuestos" class="w-full">
+                    <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Número</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Proyecto</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Obra</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Monto</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Estado</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="presupuestos-lista" class="divide-y divide-gray-200 dark:divide-slate-700">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                            <td colspan="6" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Cargando presupuestos...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Crear/Editar Presupuesto -->
+<div id="modal-presupuesto" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-slate-600 to-slate-700 text-white px-8 py-6 flex items-center justify-between border-b-2 border-slate-700 flex-shrink-0">
+            <div>
+                <h2 id="modal-titulo" class="text-2xl font-bold">Crear Nuevo Presupuesto</h2>
+                <p class="text-slate-200 text-sm mt-1">Completa los datos y agrega materiales y servicios</p>
+            </div>
+            <button onclick="cerrarModalPresupuesto()" class="text-white hover:text-gray-200 transition-colors p-2 hover:bg-slate-700 rounded-lg">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+
+        <!-- Contenido (Scrollable) -->
+        <div class="flex-1 overflow-y-auto p-8 space-y-6">
+            <form id="form-presupuesto">
+                <input type="hidden" id="presupuesto-id" value="">
+
+                <!-- Información Básica -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <i class="fas fa-info-circle text-slate-600"></i>Información Básica
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Número *</label>
+                            <input type="text" id="numero_presupuesto" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500" placeholder="PRES-001" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estado *</label>
+                            <select id="estado" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500" required>
+                                <option value="PENDIENTE">Pendiente</option>
+                                <option value="APROBADO">Aprobado</option>
+                                <option value="RECHAZADO">Rechazado</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Obra *</label>
+                            <select id="id_obra" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500" required>
+                                <option value="">Seleccionar...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Usuario *</label>
+                            <select id="num_documento" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500" required>
+                                <option value="">Seleccionar...</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MATERIALES -->
+                <div class="border-2 border-blue-300 dark:border-blue-700 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <i class="fas fa-boxes text-blue-600"></i>Materiales
+                    </h3>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="buscador-material" class="flex-1 px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Buscar material...">
+                        <button type="button" onclick="buscarMateriales()" class="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <div id="resultados-materiales" class="max-h-40 overflow-y-auto border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-800 hidden mb-4">
+                        <div id="lista-resultados-materiales"></div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-blue-100 dark:bg-blue-900">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-semibold">Material</th>
+                                    <th class="px-4 py-3 text-left font-semibold">Categoría</th>
+                                    <th class="px-4 py-3 text-center font-semibold">Cantidad</th>
+                                    <th class="px-4 py-3 text-right font-semibold">P. Unit.</th>
+                                    <th class="px-4 py-3 text-right font-semibold">Subtotal</th>
+                                    <th class="px-4 py-3 text-center font-semibold">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-materiales" class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700"></tbody>
+                        </table>
+                        <div id="sin-materiales" class="text-center py-6 text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-inbox mr-2"></i>No hay materiales
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SERVICIOS -->
+                <div class="border-2 border-purple-300 dark:border-purple-700 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <i class="fas fa-wrench text-purple-600"></i>Servicios
+                    </h3>
+                    <div class="grid grid-cols-3 gap-4 mb-4">
+                        <input type="text" id="servicio-descripcion" class="px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white" placeholder="Descripción">
+                        <input type="number" id="servicio-cantidad" class="px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white" placeholder="Cantidad" value="1" step="0.01" min="0.01">
+                        <input type="number" id="servicio-precio" class="px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white" placeholder="Precio" step="0.01" min="0">
+                    </div>
+                    <button type="button" onclick="agregarServicio()" class="mb-4 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium">
+                        <i class="fas fa-plus mr-2"></i>Agregar Servicio
+                    </button>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-purple-100 dark:bg-purple-900">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-semibold">Descripción</th>
+                                    <th class="px-4 py-3 text-center font-semibold">Cantidad</th>
+                                    <th class="px-4 py-3 text-right font-semibold">P. Unit.</th>
+                                    <th class="px-4 py-3 text-right font-semibold">Subtotal</th>
+                                    <th class="px-4 py-3 text-center font-semibold">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-servicios" class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700"></tbody>
+                        </table>
+                        <div id="sin-servicios" class="text-center py-6 text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-inbox mr-2"></i>No hay servicios
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Observaciones -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <i class="fas fa-sticky-note text-slate-600"></i>Observaciones
+                    </h3>
+                    <textarea id="observaciones" rows="3" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white resize-none" placeholder="Notas adicionales..."></textarea>
+                </div>
+
+                <!-- Totales -->
+                <div class="bg-slate-100 dark:bg-slate-800 p-6 rounded-lg grid grid-cols-3 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Total Materiales</p>
+                        <p class="text-2xl font-bold text-slate-900 dark:text-slate-100" id="total-materiales">S/. 0.00</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Total Servicios</p>
+                        <p class="text-2xl font-bold text-slate-900 dark:text-slate-100" id="total-servicios">S/. 0.00</p>
+                    </div>
+                    <div class="border-l-4 border-slate-600 pl-4">
+                        <p class="text-sm text-gray-600 dark:text-gray-400">TOTAL</p>
+                        <p class="text-2xl font-bold text-slate-600 dark:text-slate-400" id="total-presupuesto">S/. 0.00</p>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex gap-4 justify-end p-6 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 flex-shrink-0">
+            <button type="button" onclick="cerrarModalPresupuesto()" class="px-6 py-3 bg-gray-300 hover:bg-gray-400 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-900 dark:text-white rounded-lg font-medium">
+                Cancelar
+            </button>
+            <button type="submit" form="form-presupuesto" class="px-6 py-3 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium">
+                <i class="fas fa-save mr-2"></i>Guardar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="/static/js/presupuesto.js"></script>
+<script>
+// Inicializar
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('btn-crear-presupuesto').addEventListener('click', function() {
+        limpiarForm();
+        cargarObras();
+        cargarUsuarios();
+        document.getElementById('modal-titulo').textContent = 'Crear Nuevo Presupuesto';
+        document.getElementById('modal-presupuesto').classList.remove('hidden');
+    });
+    
+    document.getElementById('form-presupuesto').addEventListener('submit', function(e) {
+        e.preventDefault();
+        guardarPresupuesto();
+    });
+});
+
+async function cargarObras() {
+    const response = await fetch('/api/presupuestos/combo/obras');
+    const data = await response.json();
+    if (data.success) {
+        const select = document.getElementById('id_obra');
+        select.innerHTML = '<option value="">Seleccionar...</option>';
+        data.data.forEach(o => {
+            select.innerHTML += `<option value="${o.id_obra}">${o.nombre}</option>`;
+        });
+    }
+}
+
+async function cargarUsuarios() {
+    const response = await fetch('/api/presupuestos/combo/usuarios');
+    const data = await response.json();
+    if (data.success) {
+        const select = document.getElementById('num_documento');
+        select.innerHTML = '<option value="">Seleccionar...</option>';
+        data.data.forEach(u => {
+            select.innerHTML += `<option value="${u.num_documento}">${u.nombres}</option>`;
+        });
+    }
+}
+
+async function guardarPresupuesto() {
+    const datos = {
+        numero_presupuesto: document.getElementById('numero_presupuesto').value,
+        id_obra: parseInt(document.getElementById('id_obra').value),
+        num_documento: parseInt(document.getElementById('num_documento').value),
+        estado: document.getElementById('estado').value,
+        observaciones: document.getElementById('observaciones').value,
+        materiales: materiales_agregados,
+        servicios: servicios_agregados
+    };
+    
+    try {
+        const response = await fetch('/api/presupuestos/crear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datos)
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            mostrarExito('Presupuesto creado correctamente');
+            cerrarModalPresupuesto();
+            location.reload();
+        } else {
+            mostrarError(result.error || 'Error al guardar');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarError('Error de conexión');
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,1689 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
+    <!-- Topbar -->
+    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
+        <div class="px-6 py-4 flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Flujo de Aprobación</h1>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Gestiona tipos de documentos y flujos de aprobación</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="p-6 space-y-6">
+        
+        <!-- SECCIÓN 1: TIPOS DE DOCUMENTOS -->
+        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
+            <div class="bg-gradient-to-r from-slate-700 to-slate-800 text-white px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="bg-slate-600 p-2 rounded-lg">
+                        <i class="fas fa-file-invoice text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold">Tipos de Documentos</h2>
+                        <p class="text-slate-300 text-xs mt-0.5">Documentos que requieren aprobación</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="bg-slate-600 px-3 py-1 rounded-full text-sm font-medium" id="count-tipos">0</span>
+                    <button onclick="abrirModalTipoDocumento()" class="flex items-center gap-2 px-4 py-2 bg-slate-500 hover:bg-slate-400 text-white rounded-lg font-medium text-sm transition-colors">
+                        <i class="fas fa-plus"></i>
+                        <span>Nuevo</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table id="tabla-tipos" class="w-full">
+                    <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Nombre</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Descripción</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Icono</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Color</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Requiere Aprobación</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tipos-lista" class="divide-y divide-gray-200 dark:divide-slate-700">
+                        <tr>
+                            <td colspan="5" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Cargando...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- SECCIÓN 2: FLUJOS DE APROBACIÓN -->
+        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-700 to-blue-800 text-white px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="bg-blue-600 p-2 rounded-lg">
+                        <i class="fas fa-diagram-project text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold">Flujos de Aprobación</h2>
+                        <p class="text-blue-300 text-xs mt-0.5">Resumen de flujos por tipo de documento</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="bg-blue-600 px-3 py-1 rounded-full text-sm font-medium" id="count-flujos">0</span>
+                    <button onclick="abrirModalFlujo()" class="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg font-medium text-sm transition-colors">
+                        <i class="fas fa-plus"></i>
+                        <span>Nuevo</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table id="tabla-flujos" class="w-full">
+                    <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Tipo de Documento</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Total Pasos</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Pasos</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="flujos-lista" class="divide-y divide-gray-200 dark:divide-slate-700">
+                        <tr>
+                            <td colspan="4" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Cargando...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- MODAL: Crear Tipo de Documento -->
+<div id="modal-tipo-documento" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-slate-700 to-slate-800 text-white px-6 py-5 flex items-center justify-between border-b border-slate-700">
+            <div class="flex items-center gap-3">
+                <div class="bg-slate-600 p-2 rounded-lg">
+                    <i class="fas fa-file-invoice text-lg"></i>
+                </div>
+                <div>
+                    <h2 id="modal-tipo-titulo" class="text-lg font-semibold">Crear Tipo de Documento</h2>
+                    <p class="text-slate-400 text-xs mt-0.5">Añade un nuevo tipo de documento</p>
+                </div>
+            </div>
+            <button onclick="cerrarModalTipoDocumento()" class="text-slate-400 hover:text-white p-2 hover:bg-slate-700/50 rounded-lg transition-colors">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Contenido -->
+        <div class="p-6 space-y-4">
+            <form id="form-tipo-documento">
+                <!-- Nombre -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre *</label>
+                    <input type="text" id="tipo_nombre" class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/20" placeholder="Ej: Presupuesto" required>
+                </div>
+
+                <!-- Descripción -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Descripción</label>
+                    <textarea id="tipo_descripcion" class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/20" placeholder="Descripción del tipo de documento" rows="3"></textarea>
+                </div>
+
+                <!-- Grid: Icono y Color -->
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Icono -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Icono (Font Awesome) *</label>
+                        <input type="text" id="tipo_icono" class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/20" placeholder="Ej: fa-file-invoice-dollar" required>
+                    </div>
+
+                    <!-- Color -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Color (Hex) *</label>
+                        <input type="color" id="tipo_color" class="w-full h-10 border border-gray-300 dark:border-slate-600 rounded-lg cursor-pointer" value="#3b82f6" required>
+                    </div>
+                </div>
+
+                <!-- Requiere Aprobación -->
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" id="tipo_requiere_aprobacion" class="w-4 h-4 rounded border-gray-300 text-slate-600 focus:ring-slate-500 cursor-pointer" checked>
+                    <label for="tipo_requiere_aprobacion" class="text-sm font-medium text-gray-700 dark:text-gray-300">Requiere Aprobación</label>
+                </div>
+            </form>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex gap-3 justify-end px-6 py-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 rounded-b-xl">
+            <button onclick="cerrarModalTipoDocumento()" class="px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+                Cancelar
+            </button>
+            <button onclick="guardarTipoDocumento()" class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                <i class="fas fa-save"></i>
+                <span>Guardar</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Crear Flujo de Aprobación - DINÁMICA V2.1 -->
+<div id="modal-flujo" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white dark:bg-slate-900 rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+        
+        <!-- HEADER -->
+        <div class="bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-600 text-white px-6 py-5 flex items-center justify-between border-b-2 border-blue-500">
+            <div class="flex items-center gap-4">
+                <div class="bg-blue-500 p-3 rounded-lg shadow-lg">
+                    <i class="fas fa-network-wired text-xl"></i>
+                </div>
+                <div>
+                    <h2 id="modal-flujo-titulo" class="text-xl font-bold">Crear Flujo de Aprobación</h2>
+                    <p class="text-blue-100 text-xs mt-1">Configura pasos y múltiples aprobadores dinámicamente</p>
+                </div>
+            </div>
+            <button onclick="cerrarModalFlujo()" class="text-blue-200 hover:text-white hover:bg-blue-600/50 p-2 rounded-lg transition-all">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950">
+            <div class="p-6 space-y-5">
+                
+                <!-- SECCIÓN 1: INFORMACIÓN DEL PASO (Azul) -->
+                <div class="border-l-4 border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 p-5 rounded-lg shadow-sm">
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="bg-blue-600 text-white p-2 rounded-lg">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <h3 class="font-bold text-gray-900 dark:text-white text-base">Información del Paso</h3>
+                    </div>
+                    
+                    <form id="form-flujo" class="grid grid-cols-2 gap-4">
+                        <!-- Tipo de Documento (Full Width) -->
+                        <div class="col-span-2">
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-file text-blue-600 mr-2"></i>Tipo de Documento *
+                            </label>
+                            <select id="flujo_tipo_documento" class="w-full px-4 py-2.5 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400/50 transition-all" required>
+                                <option value="">Seleccionar tipo de documento...</option>
+                            </select>
+                        </div>
+
+                        <!-- Número Paso -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-step-forward text-blue-600 mr-2"></i>Número de Paso *
+                            </label>
+                            <input type="number" id="flujo_numero_paso" class="w-full px-4 py-2.5 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400/50 transition-all" min="1" placeholder="Ej: 1" required>
+                        </div>
+
+                        <!-- Nombre Paso -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-tag text-blue-600 mr-2"></i>Nombre del Paso *
+                            </label>
+                            <input type="text" id="flujo_nombre_paso" class="w-full px-4 py-2.5 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400/50 transition-all" placeholder="Ej: Revisión Técnica" required>
+                        </div>
+
+                        <!-- Descripción (Full Width) -->
+                        <div class="col-span-2">
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-align-left text-blue-600 mr-2"></i>Descripción
+                            </label>
+                            <textarea id="flujo_descripcion" class="w-full px-4 py-2.5 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400/50 transition-all" placeholder="Detalla qué se valida en este paso..." rows="2"></textarea>
+                        </div>
+
+                        <!-- NOTA: es_requerido y permite_rechazo siempre son TRUE (obligatorio y rechazo permitido) -->
+                        <!-- Estos campos no se muestran al usuario porque todo paso es requerido y permite rechazo -->
+                    </form>
+                </div>
+
+                <!-- SECCIÓN 2: AGREGAR APROBADORES (Verde) -->
+                <div class="border-2 border-green-300 dark:border-green-700 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-900/20 p-5 rounded-lg shadow-sm">
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="bg-green-600 text-white p-2 rounded-lg">
+                            <i class="fas fa-users-gear"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-bold text-gray-900 dark:text-white text-base">Agregar Aprobadores</h3>
+                            <p class="text-xs text-gray-600 dark:text-gray-400">Múltiples aprobadores pueden actuar en paralelo en el mismo paso</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- Selección: Área + Cargo -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wider">
+                                    <i class="fas fa-building text-green-600 mr-1"></i>Área
+                                </label>
+                                <select id="flujo_area_modal" class="w-full px-3 py-2.5 border-2 border-green-300 dark:border-green-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-400/50 transition-all" onchange="cargarCargosPorAreaModal(this.value)">
+                                    <option value="">Seleccionar área...</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wider">
+                                    <i class="fas fa-user-tie text-green-600 mr-1"></i>Cargo
+                                </label>
+                                <select id="flujo_cargo_modal" class="w-full px-3 py-2.5 border-2 border-green-300 dark:border-green-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-400/50 transition-all">
+                                    <option value="">Seleccionar cargo...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Botón Agregar -->
+                        <div class="flex gap-2 pt-2">
+                            <button type="button" onclick="agregarCargoModalFlujo()" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-semibold text-sm transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2">
+                                <i class="fas fa-plus"></i>
+                                <span>Agregar Aprobador</span>
+                            </button>
+                            <button type="button" onclick="limpiarFormaCargos()" class="px-4 py-2.5 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-900 dark:text-white rounded-lg font-semibold text-sm transition-all">
+                                Limpiar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 3: APROBADORES AGREGADOS (Gris) -->
+                <div class="border-2 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 p-5 rounded-lg shadow-sm">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="bg-gray-600 text-white p-2 rounded-lg">
+                            <i class="fas fa-list-check"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-bold text-gray-900 dark:text-white text-base">Aprobadores del Paso</h3>
+                            <p class="text-xs text-gray-600 dark:text-gray-400" id="contador-aprobadores">0 aprobadores agregados</p>
+                        </div>
+                    </div>
+                    <div class="space-y-2" id="lista-cargos-modal">
+                        <div class="text-center py-6 text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-inbox text-4xl mb-2 opacity-30"></i>
+                            <p class="text-sm">Selecciona cargos y agregarlos arriba</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER: Botones de Acción -->
+        <div class="flex gap-3 justify-between px-6 py-4 border-t-2 border-gray-200 dark:border-slate-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-900">
+            <button onclick="cerrarModalFlujo()" class="px-6 py-2.5 border-2 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-slate-700 transition-all">
+                <i class="fas fa-times mr-2"></i>Cancelar
+            </button>
+            <button onclick="guardarFlujoCompleto()" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+                <i class="fas fa-check-circle"></i>
+                <span>Guardar Flujo Completo</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Editar Flujo - NUEVO DISEÑO SIMPLIFICADO -->
+<div id="modal-detalles-flujo" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        
+        <!-- HEADER -->
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-5 flex items-center justify-between border-b-2 border-blue-500">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-500 p-2 rounded-lg">
+                    <i class="fas fa-diagram-project text-lg"></i>
+                </div>
+                <div>
+                    <h2 id="modal-detalles-titulo" class="text-xl font-bold">Editar Flujo de Aprobación</h2>
+                    <p class="text-blue-100 text-xs mt-1">Agrega o quita cargos según paso y área</p>
+                </div>
+            </div>
+            <button onclick="cerrarModalDetalles()" class="text-blue-200 hover:text-white hover:bg-blue-600/50 p-2 rounded-lg transition-all">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950">
+            <div class="p-6 space-y-6">
+                
+                <!-- SECCIÓN 1: SELECCIONAR Y AGREGAR CARGOS -->
+                <div class="border-2 border-green-300 dark:border-green-700 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-900/20 p-6 rounded-lg shadow-sm">
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="bg-green-600 text-white p-2.5 rounded-lg">
+                            <i class="fas fa-plus-circle text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-900 dark:text-white text-base">Agregar Cargos</h3>
+                            <p class="text-xs text-gray-600 dark:text-gray-400">Selecciona paso, área y cargo para agregar</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <!-- Paso -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wider">
+                                <i class="fas fa-step-forward text-green-600 mr-1"></i>Paso
+                            </label>
+                            <select id="editar-paso-select" class="w-full px-3 py-2.5 border-2 border-green-300 dark:border-green-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-400/50 transition-all">
+                                <option value="">Seleccionar paso...</option>
+                            </select>
+                        </div>
+
+                        <!-- Área -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wider">
+                                <i class="fas fa-building text-green-600 mr-1"></i>Área
+                            </label>
+                            <select id="editar-area-select" class="w-full px-3 py-2.5 border-2 border-green-300 dark:border-green-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-400/50 transition-all" onchange="cargarCargosEditarFlujo()">
+                                <option value="">Seleccionar área...</option>
+                            </select>
+                        </div>
+
+                        <!-- Cargo -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wider">
+                                <i class="fas fa-user-tie text-green-600 mr-1"></i>Cargo
+                            </label>
+                            <select id="editar-cargo-select" class="w-full px-3 py-2.5 border-2 border-green-300 dark:border-green-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-400/50 transition-all">
+                                <option value="">Seleccionar cargo...</option>
+                            </select>
+                        </div>
+
+                        <!-- Botón Agregar -->
+                        <div class="flex items-end">
+                            <button type="button" onclick="agregarCargoEnEditarFlujo()" class="w-full px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-bold text-sm transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2">
+                                <i class="fas fa-plus"></i>
+                                <span>Agregar</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 2: LISTADO DE CARGOS AGREGADOS -->
+                <div class="border-2 border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 p-6 rounded-lg shadow-sm">
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="bg-blue-600 text-white p-2.5 rounded-lg">
+                            <i class="fas fa-list-check text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-900 dark:text-white text-base">Cargos del Flujo</h3>
+                            <p class="text-xs text-gray-600 dark:text-gray-400" id="contador-cargos-editar">0 cargos</p>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de cargos -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-blue-50 dark:bg-slate-800 border-b-2 border-blue-200 dark:border-slate-700">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-bold text-gray-700 dark:text-gray-300">Paso</th>
+                                    <th class="px-4 py-3 text-left font-bold text-gray-700 dark:text-gray-300">Área</th>
+                                    <th class="px-4 py-3 text-left font-bold text-gray-700 dark:text-gray-300">Cargo</th>
+                                    <th class="px-4 py-3 text-center font-bold text-gray-700 dark:text-gray-300">Orden</th>
+                                    <th class="px-4 py-3 text-center font-bold text-gray-700 dark:text-gray-300">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-cargos-editar" class="divide-y divide-gray-200 dark:divide-slate-700">
+                                <tr>
+                                    <td colspan="5" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                                        <i class="fas fa-inbox text-3xl opacity-30 mb-2"></i>
+                                        <p class="text-sm">Selecciona paso, área y cargo para agregar</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- FOOTER: Botones de Acción -->
+        <div class="border-t-2 border-gray-200 dark:border-slate-700 px-6 py-4 bg-gray-50 dark:bg-slate-800 flex justify-between gap-3">
+            <button onclick="cerrarModalDetalles()" class="px-6 py-2.5 border-2 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg font-bold hover:bg-gray-100 dark:hover:bg-slate-700 transition-all flex items-center gap-2">
+                <i class="fas fa-times"></i>
+                <span>Cerrar</span>
+            </button>
+            <button onclick="guardarCambiosEditarFlujo()" class="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-bold transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+                <i class="fas fa-check-circle"></i>
+                <span>✅ Guardar Cambios</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Variables globales
+    let tipos_datos = [];
+    let flujos_datos = [];
+    let cargos_datos = [];
+    let areas_datos = [];
+
+    // Estado temporal del modal de edición
+    let estadoModalEdicion = {
+        idTipoDocumento: null,
+        numeroPaso: null,
+        nombrePasoOriginal: null,
+        descripcionOriginal: null,
+        cambios: {
+            paso_modificado: false,
+            nombre_nuevo: null,
+            descripcion_nueva: null,
+            cargos_agregados: [],
+            cargos_eliminados: []
+        }
+    };
+
+    // Cargar datos al inicializar
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('[FLUJO_APROBACION] Inicializando...');
+        cargarTiposDocumentos();
+        cargarFlujos();
+        cargarAreas();
+        cargarTodosCargos(); // Cargar todos los cargos una sola vez
+    });
+
+    // FUNCIÓN: Cargar áreas
+    async function cargarAreas() {
+        try {
+            console.log('[AREAS] Cargando áreas...');
+            const response = await fetch('/api/areas/obtener');
+            const data = await response.json();
+
+            if (data.success) {
+                areas_datos = data.data || [];
+                console.log(`[AREAS] ✓ Cargadas ${areas_datos.length} áreas`);
+                llenarSelectAreas();
+                return areas_datos;
+            } else {
+                console.error('[AREAS] Error:', data.error);
+                return [];
+            }
+        } catch (error) {
+            console.error('[AREAS] Error:', error);
+            return [];
+        }
+    }
+    function llenarSelectAreas() {
+        const select = document.getElementById('flujo_area_modal');
+        if (!select) {
+            console.error('[AREAS] Elemento flujo_area_modal no encontrado');
+            return;
+        }
+        
+        select.innerHTML = '<option value="">Seleccionar...</option>';
+        
+        if (areas_datos && areas_datos.length > 0) {
+            areas_datos.forEach(area => {
+                select.innerHTML += `<option value="${area.id_area}">${area.nombre}</option>`;
+            });
+        }
+    }
+
+    // FUNCIÓN: Cargar TODOS los cargos de TODAS las áreas (para usar en modal)
+    async function cargarTodosCargos() {
+        try {
+            console.log('[CARGOS] Cargando todos los cargos...');
+            
+            if (areas_datos.length === 0) {
+                console.log('[CARGOS] No hay áreas. Esperando...');
+                setTimeout(cargarTodosCargos, 500); // Reintentar en 500ms
+                return;
+            }
+            
+            // Cargar cargos para cada área
+            const promesas = areas_datos.map(area => 
+                fetch(`/api/cargos/por-area/${area.id_area}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success && data.data) {
+                            return data.data; // Retorna array de cargos
+                        }
+                        return [];
+                    })
+                    .catch(err => {
+                        console.error(`[CARGOS] Error cargando área ${area.id_area}:`, err);
+                        return [];
+                    })
+            );
+            
+            // Esperar a que todas las promesas se resuelvan y combinar
+            const resultados = await Promise.all(promesas);
+            cargos_datos = resultados.flat(); // Combinar todos los cargos en un solo array
+            
+            console.log(`[CARGOS] ✓ Cargados ${cargos_datos.length} cargos totales`, cargos_datos);
+        } catch (error) {
+            console.error('[CARGOS] Error:', error);
+        }
+    }
+
+    // FUNCIÓN: Cargar cargos según área
+    async function cargarCargosPorArea(idArea) {
+        if (!idArea) {
+            document.getElementById('flujo_cargo').innerHTML = '<option value="">Seleccionar área primero...</option>';
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/cargos/por-area/${idArea}`);
+            const data = await response.json();
+
+            if (data.success) {
+                cargos_datos = data.data || [];
+                llenarSelectCargos();
+            }
+        } catch (error) {
+            console.error('[CARGOS_AREA] Error:', error);
+        }
+    }
+
+    // FUNCIÓN: Llenar select de cargos
+    function llenarSelectCargos() {
+        const select = document.getElementById('flujo_cargo');
+        select.innerHTML = '<option value="">Seleccionar...</option>';
+        
+        cargos_datos.forEach(cargo => {
+            select.innerHTML += `<option value="${cargo.id_cargo}">${cargo.nombre}</option>`;
+        });
+    }
+
+    // FUNCIÓN: Cargar tipos de documentos
+    async function cargarTiposDocumentos() {
+        console.log('[TIPOS] Cargando tipos de documentos...');
+        
+        try {
+            const response = await fetch('/api/flujo-aprobacion/obtener-tipos');
+            const data = await response.json();
+
+            if (data.success) {
+                tipos_datos = data.data || [];
+                mostrarTiposDocumentos();
+                llenarSelectTiposDocumentos();
+            }
+        } catch (error) {
+            console.error('[TIPOS] Error:', error);
+        }
+    }
+
+    // FUNCIÓN: Llenar select de tipos de documentos
+    function llenarSelectTiposDocumentos() {
+        const select = document.getElementById('flujo_tipo_documento');
+        select.innerHTML = '<option value="">Seleccionar...</option>';
+        
+        tipos_datos.forEach(tipo => {
+            select.innerHTML += `<option value="${tipo.id_tipo_documento}">${tipo.nombre}</option>`;
+        });
+    }
+
+    // FUNCIÓN: Mostrar tipos de documentos
+    function mostrarTiposDocumentos() {
+        const tbody = document.getElementById('tipos-lista');
+        const count = document.getElementById('count-tipos');
+        
+        tbody.innerHTML = '';
+        count.textContent = tipos_datos.length;
+
+        if (tipos_datos.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-inbox mr-2"></i>No hay tipos de documentos configurados
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tipos_datos.forEach(tipo => {
+            const badge = tipo.requiere_aprobacion 
+                ? '<span class="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-3 py-1 rounded-full text-xs font-medium">Sí</span>'
+                : '<span class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-xs font-medium">No</span>';
+
+            tbody.innerHTML += `
+                <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">${tipo.nombre}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${tipo.descripcion || '—'}</td>
+                    <td class="px-6 py-4 text-center text-sm">
+                        <i class="fas ${tipo.icono} text-gray-600 dark:text-gray-400"></i>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="inline-block w-6 h-6 rounded" style="background-color: ${tipo.color}; border: 1px solid #ddd;"></span>
+                    </td>
+                    <td class="px-6 py-4 text-center text-sm">${badge}</td>
+                    <td class="px-6 py-4 text-center text-sm space-x-2">
+                        <button onclick="editarTipoDocumento(${tipo.id_tipo_documento})" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-medium" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="eliminarTipoDocumento(${tipo.id_tipo_documento})" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 font-medium" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    // FUNCIÓN: Cargar flujos de aprobación
+    async function cargarFlujos() {
+        console.log('[FLUJOS] Cargando flujos de aprobación...');
+        
+        try {
+            const response = await fetch('/api/flujo-aprobacion/obtener-flujos');
+            const data = await response.json();
+
+            if (data.success) {
+                flujos_datos = data.data || [];
+                mostrarFlujos();
+            }
+        } catch (error) {
+            console.error('[FLUJOS] Error:', error);
+        }
+    }
+
+    // FUNCIÓN: Mostrar flujos de aprobación (RESUMEN)
+    function mostrarFlujos() {
+        const tbody = document.getElementById('flujos-lista');
+        const count = document.getElementById('count-flujos');
+        
+        tbody.innerHTML = '';
+
+        if (flujos_datos.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-inbox mr-2"></i>No hay flujos de aprobación configurados
+                    </td>
+                </tr>
+            `;
+            count.textContent = 0;
+            return;
+        }
+
+        // Agrupar flujos por tipo de documento
+        const flujosPorTipo = {};
+        flujos_datos.forEach(flujo => {
+            if (!flujosPorTipo[flujo.id_tipo_documento]) {
+                flujosPorTipo[flujo.id_tipo_documento] = {
+                    tipo_documento_nombre: flujo.tipo_documento_nombre,
+                    pasos: []
+                };
+            }
+            flujosPorTipo[flujo.id_tipo_documento].pasos.push(flujo);
+        });
+
+        count.textContent = Object.keys(flujosPorTipo).length;
+
+        // Mostrar resumen por tipo de documento
+        Object.entries(flujosPorTipo).forEach(([tipoId, data]) => {
+            const pasosDescription = data.pasos
+                .sort((a, b) => a.numero_paso - b.numero_paso)
+                .map((p, i) => `${i + 1}. ${p.nombre_paso} (${p.cargo_nombre})`)
+                .join(' → ');
+
+            tbody.innerHTML += `
+                <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">${data.tipo_documento_nombre}</td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium">${data.pasos.length}</span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${pasosDescription}</td>
+                    <td class="px-6 py-4 text-center text-sm space-x-2">
+                        <button onclick="abrirModalDetalles(${tipoId})" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-medium" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="eliminarFlujosTipo(${tipoId})" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 font-medium" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    // ============================================================================
+    // FUNCIONES: MODAL TIPO DE DOCUMENTO
+    // ============================================================================
+
+    function abrirModalTipoDocumento() {
+        document.getElementById('modal-tipo-titulo').textContent = 'Crear Tipo de Documento';
+        document.getElementById('form-tipo-documento').reset();
+        document.getElementById('tipo_color').value = '#3b82f6';
+        document.getElementById('modal-tipo-documento').classList.remove('hidden');
+    }
+
+    function cerrarModalTipoDocumento() {
+        document.getElementById('modal-tipo-documento').classList.add('hidden');
+    }
+
+    function editarTipoDocumento(id) {
+        const tipo = tipos_datos.find(t => t.id_tipo_documento === id);
+        if (!tipo) {
+            alert('Tipo de documento no encontrado');
+            return;
+        }
+
+        document.getElementById('modal-tipo-titulo').textContent = 'Editar Tipo de Documento';
+        document.getElementById('tipo_nombre').value = tipo.nombre;
+        document.getElementById('tipo_descripcion').value = tipo.descripcion || '';
+        document.getElementById('tipo_icono').value = tipo.icono;
+        document.getElementById('tipo_color').value = tipo.color;
+        document.getElementById('tipo_requiere_aprobacion').checked = tipo.requiere_aprobacion;
+        document.getElementById('form-tipo-documento').dataset.editId = id;
+        document.getElementById('modal-tipo-documento').classList.remove('hidden');
+    }
+
+    async function eliminarTipoDocumento(id) {
+        if (!confirm('¿Estás seguro de que deseas eliminar este tipo de documento?')) return;
+
+        try {
+            const response = await fetch(`/api/flujo-aprobacion/eliminar-tipo/${id}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert('Tipo de documento eliminado correctamente');
+                cargarTiposDocumentos();
+            } else {
+                alert('Error: ' + result.error);
+            }
+        } catch (error) {
+            console.error('[ELIMINAR_TIPO] Error:', error);
+            alert('Error de conexión');
+        }
+    }
+
+    async function guardarTipoDocumento() {
+        const datos = {
+            nombre: document.getElementById('tipo_nombre').value,
+            descripcion: document.getElementById('tipo_descripcion').value,
+            icono: document.getElementById('tipo_icono').value,
+            color: document.getElementById('tipo_color').value,
+            requiere_aprobacion: document.getElementById('tipo_requiere_aprobacion').checked ? 1 : 0
+        };
+
+        if (!datos.nombre || !datos.icono) {
+            alert('Complete los campos requeridos (Nombre e Icono)');
+            return;
+        }
+
+        const editId = document.getElementById('form-tipo-documento').dataset.editId;
+        const url = editId ? `/api/flujo-aprobacion/actualizar-tipo/${editId}` : '/api/flujo-aprobacion/crear-tipo';
+        const method = editId ? 'PUT' : 'POST';
+
+        console.log('[GUARDAR_TIPO]', method, url, datos);
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datos)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert(editId ? 'Tipo de documento actualizado' : 'Tipo de documento creado correctamente');
+                cerrarModalTipoDocumento();
+                delete document.getElementById('form-tipo-documento').dataset.editId;
+                cargarTiposDocumentos();
+            } else {
+                alert('Error: ' + result.error);
+            }
+        } catch (error) {
+            console.error('[GUARDAR_TIPO] Error:', error);
+            alert('Error de conexión');
+        }
+    }
+
+    // ============================================================================
+    // FUNCIONES: MODAL FLUJO DE APROBACIÓN
+    // ============================================================================
+
+    function abrirModalFlujo() {
+        abrirModalFlujoMejorado();
+    }
+
+    function cerrarModalFlujo() {
+        document.getElementById('modal-flujo').classList.add('hidden');
+    }
+
+    function editarFlujo(id) {
+        const flujo = flujos_datos.find(f => f.id_flujo_aprobacion === id);
+        if (!flujo) {
+            alert('Flujo de aprobación no encontrado');
+            return;
+        }
+
+        // Cerrar modal de detalles primero
+        cerrarModalDetalles();
+        
+        // Luego abrir modal de edición
+        setTimeout(async () => {
+            document.getElementById('modal-flujo-titulo').textContent = 'Editar Flujo de Aprobación';
+            document.getElementById('flujo_tipo_documento').value = flujo.id_tipo_documento;
+            document.getElementById('flujo_numero_paso').value = flujo.numero_paso;
+            document.getElementById('flujo_nombre_paso').value = flujo.nombre_paso;
+            document.getElementById('flujo_descripcion').value = flujo.descripcion || '';
+            // es_requerido y permite_rechazo siempre son 1 (no se muestran al usuario)
+            document.getElementById('form-flujo').dataset.editId = id;
+            
+            // Obtener el área para este cargo
+            try {
+                const response = await fetch(`/api/flujo-aprobacion/area-para-cargo/${flujo.id_cargo}`);
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const idArea = data.data.id_area;
+                    // Pre-seleccionar área
+                    const areaSelect = document.getElementById('flujo_area_modal');
+                    if (areaSelect) {
+                        areaSelect.value = idArea;
+                    }
+                    // Cargar cargos para esta área
+                    await cargarCargosPorArea(idArea);
+                    // Pre-seleccionar cargo después de cargar
+                    const cargoSelect = document.getElementById('flujo_cargo_modal');
+                    if (cargoSelect) {
+                        cargoSelect.value = flujo.id_cargo;
+                    }
+                } else {
+                    console.warn('[EDITAR_FLUJO] No se encontró área para cargo');
+                }
+            } catch (error) {
+                console.error('[EDITAR_FLUJO] Error al obtener área:', error);
+            }
+            
+            document.getElementById('modal-flujo').classList.remove('hidden');
+        }, 200);
+    }
+
+    async function eliminarFlujo(id) {
+        if (!confirm('¿Estás seguro de que deseas eliminar este flujo de aprobación?')) return;
+
+        try {
+            const response = await fetch(`/api/flujo-aprobacion/eliminar-flujo/${id}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert('✅ ' + result.message);
+                cargarFlujos();
+            } else {
+                // Diferenciar entre ADVERTENCIA y ERROR
+                if (result.type === 'ADVERTENCIA') {
+                    alert('⚠️ ADVERTENCIA: ' + result.error);
+                } else {
+                    alert('❌ Error: ' + result.error);
+                }
+            }
+        } catch (error) {
+            console.error('[ELIMINAR_FLUJO] Error:', error);
+            alert('Error de conexión');
+        }
+    }
+
+    async function guardarFlujo() {
+        const datos = {
+            id_tipo_documento: document.getElementById('flujo_tipo_documento').value,
+            numero_paso: document.getElementById('flujo_numero_paso').value,
+            id_cargo: document.getElementById('flujo_cargo').value,
+            nombre_paso: document.getElementById('flujo_nombre_paso').value,
+            descripcion: document.getElementById('flujo_descripcion').value,
+            es_requerido: 1,  // Todo paso es requerido
+            permite_rechazo: 1  // Todo paso permite rechazo
+        };
+
+        if (!datos.id_tipo_documento || !datos.numero_paso || !datos.id_cargo || !datos.nombre_paso) {
+            alert('Complete todos los campos requeridos');
+            return;
+        }
+
+        const editId = document.getElementById('form-flujo').dataset.editId;
+        const url = editId ? `/api/flujo-aprobacion/actualizar-flujo/${editId}` : '/api/flujo-aprobacion/crear-flujo';
+        const method = editId ? 'PUT' : 'POST';
+
+        console.log('[GUARDAR_FLUJO]', method, url, datos);
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datos)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert(editId ? 'Flujo de aprobación actualizado' : 'Flujo de aprobación creado correctamente');
+                cerrarModalFlujo();
+                delete document.getElementById('form-flujo').dataset.editId;
+                cargarFlujos();
+            } else {
+                alert('Error: ' + result.error);
+            }
+        } catch (error) {
+            console.error('[GUARDAR_FLUJO] Error:', error);
+            alert('Error de conexión');
+        }
+    }
+
+    // FUNCIÓN: Abrir modal para editar flujo - NUEVO DISEÑO SIMPLIFICADO
+    function abrirModalDetalles(idTipoDocumento) {
+        console.log(`\n${'='*80}`);
+        console.log(`[ABRIR_MODAL_EDITAR] Abriendo modal para tipo documento ${idTipoDocumento}`);
+        console.log(`${'='*80}`);
+        
+        const flujosDelTipo = flujos_datos.filter(f => f.id_tipo_documento === idTipoDocumento);
+        
+        if (flujosDelTipo.length === 0) {
+            alert('No hay flujos para este tipo de documento');
+            return;
+        }
+
+        const tipoDocumento = flujosDelTipo[0].tipo_documento_nombre;
+        document.getElementById('modal-detalles-titulo').textContent = `Editar Flujo - ${tipoDocumento}`;
+        
+        // Guardar en estado global
+        estadoModalEdicion.idTipoDocumento = idTipoDocumento;
+        estadoModalEdicion.cambios = {
+            paso_modificado: false,
+            nombre_nuevo: null,
+            descripcion_nueva: null,
+            cargos_agregados: [],
+            cargos_eliminados: []
+        };
+        
+        // Limpiar tabla
+        document.getElementById('tabla-cargos-editar').innerHTML = `
+            <tr>
+                <td colspan="5" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                    <i class="fas fa-inbox text-3xl opacity-30 mb-2"></i>
+                    <p class="text-sm">Selecciona paso, área y cargo para agregar</p>
+                </td>
+            </tr>
+        `;
+        
+        // Llenar select de PASOS: Permitir 1-10 (o más si existen pasos mayores)
+        // Encontrar el máximo paso existente
+        let maxPasoExistente = 0;
+        flujosDelTipo.forEach(flujo => {
+            if (flujo.numero_paso > maxPasoExistente) {
+                maxPasoExistente = flujo.numero_paso;
+            }
+        });
+        
+        // Permitir pasos desde 1 hasta max(existente) + 5, mínimo 10
+        const maxPaso = Math.max(maxPasoExistente + 5, 10);
+        
+        const selectPaso = document.getElementById('editar-paso-select');
+        selectPaso.innerHTML = '<option value="">Seleccionar paso...</option>';
+        
+        for (let i = 1; i <= maxPaso; i++) {
+            selectPaso.innerHTML += `<option value="${i}">Paso ${i}</option>`;
+        }
+        
+        console.log(`[ABRIR_MODAL_EDITAR] Pasos disponibles: 1 a ${maxPaso} (máximo existente: ${maxPasoExistente})`);
+        
+        // Llenar select de ÁREAS
+        const selectArea = document.getElementById('editar-area-select');
+        selectArea.innerHTML = '<option value="">Seleccionar área...</option>';
+        areas_datos.forEach(area => {
+            selectArea.innerHTML += `<option value="${area.id_area}">${area.nombre}</option>`;
+        });
+        
+        // Limpiar select de cargos
+        document.getElementById('editar-cargo-select').innerHTML = '<option value="">Seleccionar cargo...</option>';
+        
+        // Mostrar cargos actuales
+        renderizarTablaCargosEditarFlujo(idTipoDocumento);
+        
+        // Abrir modal
+        document.getElementById('modal-detalles-flujo').classList.remove('hidden');
+        
+        console.log('[ABRIR_MODAL_EDITAR] ✓ Modal abierto');
+        console.log(`${'='*80}\n`);
+    }
+
+    // FUNCIÓN: Cargar cargos para un paso específico
+    function cargarCargosPasoModal(idArea, numeroPaso) {
+        const select = document.querySelector(`.select-cargo-paso[data-paso="${numeroPaso}"]`);
+        
+        if (!idArea) {
+            select.innerHTML = '<option value="">Seleccionar área...</option>';
+            return;
+        }
+
+        console.log(`[CARGO_MODAL] Filtrando cargos para área ${idArea}, paso ${numeroPaso}`);
+        console.log(`[CARGO_MODAL] Total de cargos disponibles: ${cargos_datos.length}`);
+        
+        const cargosFiltrados = cargos_datos.filter(c => c.id_area === parseInt(idArea));
+        
+        console.log(`[CARGO_MODAL] Cargos filtrados para área ${idArea}: ${cargosFiltrados.length}`, cargosFiltrados);
+        
+        select.innerHTML = '<option value="">Seleccionar...</option>';
+        cargosFiltrados.forEach(c => {
+            select.innerHTML += `<option value="${c.id_cargo}" data-area="${c.id_area}">${c.nombre}</option>`;
+        });
+    }
+
+    // FUNCIÓN: Guardar nuevo cargo para un paso
+    async function guardarNuevoCargo(event, numeroPaso, idTipoDocumento) {
+        event.preventDefault();
+
+        const idCargo = document.querySelector(`.select-cargo-paso[data-paso="${numeroPaso}"]`).value;
+        const orden = document.querySelector(`.input-orden-paso[data-paso="${numeroPaso}"]`).value;
+
+        if (!idCargo) {
+            alert('❌ Selecciona un cargo');
+            return;
+        }
+
+        // Obtener el flujo de este paso
+        const flujoPaso = flujos_datos.find(f => 
+            f.id_tipo_documento === idTipoDocumento && 
+            f.numero_paso === numeroPaso
+        );
+
+        if (!flujoPaso) {
+            alert('❌ No se encontró el paso');
+            return;
+        }
+
+        const datos = {
+            id_tipo_documento: idTipoDocumento,
+            numero_paso: numeroPaso,
+            id_cargo: idCargo,
+            nombre_paso: flujoPaso.nombre_paso,
+            descripcion: flujoPaso.descripcion,
+            es_final: flujoPaso.es_final,
+            es_requerido: flujoPaso.es_requerido,
+            permite_rechazo: flujoPaso.permite_rechazo
+        };
+
+        try {
+            const response = await fetch('/api/flujo-aprobacion/crear-flujo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datos)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert('✅ Cargo agregado');
+                document.querySelector(`#form-agregar-cargo-${numeroPaso}`).reset();
+                cargarFlujos();
+                setTimeout(() => abrirModalDetalles(idTipoDocumento), 500);
+            } else {
+                alert('❌ Error: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('❌ Error de conexión');
+        }
+    }
+
+    // FUNCIÓN: Guardar todos los cambios
+    async function guardarTodosFlujos(idTipoDocumento) {
+        alert('✅ Cambios guardados');
+        cargarFlujos();
+        cerrarModalDetalles();
+    }
+
+    function cerrarModalDetalles() {
+        document.getElementById('modal-detalles-flujo').classList.add('hidden');
+    }
+
+    // ============================================================================
+    // FUNCIONES PARA MODAL "CREAR FLUJO" - MÚLTIPLES CARGOS POR PASO
+    // ============================================================================
+
+    // Array temporal para almacenar cargos agregados durante la creación
+    let cargosTemporales = [];
+
+    // FUNCIÓN: Cargar cargos según área en el modal de creación
+    async function cargarCargosPorAreaModal(idArea) {
+        const select = document.getElementById('flujo_cargo_modal');
+        
+        if (!idArea) {
+            select.innerHTML = '<option value="">Seleccionar área...</option>';
+            return;
+        }
+
+        console.log(`[CARGO_MODAL_CREAR] Filtrando cargos para área ${idArea}`);
+        
+        // Filtrar de cargos_datos (que ya tiene todos los cargos precargados)
+        const cargosFiltrados = cargos_datos.filter(c => c.id_area === parseInt(idArea));
+        
+        console.log(`[CARGO_MODAL_CREAR] Cargos encontrados: ${cargosFiltrados.length}`, cargosFiltrados);
+        
+        select.innerHTML = '<option value="">Seleccionar...</option>';
+        cargosFiltrados.forEach(c => {
+            select.innerHTML += `<option value="${c.id_cargo}" data-area="${c.id_area}">${c.nombre}</option>`;
+        });
+    }
+
+    // FUNCIÓN: Agregar cargo a la lista temporal
+    function agregarCargoModalFlujo() {
+        const idArea = document.getElementById('flujo_area_modal').value;
+        const idCargo = document.getElementById('flujo_cargo_modal').value;
+        const orden = document.getElementById('flujo_orden_modal').value || 0;
+
+        if (!idArea || !idCargo) {
+            alert('❌ Por favor selecciona un área y un cargo');
+            return;
+        }
+
+        // Obtener datos del cargo
+        const cargo = cargos_datos.find(c => c.id_cargo === parseInt(idCargo));
+        const area = areas_datos.find(a => a.id_area === parseInt(idArea));
+
+        if (!cargo || !area) {
+            alert('❌ Error: Cargo o área no encontrados');
+            return;
+        }
+
+        // Evitar duplicados en la misma sesión
+        const isDuplicado = cargosTemporales.some(c => c.id_cargo === parseInt(idCargo));
+        if (isDuplicado) {
+            alert('❌ Este cargo ya fue agregado');
+            return;
+        }
+
+        // Agregar a lista temporal
+        cargosTemporales.push({
+            id_cargo: parseInt(idCargo),
+            cargo_nombre: cargo.nombre,
+            area_nombre: area.nombre,
+            id_area: parseInt(idArea),
+            orden_visualizacion: parseInt(orden)
+        });
+
+        console.log('[AGREGAR_CARGO_MODAL] Cargo agregado', cargosTemporales);
+
+        // Actualizar vista de lista
+        actualizarListaCargosModal();
+
+        // Limpiar formulario de cargos
+        limpiarFormaCargos();
+
+        alert('✅ Cargo agregado');
+    }
+
+    // FUNCIÓN: Actualizar vista de lista de cargos agregados
+    function actualizarListaCargosModal() {
+        const container = document.getElementById('lista-cargos-modal');
+
+        if (cargosTemporales.length === 0) {
+            container.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No hay cargos agregados</p>';
+            return;
+        }
+
+        container.innerHTML = '';
+        cargosTemporales.forEach((cargo, idx) => {
+            container.innerHTML += `
+                <div class="flex items-center justify-between bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:shadow-sm transition-shadow">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-bold bg-green-600 text-white w-6 h-6 rounded flex items-center justify-center">${idx + 1}</span>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">${cargo.cargo_nombre}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">${cargo.area_nombre} • Orden: ${cargo.orden_visualizacion}</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="removerCargoTemporalModal(${idx})" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title="Eliminar">
+                        <i class="fas fa-trash text-lg"></i>
+                    </button>
+                </div>
+            `;
+        });
+    }
+
+    // FUNCIÓN: Remover cargo de la lista temporal
+    function removerCargoTemporalModal(idx) {
+        cargosTemporales.splice(idx, 1);
+        actualizarListaCargosModal();
+        console.log('[REMOVER_CARGO] Cargo removido', cargosTemporales);
+    }
+
+    // FUNCIÓN: Limpiar formulario de cargos
+    function limpiarFormaCargos() {
+        document.getElementById('flujo_area_modal').value = '';
+        document.getElementById('flujo_cargo_modal').innerHTML = '<option value="">Seleccionar área...</option>';
+        document.getElementById('flujo_orden_modal').value = '0';
+    }
+
+    // FUNCIÓN: Guardar flujo completo con todos los cargos agregados
+    async function guardarFlujoCompleto() {
+        // Validar información del paso
+        const idTipoDocumento = document.getElementById('flujo_tipo_documento').value;
+        const numeroPaso = document.getElementById('flujo_numero_paso').value;
+        const nombrePaso = document.getElementById('flujo_nombre_paso').value;
+
+        if (!idTipoDocumento || !numeroPaso || !nombrePaso) {
+            alert('❌ Complete la información del paso (Tipo, Número y Nombre)');
+            return;
+        }
+
+        if (cargosTemporales.length === 0) {
+            alert('❌ Agregue al menos un aprobador (cargo)');
+            return;
+        }
+
+        // VALIDACIÓN: Verificar si hay duplicados en cargosTemporales
+        const idsUnicos = new Set();
+        for (const cargo of cargosTemporales) {
+            if (idsUnicos.has(cargo.id_cargo)) {
+                alert(`❌ El cargo "${cargo.cargo_nombre}" está duplicado. Por favor, remúevalo de la lista.`);
+                console.error('[GUARDAR_FLUJO_COMPLETO] Duplicado detectado:', cargo.id_cargo);
+                return;
+            }
+            idsUnicos.add(cargo.id_cargo);
+        }
+
+        console.log('[GUARDAR_FLUJO_COMPLETO] Iniciando guardado...');
+        console.log('[GUARDAR_FLUJO_COMPLETO] Cargos a guardar:', cargosTemporales);
+
+        try {
+            let todoOk = true;
+
+            // Guardar cada cargo (cada uno crea o actualiza el paso)
+            for (let i = 0; i < cargosTemporales.length; i++) {
+                const cargo = cargosTemporales[i];
+
+                const datos = {
+                    id_tipo_documento: parseInt(idTipoDocumento),
+                    numero_paso: parseInt(numeroPaso),
+                    id_cargo: cargo.id_cargo,
+                    nombre_paso: nombrePaso,
+                    descripcion: document.getElementById('flujo_descripcion').value,
+                    es_requerido: 1,  // Todo paso es requerido
+                    permite_rechazo: 1,  // Todo paso permite rechazo
+                    orden_visualizacion: cargo.orden_visualizacion
+                };
+
+                console.log(`[GUARDAR_FLUJO_COMPLETO] Guardando cargo ${i + 1}/${cargosTemporales.length}:`, datos);
+
+                const response = await fetch('/api/flujo-aprobacion/crear-flujo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datos)
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    console.error(`[GUARDAR_FLUJO_COMPLETO] Error en cargo ${i + 1}:`, result.error);
+                    todoOk = false;
+                    
+                    // Mensaje más específico para duplicados
+                    let mensajeError = result.error;
+                    if (response.status === 409 || result.error.includes('ya está asignado')) {
+                        mensajeError = `El cargo "${cargo.cargo_nombre}" ya está asignado a este paso. No se permiten duplicados.`;
+                    }
+                    
+                    alert(`❌ Error: ${mensajeError}`);
+                    break;
+                }
+
+                console.log(`[GUARDAR_FLUJO_COMPLETO] ✓ Cargo ${i + 1} guardado`);
+            }
+
+            if (todoOk) {
+                alert(`✅ Flujo de aprobación creado con ${cargosTemporales.length} aprobador(es)`);
+                
+                // Limpiar variables
+                cargosTemporales = [];
+                
+                // Cerrar modal y recargar
+                cerrarModalFlujo();
+                cargarFlujos();
+                
+                console.log('[GUARDAR_FLUJO_COMPLETO] ✓ Flujo guardado exitosamente');
+            }
+
+        } catch (error) {
+            console.error('[GUARDAR_FLUJO_COMPLETO] Error:', error);
+            alert('❌ Error de conexión al guardar');
+        }
+    }
+
+    // FUNCIÓN: Inicializar modal "Crear Flujo" con áreas y cargos
+    async function abrirModalFlujoMejorado() {
+        console.log('[ABRIR_MODAL_FLUJO] Inicializando modal mejorado...');
+
+        // Limpiar datos
+        cargosTemporales = [];
+        document.getElementById('form-flujo').reset();
+        document.getElementById('flujo_numero_paso').value = '';
+        // es_requerido y permite_rechazo siempre son 1 (no se necesita reset)
+        delete document.getElementById('form-flujo').dataset.editId;
+        
+        // Llenar select de áreas en la sección "Agregar Cargos"
+        const selectArea = document.getElementById('flujo_area_modal');
+        selectArea.innerHTML = '<option value="">Seleccionar...</option>';
+        areas_datos.forEach(area => {
+            selectArea.innerHTML += `<option value="${area.id_area}">${area.nombre}</option>`;
+        });
+        
+        // Limpiar select de cargos
+        document.getElementById('flujo_cargo_modal').innerHTML = '<option value="">Seleccionar área...</option>';
+        
+        // Limpiar lista de cargos
+        document.getElementById('lista-cargos-modal').innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No hay cargos agregados</p>';
+        
+        // Actualizar modal titulo
+        document.getElementById('modal-flujo-titulo').textContent = 'Crear Flujo de Aprobación';
+        
+        // Abrir modal
+        document.getElementById('modal-flujo').classList.remove('hidden');
+
+        console.log('[ABRIR_MODAL_FLUJO] Modal abierto, listo para agregar cargos');
+    }
+
+    async function eliminarFlujosTipo(idTipoDocumento) {
+        if (!confirm('¿Eliminar todos los flujos de este tipo de documento?')) return;
+
+        const flujosDelTipo = flujos_datos.filter(f => f.id_tipo_documento === idTipoDocumento);
+        
+        let eliminados = 0;
+        let advertencias = 0;
+        let errores = 0;
+
+        for (const flujo of flujosDelTipo) {
+            try {
+                const response = await fetch(`/api/flujo-aprobacion/eliminar-flujo/${flujo.id_flujo_aprobacion}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    eliminados++;
+                } else if (result.type === 'ADVERTENCIA') {
+                    advertencias++;
+                } else {
+                    errores++;
+                }
+            } catch (error) {
+                console.error('[ELIMINAR_FLUJOS_TIPO] Error:', error);
+                errores++;
+            }
+        }
+
+        let mensaje = `Eliminados: ${eliminados}`;
+        if (advertencias > 0) mensaje += `, Advertencias: ${advertencias}`;
+        if (errores > 0) mensaje += `, Errores: ${errores}`;
+
+        alert(mensaje);
+        cargarFlujos();
+    }
+
+    // ============================================================================
+    // NUEVAS FUNCIONES: EDICIÓN SIMPLIFICADA DE FLUJOS (NUEVO MODAL)
+    // ============================================================================
+
+    // FUNCIÓN: Cargar cargos según área en el modal editar
+    function cargarCargosEditarFlujo() {
+        const idArea = document.getElementById('editar-area-select').value;
+        const selectCargo = document.getElementById('editar-cargo-select');
+        
+        if (!idArea) {
+            selectCargo.innerHTML = '<option value="">Seleccionar cargo...</option>';
+            return;
+        }
+
+        console.log(`[EDITAR_FLUJO] Filtrando cargos para área ${idArea}`);
+        
+        const cargosFiltrados = cargos_datos.filter(c => c.id_area === parseInt(idArea));
+        
+        selectCargo.innerHTML = '<option value="">Seleccionar cargo...</option>';
+        cargosFiltrados.forEach(c => {
+            selectCargo.innerHTML += `<option value="${c.id_cargo}">${c.nombre}</option>`;
+        });
+    }
+
+    // FUNCIÓN: Agregar cargo al modal editar
+    function agregarCargoEnEditarFlujo() {
+        console.log('[EDITAR_FLUJO] Agregando cargo...');
+        
+        const numeroPaso = document.getElementById('editar-paso-select').value;
+        const idArea = document.getElementById('editar-area-select').value;
+        const idCargo = document.getElementById('editar-cargo-select').value;
+        
+        if (!numeroPaso || !idArea || !idCargo) {
+            alert('❌ Selecciona paso, área y cargo');
+            return;
+        }
+        
+        // Buscar cargo y área en datos
+        const cargo = cargos_datos.find(c => c.id_cargo === parseInt(idCargo));
+        const area = areas_datos.find(a => a.id_area === parseInt(idArea));
+        
+        if (!cargo || !area) {
+            alert('❌ Error: Cargo o área no encontrados');
+            return;
+        }
+        
+        // Registrar en cambios acumulados
+        estadoModalEdicion.cambios.cargos_agregados.push({
+            numero_paso: parseInt(numeroPaso),
+            id_cargo: parseInt(idCargo),
+            nombre_cargo: cargo.nombre,
+            nombre_area: area.nombre,
+            orden: 0
+        });
+        
+        console.log('[EDITAR_FLUJO] Cargo agregado:', estadoModalEdicion.cambios.cargos_agregados);
+        
+        // Actualizar tabla
+        renderizarTablaCargosEditarFlujo(estadoModalEdicion.idTipoDocumento);
+        
+        // Limpiar selectors
+        document.getElementById('editar-paso-select').value = '';
+        document.getElementById('editar-area-select').value = '';
+        document.getElementById('editar-cargo-select').innerHTML = '<option value="">Seleccionar cargo...</option>';
+        
+        alert('✅ Cargo agregado temporalmente');
+    }
+
+    // FUNCIÓN: Renderizar tabla de cargos en modal editar (ordenada)
+    function renderizarTablaCargosEditarFlujo(idTipoDocumento) {
+        const flujosDelTipo = flujos_datos.filter(f => f.id_tipo_documento === idTipoDocumento);
+        
+        // Combinar cargos existentes + nuevos (agregados)
+        let cargosOrdenados = [];
+        
+        // Agregar cargos existentes (que no estén marcados para eliminar)
+        flujosDelTipo.forEach(flujo => {
+            // Solo mostrar si NO está en la lista de eliminados
+            if (!estadoModalEdicion.cambios.cargos_eliminados.includes(flujo.id_flujo_aprobacion)) {
+                cargosOrdenados.push({
+                    id_flujo_aprobacion: flujo.id_flujo_aprobacion,
+                    numero_paso: flujo.numero_paso,
+                    nombre_paso: flujo.nombre_paso,
+                    nombre_area: flujo.area_nombre,
+                    nombre_cargo: flujo.cargo_nombre,
+                    id_cargo: flujo.id_cargo,
+                    estado: 'existente',
+                    orden: flujo.orden_visualizacion || 0
+                });
+            }
+        });
+        
+        // Agregar cargos nuevos (que no hayan sido removidos)
+        estadoModalEdicion.cambios.cargos_agregados.forEach(cargo => {
+            cargosOrdenados.push({
+                id_flujo_aprobacion: null,
+                numero_paso: cargo.numero_paso,
+                nombre_paso: '',
+                nombre_area: cargo.nombre_area,
+                nombre_cargo: cargo.nombre_cargo,
+                id_cargo: cargo.id_cargo,
+                estado: 'nuevo',
+                orden: cargo.orden || 0
+            });
+        });
+        
+        // Ordenar por: Paso → Área → Cargo
+        cargosOrdenados.sort((a, b) => {
+            if (a.numero_paso !== b.numero_paso) return a.numero_paso - b.numero_paso;
+            if (a.nombre_area !== b.nombre_area) return a.nombre_area.localeCompare(b.nombre_area);
+            return a.nombre_cargo.localeCompare(b.nombre_cargo);
+        });
+        
+        // Renderizar tabla
+        const tbody = document.getElementById('tabla-cargos-editar');
+        
+        if (cargosOrdenados.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-inbox text-3xl opacity-30 mb-2"></i>
+                        <p class="text-sm">Selecciona paso, área y cargo para agregar</p>
+                    </td>
+                </tr>
+            `;
+            document.getElementById('contador-cargos-editar').textContent = '0 cargos';
+            return;
+        }
+        
+        tbody.innerHTML = cargosOrdenados.map((cargo, idx) => {
+            const estilo = cargo.estado === 'nuevo' 
+                ? 'bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400' 
+                : 'bg-white dark:bg-slate-900';
+            const badge = cargo.estado === 'nuevo' 
+                ? '<span class="ml-2 inline-block px-2 py-0.5 bg-yellow-500 text-white text-xs rounded font-bold">NUEVO</span>' 
+                : '';
+            
+            return `
+                <tr class="${estilo}">
+                    <td class="px-4 py-3 font-bold text-blue-600 dark:text-blue-400">Paso ${cargo.numero_paso}</td>
+                    <td class="px-4 py-3">${cargo.nombre_area}</td>
+                    <td class="px-4 py-3 font-medium">${cargo.nombre_cargo}${badge}</td>
+                    <td class="px-4 py-3 text-center">${cargo.orden || '-'}</td>
+                    <td class="px-4 py-3 text-center">
+                        <button type="button" onclick="quitarCargoEditarFlujo(${cargo.id_cargo}, '${cargo.estado}')" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors" title="Quitar (cambio se aplica al guardar)">
+                            <i class="fas fa-trash text-lg"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        
+        document.getElementById('contador-cargos-editar').textContent = `${cargosOrdenados.length} cargo${cargosOrdenados.length !== 1 ? 's' : ''}`;
+        
+        console.log('[EDITAR_FLUJO] Tabla renderizada:', cargosOrdenados);
+    }
+
+    // FUNCIÓN: Quitar cargo de la tabla (TEMPORAL - sin confirmar)
+    function quitarCargoEditarFlujo(idCargo, estado) {
+        console.log(`[EDITAR_FLUJO] Quitando cargo ${idCargo} (${estado}) - TEMPORAL`);
+        
+        if (estado === 'nuevo') {
+            // Remover de agregados
+            estadoModalEdicion.cambios.cargos_agregados = 
+                estadoModalEdicion.cambios.cargos_agregados.filter(c => c.id_cargo !== idCargo);
+        } else {
+            // Marcar para eliminar (no confirmar)
+            const flujo = flujos_datos.find(f => f.id_cargo === idCargo);
+            if (flujo && !estadoModalEdicion.cambios.cargos_eliminados.includes(flujo.id_flujo_aprobacion)) {
+                estadoModalEdicion.cambios.cargos_eliminados.push(flujo.id_flujo_aprobacion);
+            }
+        }
+        
+        console.log('[EDITAR_FLUJO] cambios.cargos_eliminados:', estadoModalEdicion.cambios.cargos_eliminados);
+        
+        renderizarTablaCargosEditarFlujo(estadoModalEdicion.idTipoDocumento);
+        console.log('[EDITAR_FLUJO] ✓ Cargo removido temporalmente de la tabla');
+    }
+
+    // FUNCIÓN: Guardar todos los cambios acumulados en editar flujo
+    async function guardarCambiosEditarFlujo() {
+        console.log(`\n${'='*80}`);
+        console.log(`[GUARDAR_CAMBIOS_EDITAR] Guardando cambios...`);
+        console.log(`[GUARDAR_CAMBIOS_EDITAR] Estado:`, estadoModalEdicion.cambios);
+        console.log(`${'='*80}`);
+        
+        const idTipo = estadoModalEdicion.idTipoDocumento;
+        
+        if (!idTipo) {
+            alert('❌ Error: Falta información del tipo de documento');
+            return;
+        }
+        
+        const hayCambios = estadoModalEdicion.cambios.cargos_agregados.length > 0 || 
+                          estadoModalEdicion.cambios.cargos_eliminados.length > 0;
+        
+        if (!hayCambios) {
+            alert('⚠️ No hay cambios para guardar');
+            return;
+        }
+        
+        try {
+            // Preparar datos
+            const datos = {
+                id_tipo_documento: idTipo,
+                cargos_agregados: estadoModalEdicion.cambios.cargos_agregados,
+                cargos_eliminados: estadoModalEdicion.cambios.cargos_eliminados
+            };
+            
+            console.log('[GUARDAR_CAMBIOS_EDITAR] Enviando datos:', datos);
+            
+            // POST al endpoint
+            const response = await fetch('/api/flujo-aprobacion/guardar-cambios-flujo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datos)
+            });
+            
+            const result = await response.json();
+            
+            console.log('[GUARDAR_CAMBIOS_EDITAR] Respuesta:', result);
+            
+            if (result.success) {
+                alert(`✅ ${result.message}`);
+                
+                // Limpiar estado
+                estadoModalEdicion = {
+                    idTipoDocumento: null,
+                    numeroPaso: null,
+                    nombrePasoOriginal: null,
+                    descripcionOriginal: null,
+                    cambios: {
+                        paso_modificado: false,
+                        nombre_nuevo: null,
+                        descripcion_nueva: null,
+                        cargos_agregados: [],
+                        cargos_eliminados: []
+                    }
+                };
+                
+                // Cerrar modal y recargar
+                cerrarModalDetalles();
+                cargarFlujos();
+            } else {
+                alert(`❌ Error: ${result.error}`);
+            }
+            
+            console.log(`${'='*80}\n`);
+            
+        } catch (error) {
+            console.error('[GUARDAR_CAMBIOS_EDITAR] Error:', error);
+            alert(`❌ Error de conexión: ${error.message}`);
+            console.log(`${'='*80}\n`);
+        }
+    }</script>
+{% endblock %}

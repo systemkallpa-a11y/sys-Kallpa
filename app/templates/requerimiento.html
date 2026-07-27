@@ -1,0 +1,1315 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- CSS para componente visual de flujo -->
+<style>
+.flujo-timeline {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px;
+    min-width: 120px;
+}
+
+.flujo-step {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.flujo-circle {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    position: relative;
+}
+
+.flujo-circle.aprobado {
+    background-color: #22c55e;
+    color: white;
+}
+
+.flujo-circle.pendiente {
+    background-color: #d1d5db;
+    color: #6b7280;
+}
+
+.flujo-connector {
+    width: 12px;
+    height: 2px;
+    background-color: #d1d5db;
+}
+
+.flujo-connector.completed {
+    background-color: #22c55e;
+}
+
+.flujo-visual-loading {
+    color: #9ca3af;
+    font-size: 12px;
+}
+</style>
+<div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
+    <!-- Topbar -->
+    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
+        <div class="px-6 py-4 flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Gestión de Requerimientos</h1>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Administra los requerimientos logísticos</p>
+            </div>
+            <button id="btn-crear-requerimiento" class="flex items-center gap-2 px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg">
+                <i class="fas fa-plus"></i>
+                <span>Crear Requerimiento</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="p-6">
+        <!-- Tabla de Requerimientos -->
+        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table id="tabla-requerimientos" class="w-full">
+                    <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">ID</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Código</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Descripción</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Cantidad</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Solicitante</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Estado</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Aprobado/Rechazado por</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Fecha</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requerimientos-lista" class="divide-y divide-gray-200 dark:divide-slate-700">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                            <td colspan="9" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Cargando requerimientos...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Crear Nuevo Requerimiento -->
+<div id="modal-requerimiento" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 md:p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl md:rounded-2xl shadow-2xl w-full md:max-w-5xl h-screen md:h-auto md:max-h-[90vh] overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-slate-700 via-slate-600 to-slate-800 text-white px-5 md:px-8 py-4 md:py-5 flex items-center justify-between border-b-4 border-slate-500 flex-shrink-0">
+            <div class="flex-1 min-w-0">
+                <h2 class="text-xl md:text-2xl font-bold">Crear Nuevo Requerimiento</h2>
+                <p class="text-slate-300 text-xs md:text-sm mt-1">Busca presupuestos y agrega items a tu requerimiento</p>
+            </div>
+            <button onclick="cerrarModalRequerimiento()" class="text-white hover:text-red-200 transition-colors p-2 hover:bg-slate-700/50 rounded-lg flex-shrink-0 ml-3">
+                <i class="fas fa-times text-lg md:text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Contenido Principal -->
+        <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950">
+            <form id="form-requerimiento" class="p-4 md:p-6 space-y-4 md:space-y-5">
+
+                <!-- SECCIÓN 1: Búsqueda -->
+                <div class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-4 md:p-5 rounded-lg shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-base md:text-lg font-semibold text-gray-900 dark:text-white">
+                            Buscar Presupuesto
+                        </h3>
+                        <span class="px-2.5 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold flex items-center gap-1">
+                            <i class="fas fa-check-circle text-xs"></i>Solo APROBADOS
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mb-3">Busca presupuestos que estén en estado APROBADO</p>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="text" id="buscar-presupuesto" class="flex-1 px-3 md:px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent" placeholder="Ingresa número (ej: PRES-001)">
+                        <button type="button" onclick="buscarPresupuesto()" class="px-4 md:px-6 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-medium text-sm flex items-center justify-center gap-1.5 flex-shrink-0 transition-colors">
+                            <i class="fas fa-search text-xs"></i><span>Buscar</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 2: Resultados -->
+                <div id="seccion-resultados" class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-4 md:p-5 rounded-lg shadow-sm">
+                    <h3 class="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                        Detalles del Presupuesto
+                    </h3>
+                    <div id="contenido-resultados" class="space-y-3 max-h-48 md:max-h-56 overflow-y-auto">
+                        <p class="text-gray-500 dark:text-gray-400 text-sm text-center py-4">Realiza una búsqueda</p>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 3: Items Requerimiento -->
+                <div class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-4 md:p-5 rounded-lg shadow-sm">
+                    <h3 class="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                        Items del Requerimiento
+                    </h3>
+                    <div id="lista-requerimiento" class="space-y-2 bg-gray-50 dark:bg-slate-700/30 p-3 rounded-lg border border-gray-200 dark:border-slate-600 max-h-48 md:max-h-56 overflow-y-auto">
+                        <p class="text-gray-500 dark:text-gray-400 text-sm text-center py-4">Agrega items desde el presupuesto</p>
+                    </div>
+
+                    <!-- Resumen -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
+                        <div class="bg-gray-50 dark:bg-slate-700/50 p-3 rounded-lg text-xs border border-gray-200 dark:border-slate-600">
+                            <p class="text-gray-600 dark:text-gray-400 font-semibold text-xs uppercase">Items</p>
+                            <p id="total-items" class="font-bold text-lg text-gray-900 dark:text-white mt-1">0</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-slate-700/50 p-3 rounded-lg text-xs border border-gray-200 dark:border-slate-600">
+                            <p class="text-gray-600 dark:text-gray-400 font-semibold text-xs uppercase">Materiales</p>
+                            <p id="total-materiales" class="font-bold text-lg text-gray-900 dark:text-white mt-1">0</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-slate-700/50 p-3 rounded-lg text-xs border border-gray-200 dark:border-slate-600">
+                            <p class="text-gray-600 dark:text-gray-400 font-semibold text-xs uppercase">Servicios</p>
+                            <p id="total-servicios" class="font-bold text-lg text-gray-900 dark:text-white mt-1">0</p>
+                        </div>
+                    </div>
+
+                    <!-- Datos Requerimiento -->
+                    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-slate-600 space-y-3">
+                        <h4 class="font-bold text-gray-900 dark:text-white text-sm">Información del Requerimiento</h4>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Descripción <span class="text-red-500">*</span></label>
+                            <textarea id="descripcion" rows="2" class="w-full px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm resize-none" placeholder="Describe el requerimiento..." required></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Observaciones</label>
+                            <textarea id="observaciones" rows="2" class="w-full px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm resize-none" placeholder="Observaciones adicionales..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <input type="hidden" id="id_presupuesto_selected" value="">
+                <input type="hidden" id="items-requerimiento-json" value="[]">
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 px-4 md:px-6 py-3 md:py-4 flex flex-col sm:flex-row gap-2 justify-end shadow-lg flex-shrink-0">
+            <button type="button" onclick="cerrarModalRequerimiento()" class="order-2 sm:order-1 px-4 md:px-6 py-2 bg-gray-400 hover:bg-gray-500 text-white rounded-lg font-medium text-sm flex items-center justify-center gap-1.5">
+                <i class="fas fa-times text-sm"></i><span>Cancelar</span>
+            </button>
+            <button type="submit" form="form-requerimiento" class="order-1 sm:order-2 px-4 md:px-6 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-medium text-sm flex items-center justify-center gap-1.5">
+                <i class="fas fa-save text-sm"></i><span>Guardar</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Editar Requerimiento -->
+<div id="modal-editar-requerimiento" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 md:p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl md:rounded-2xl shadow-2xl w-full md:max-w-5xl h-screen md:h-auto md:max-h-[90vh] overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-slate-700 via-slate-600 to-slate-800 text-white px-5 md:px-8 py-4 md:py-5 flex items-center justify-between border-b-4 border-slate-500 flex-shrink-0">
+            <div class="flex-1 min-w-0">
+                <h2 class="text-xl md:text-2xl font-bold">Editar Requerimiento</h2>
+                <p class="text-slate-300 text-xs md:text-sm mt-1" id="edit-codigo-titulo">REQ-00001</p>
+            </div>
+            <button onclick="cerrarModalEditar()" class="text-white hover:text-red-200 transition-colors p-2 hover:bg-slate-700/50 rounded-lg flex-shrink-0 ml-3">
+                <i class="fas fa-times text-lg md:text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Contenido Principal -->
+        <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950">
+            <form id="form-editar-requerimiento" class="p-4 md:p-6 space-y-4 md:space-y-5">
+
+                <!-- SECCIÓN 1: Información del Requerimiento -->
+                <div class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-4 md:p-5 rounded-lg shadow-sm">
+                    <h3 class="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        Información General
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Código</label>
+                            <input type="text" id="edit-codigo" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white text-sm" readonly>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Solicitante</label>
+                            <input type="text" id="edit-solicitante" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white text-sm" readonly>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Presupuesto Origen</label>
+                            <input type="text" id="edit-presupuesto" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white text-sm" readonly>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Estado</label>
+                            <input type="text" id="edit-estado" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white text-sm" readonly>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 2: Descripción -->
+                <div class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-4 md:p-5 rounded-lg shadow-sm">
+                    <h3 class="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                        Contenido
+                    </h3>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Descripción <span class="text-red-500">*</span></label>
+                        <textarea id="edit-descripcion" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm resize-none" required></textarea>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Observaciones</label>
+                        <textarea id="edit-observaciones" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm resize-none"></textarea>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 3: Items del Requerimiento (EDITABLES) -->
+                <div class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-4 md:p-5 rounded-lg shadow-sm">
+                    <h3 class="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                        Items (Editables)
+                    </h3>
+                    <div id="edit-items-lista" class="space-y-3 bg-gray-50 dark:bg-slate-700/30 p-3 rounded-lg border border-gray-200 dark:border-slate-600 max-h-96 overflow-y-auto">
+                        <p class="text-gray-500 dark:text-gray-400 text-sm text-center py-4">Cargando items...</p>
+                    </div>
+
+                    <!-- Resumen -->
+                    <div class="grid grid-cols-3 gap-3 mt-4">
+                        <div class="bg-gray-50 dark:bg-slate-700/50 p-3 rounded-lg text-xs border border-gray-200 dark:border-slate-600">
+                            <p class="text-gray-600 dark:text-gray-400 font-semibold text-xs uppercase">Items</p>
+                            <p id="edit-total-items" class="font-bold text-lg text-gray-900 dark:text-white mt-1">0</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-slate-700/50 p-3 rounded-lg text-xs border border-gray-200 dark:border-slate-600">
+                            <p class="text-gray-600 dark:text-gray-400 font-semibold text-xs uppercase">Materiales</p>
+                            <p id="edit-total-materiales" class="font-bold text-lg text-gray-900 dark:text-white mt-1">0</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-slate-700/50 p-3 rounded-lg text-xs border border-gray-200 dark:border-slate-600">
+                            <p class="text-gray-600 dark:text-gray-400 font-semibold text-xs uppercase">Servicios</p>
+                            <p id="edit-total-servicios" class="font-bold text-lg text-gray-900 dark:text-white mt-1">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <input type="hidden" id="edit-id-requerimiento" value="">
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 px-4 md:px-6 py-3 md:py-4 flex flex-col sm:flex-row gap-2 justify-end shadow-lg flex-shrink-0">
+            <button type="button" onclick="cerrarModalEditar()" class="order-2 sm:order-1 px-4 md:px-6 py-2 bg-gray-400 hover:bg-gray-500 text-white rounded-lg font-medium text-sm flex items-center justify-center gap-1.5">
+                <i class="fas fa-times text-sm"></i><span>Cancelar</span>
+            </button>
+            <button type="submit" form="form-editar-requerimiento" class="order-1 sm:order-2 px-4 md:px-6 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-medium text-sm flex items-center justify-center gap-1.5">
+                <i class="fas fa-save text-sm"></i><span>Guardar Cambios</span>
+            </button>
+        </div>
+    </div>
+</div>
+<!-- Modal: Ver Detalle Requerimiento - MODAL COMPLETO REQUERIMIENTOS PENDIENTES -->
+<div id="modal-ver-requerimiento" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 md:p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl md:rounded-2xl shadow-2xl w-full md:max-w-5xl h-screen md:h-auto md:max-h-[95vh] overflow-hidden flex flex-col">
+        <!-- Header Premium -->
+        <div class="bg-gradient-to-r from-emerald-700 via-emerald-600 to-emerald-800 text-white px-5 md:px-8 py-4 md:py-5 flex items-center justify-between border-b-4 border-emerald-500 flex-shrink-0">
+            <div class="flex-1 min-w-0">
+                <h2 class="text-xl md:text-2xl font-bold">Detalle del Requerimiento</h2>
+                <p class="text-emerald-200 text-xs md:text-sm mt-1" id="ver-codigo-titulo">REQ-00001</p>
+            </div>
+            <button onclick="cerrarModalVerRequerimiento()" class="text-white hover:text-red-200 transition-colors p-2 hover:bg-emerald-700/50 rounded-lg flex-shrink-0 ml-3">
+                <i class="fas fa-times text-lg md:text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Contenido Principal -->
+        <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950">
+            <div class="p-4 md:p-6 space-y-4 md:space-y-5">
+
+                <!-- SECCIÓN 1: Información General -->
+                <div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4 md:p-5">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded">
+                            <i class="fas fa-info-circle text-emerald-600 dark:text-emerald-400 text-sm"></i>
+                        </div>
+                        <h3 class="text-base md:text-lg font-semibold text-gray-900 dark:text-white">Información General</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <p class="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">Código</p>
+                            <p class="text-lg font-bold text-emerald-600 dark:text-emerald-400" id="ver-codigo">REQ-00001</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">ID</p>
+                            <p class="text-lg font-semibold text-gray-900 dark:text-white" id="ver-id">-</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">Estado</p>
+                            <span id="ver-estado-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">PENDIENTE</span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">Fecha Creación</p>
+                            <p class="text-sm text-gray-900 dark:text-white" id="ver-fecha">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 2: Solicitante y Descripción -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="md:col-span-2">
+                        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4 md:p-5 h-full">
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="bg-blue-100 dark:bg-blue-900/30 p-2 rounded">
+                                    <i class="fas fa-file-alt text-blue-600 dark:text-blue-400 text-sm"></i>
+                                </div>
+                                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Descripción</h3>
+                            </div>
+                            <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap max-h-24 overflow-y-auto" id="ver-descripcion">-</p>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4 md:p-5 h-full">
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="bg-purple-100 dark:bg-purple-900/30 p-2 rounded">
+                                    <i class="fas fa-user text-purple-600 dark:text-purple-400 text-sm"></i>
+                                </div>
+                                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Solicitante</h3>
+                            </div>
+                            <p class="text-sm text-gray-900 dark:text-white font-medium" id="ver-solicitante">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 3: Observaciones -->
+                <div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4 md:p-5">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="bg-amber-100 dark:bg-amber-900/30 p-2 rounded">
+                            <i class="fas fa-sticky-note text-amber-600 dark:text-amber-400 text-sm"></i>
+                        </div>
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Observaciones</h3>
+                    </div>
+                    <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap" id="ver-observaciones">-</p>
+                </div>
+
+                <!-- SECCIÓN 4: Detalles - Items del Requerimiento -->
+                <div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4 md:p-5">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="bg-indigo-100 dark:bg-indigo-900/30 p-2 rounded">
+                            <i class="fas fa-list text-indigo-600 dark:text-indigo-400 text-sm"></i>
+                        </div>
+                        <h3 class="text-base md:text-lg font-semibold text-gray-900 dark:text-white">Items del Requerimiento</h3>
+                        <span class="ml-auto px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-bold" id="ver-contador-items">0 items</span>
+                    </div>
+
+                    <!-- Tabla de detalles -->
+                    <div class="overflow-x-auto border border-gray-200 dark:border-slate-700 rounded-lg">
+                        <table class="w-full text-xs md:text-sm">
+                            <thead class="bg-gradient-to-r from-gray-100 to-gray-50 dark:from-slate-800 dark:to-slate-700 border-b-2 border-gray-200 dark:border-slate-700">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">Tipo</th>
+                                    <th class="px-4 py-3 text-left font-bold text-gray-700 dark:text-gray-300">Descripción</th>
+                                    <th class="px-4 py-3 text-center font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">Cantidad</th>
+                                    <th class="px-4 py-3 text-center font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">Unidad</th>
+                                    <th class="px-4 py-3 text-left font-bold text-gray-700 dark:text-gray-300">Observaciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ver-tabla-detalles" class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
+                                <tr>
+                                    <td colspan="5" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                                        <i class="fas fa-spinner fa-spin mr-2"></i>Cargando detalles...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Resumen de items -->
+                    <div class="grid grid-cols-3 gap-3 mt-4">
+                        <div class="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-3 border border-indigo-200 dark:border-indigo-800">
+                            <p class="text-xs text-indigo-700 dark:text-indigo-300 font-semibold uppercase mb-1">Total Items</p>
+                            <p class="text-2xl font-bold text-indigo-900 dark:text-indigo-100" id="ver-total-items">0</p>
+                        </div>
+                        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+                            <p class="text-xs text-blue-700 dark:text-blue-300 font-semibold uppercase mb-1">Materiales</p>
+                            <p class="text-2xl font-bold text-blue-900 dark:text-blue-100" id="ver-total-materiales">0</p>
+                        </div>
+                        <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 border border-emerald-200 dark:border-emerald-800">
+                            <p class="text-xs text-emerald-700 dark:text-emerald-300 font-semibold uppercase mb-1">Servicios</p>
+                            <p class="text-2xl font-bold text-emerald-900 dark:text-emerald-100" id="ver-total-servicios">0</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 px-4 md:px-6 py-3 md:py-4 flex gap-2 justify-end shadow-lg flex-shrink-0">
+            <button type="button" onclick="cerrarModalVerRequerimiento()" class="px-6 py-2 bg-gray-300 hover:bg-gray-400 dark:bg-slate-600 dark:hover:bg-slate-500 text-gray-900 dark:text-white rounded-lg font-medium text-sm flex items-center gap-2 transition-colors">
+                <i class="fas fa-times"></i><span>Cerrar</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let requerimientos = [];
+let itemsRequerimiento = [];
+
+// ============================================================================
+// FUNCIONES PARA COMPONENTE VISUAL DE FLUJO DE APROBACIÓN
+// ============================================================================
+
+/**
+ * Carga y renderiza el componente visual del flujo para un requerimiento
+ */
+async function cargarFlujoVisual(idRequerimiento) {
+    const contenedor = document.getElementById(`flujo-${idRequerimiento}`);
+    if (!contenedor) {
+        console.log(`Contenedor flujo-${idRequerimiento} no encontrado`);
+        return;
+    }
+    
+    try {
+        console.log(`Cargando flujo visual para requerimiento ${idRequerimiento}`);
+        const response = await fetch(`/api/requerimientos/flujo/${idRequerimiento}`);
+        const data = await response.json();
+        
+        console.log(`Respuesta flujo ${idRequerimiento}:`, data);
+        
+        if (data.success && data.data) {
+            const componenteHTML = generarComponenteFlujoVisual(data.data);
+            contenedor.innerHTML = componenteHTML;
+            console.log(`Flujo visual renderizado para ${idRequerimiento}`);
+        } else {
+            contenedor.innerHTML = '<span class="text-gray-400 text-xs">Sin flujo</span>';
+            console.log(`Sin datos de flujo para ${idRequerimiento}`);
+        }
+    } catch (error) {
+        console.error('Error cargando flujo visual:', error);
+        contenedor.innerHTML = '<span class="text-red-400 text-xs">Error</span>';
+    }
+}
+
+/**
+ * Genera el HTML del componente visual del flujo
+ */
+function generarComponenteFlujoVisual(pasos) {
+    console.log('Generando componente visual para pasos:', pasos);
+    
+    if (!pasos || pasos.length === 0) {
+        return '<span class="text-gray-400 text-xs">Sin flujo</span>';
+    }
+    
+    let html = '<div class="flujo-timeline">';
+    
+    pasos.forEach((paso, index) => {
+        console.log(`Procesando paso ${index + 1}:`, paso);
+        
+        // Determinar estado del círculo
+        let circleClass = 'pendiente';
+        let icon = '';
+        
+        if (paso.estado === 'APROBADO') {
+            circleClass = 'aprobado';
+            icon = '✓';
+        } else {
+            icon = ''; // Círculo vacío para pendientes
+        }
+        
+        // Agregar paso
+        html += '<div class="flujo-step">';
+        html += `<div class="flujo-circle ${circleClass}" title="${paso.nombre_paso || 'Paso ' + (index + 1)}">${icon}</div>`;
+        
+        // Agregar conector (excepto en el último paso)
+        if (index < pasos.length - 1) {
+            const connectorClass = paso.estado === 'APROBADO' ? 'completed' : '';
+            html += `<div class="flujo-connector ${connectorClass}"></div>`;
+        }
+        
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    
+    console.log('HTML generado:', html);
+    return html;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    cargarRequerimientos();
+    document.getElementById('btn-crear-requerimiento').addEventListener('click', abrirModalRequerimiento);
+    document.getElementById('form-requerimiento').addEventListener('submit', guardarRequerimiento);
+    
+    // Evento para formulario de edición
+    const formEditar = document.getElementById('form-editar-requerimiento');
+    if (formEditar) {
+        formEditar.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('edit-id-requerimiento').value;
+            
+            try {
+                const response = await fetch(`/api/requerimientos/actualizar/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        descripcion: document.getElementById('edit-descripcion').value,
+                        observaciones: document.getElementById('edit-observaciones').value
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert('✅ Requerimiento actualizado exitosamente');
+                    cerrarModalEditar();
+                    cargarRequerimientos();
+                } else {
+                    alert('❌ Error: ' + (result.error || 'Error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al actualizar');
+            }
+        });
+    }
+});
+
+function abrirModalRequerimiento() {
+    itemsRequerimiento = [];
+    limpiarModal();
+    document.getElementById('modal-requerimiento').classList.remove('hidden');
+}
+
+function cerrarModalRequerimiento() {
+    document.getElementById('modal-requerimiento').classList.add('hidden');
+    limpiarModal();
+}
+
+function limpiarModal() {
+    document.getElementById('buscar-presupuesto').value = '';
+    document.getElementById('contenido-resultados').innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-sm text-center py-4">Realiza una búsqueda</p>';
+    document.getElementById('lista-requerimiento').innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-sm text-center py-4">Agrega items</p>';
+    limpiarForm();
+    actualizarResumen();
+}
+
+function limpiarForm() {
+    document.getElementById('descripcion').value = '';
+    document.getElementById('observaciones').value = '';
+}
+
+async function buscarPresupuesto() {
+    const numero = document.getElementById('buscar-presupuesto').value.trim();
+    if (!numero) {
+        alert('Ingresa número de presupuesto');
+        return;
+    }
+    try {
+        const response = await fetch(`/api/presupuestos/buscar-por-numero?numero=${numero}`);
+        const data = await response.json();
+        if (data.success && data.data) {
+            document.getElementById('id_presupuesto_selected').value = data.data.id_presupuesto;
+            const p = data.data;
+            // TASK 6: Display cantidad_saldo (available quantity balance)
+            document.getElementById('contenido-resultados').innerHTML = `
+                <div class="bg-white dark:bg-slate-700 p-4 rounded-lg border border-gray-200 dark:border-slate-600">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Número</p>
+                            <p class="font-semibold text-gray-900 dark:text-white mt-1">${p.numero_presupuesto}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Obra</p>
+                            <p class="font-semibold text-gray-900 dark:text-white mt-1">${p.nombre_obra || '-'}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Monto Total</p>
+                            <p class="font-semibold text-gray-900 dark:text-white mt-1">S/ ${parseFloat(p.monto).toFixed(2)}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Consumida</p>
+                            <p class="font-semibold text-orange-600 dark:text-orange-400 mt-1">S/ ${parseFloat(p.cantidad_consumida || 0).toFixed(2)}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Disponible</p>
+                            <p class="font-semibold ${parseFloat(p.cantidad_saldo) > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'} mt-1">S/ ${parseFloat(p.cantidad_saldo || 0).toFixed(2)}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            await cargarItemsPresupuesto(data.data.id_presupuesto);
+        } else {
+            // Mostrar mensaje de error mejorado
+            const errorMsg = data.error || 'Presupuesto no encontrado';
+            document.getElementById('contenido-resultados').innerHTML = `
+                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 p-4 rounded-lg">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-exclamation-circle text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"></i>
+                        <div>
+                            <p class="font-semibold text-red-800 dark:text-red-300 text-sm">No se encontró presupuesto</p>
+                            <p class="text-red-700 dark:text-red-400 text-xs mt-1">Solo se pueden buscar presupuestos en estado <strong>APROBADO</strong></p>
+                            <ul class="text-red-700 dark:text-red-400 text-xs mt-2 ml-4 list-disc space-y-0.5">
+                                <li>Verifica que el número sea correcto</li>
+                                <li>Asegúrate que el presupuesto esté <strong>APROBADO</strong></li>
+                                <li>Intenta nuevamente con otro número</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('lista-requerimiento').innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-sm text-center py-4">Agrega items desde el presupuesto</p>';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('contenido-resultados').innerHTML = `
+            <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 p-4 rounded-lg">
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-times-circle text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"></i>
+                    <div>
+                        <p class="font-semibold text-red-800 dark:text-red-300 text-sm">Error en la búsqueda</p>
+                        <p class="text-red-700 dark:text-red-400 text-xs mt-1">${error.message || 'Verifica tu conexión e intenta de nuevo'}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+}
+
+async function cargarItemsPresupuesto(idPresupuesto) {
+    try {
+        const response = await fetch(`/api/presupuestos/obtener-detalles/${idPresupuesto}`);
+        const data = await response.json();
+        if (data.success && data.data && data.data.detalles) {
+            const detalles = data.data.detalles;
+            
+            // ⭐ DEBUG: Ver qué valores de id_material estamos recibiendo
+            console.log('[DEBUG_ID_MATERIAL] Detalles recibidos del backend:', detalles.map(item => ({
+                id_detalle: item.id_detalle,
+                descripcion: item.descripcion,
+                id_material: item.id_material,
+                tipo_item: item.tipo_item
+            })));
+            
+            const html = detalles.map((item, idx) => `
+                <div class="bg-white dark:bg-slate-700 p-3 rounded-lg border border-gray-200 dark:border-slate-600 flex items-center justify-between">
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-900 dark:text-white text-sm">${item.material_nombre || item.descripcion}</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                            Disp: ${parseFloat(item.cantidad_saldo || item.cantidad || 0).toFixed(2)} ${item.unidad_nombre || item.unidad_abreviatura || 'und'}
+                            ${item.cantidad_consumida && parseFloat(item.cantidad_consumida) > 0 ? `(Cons: ${parseFloat(item.cantidad_consumida).toFixed(2)})` : ''}
+                        </p>
+                    </div>
+                    <button type="button" class="btn-agregar-item ml-2 px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded text-xs font-medium transition-colors" data-id-detalle="${item.id_detalle}" data-id-material="${item.id_material || ''}" data-nombre="${(item.material_nombre || item.descripcion).replace(/"/g, '&quot;')}" data-cantidad="${item.cantidad_saldo || item.cantidad}" data-tipo="${item.tipo_item}" data-unidad="${item.unidad_nombre || item.unidad_abreviatura || 'und'}" data-cantidad-original="${item.cantidad}" data-cantidad-consumida="${item.cantidad_consumida || 0}">Agregar</button>
+                </div>
+            `).join('');
+            document.getElementById('contenido-resultados').innerHTML = html;
+            
+            // Agregar event listeners a los botones
+            document.querySelectorAll('.btn-agregar-item').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // ⭐ DEBUG: Ver qué valores estamos pasando a agregarItem
+                    console.log('[DEBUG_ID_MATERIAL] Botón clickeado. Dataset:', {
+                        idDetalle: this.dataset.idDetalle,
+                        idMaterial: this.dataset.idMaterial,
+                        nombre: this.dataset.nombre,
+                        tipo: this.dataset.tipo
+                    });
+                    
+                    agregarItem(
+                        parseInt(this.dataset.idDetalle),
+                        this.dataset.nombre,
+                        this.dataset.cantidad,
+                        this.dataset.tipo,
+                        this.dataset.unidad,
+                        this.dataset.idMaterial ? parseInt(this.dataset.idMaterial) : null
+                    );
+                });
+            });
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function agregarItem(idDetalle, nombre, cantidad, tipo, unidad, idMaterial = null) {
+    // ⭐ DEBUG: Ver qué valores están llegando a agregarItem
+    console.log('[DEBUG_ID_MATERIAL] agregarItem llamado con:', {
+        idDetalle,
+        nombre,
+        cantidad,
+        tipo,
+        unidad,
+        idMaterial
+    });
+    
+    // cantidad aquí es ahora cantidad_saldo (disponible)
+    const nuevoItem = { 
+        id_detalle_presupuesto: idDetalle,
+        id_material: idMaterial,
+        nombre: nombre,
+        cantidad: cantidad,  // cantidad_saldo
+        cantidad_saldo: cantidad,  // guardar el saldo disponible
+        tipo_item: tipo
+        // unidad_medida removida - se obtiene vía id_material → TblMateriales → TblUnidadMedida
+    };
+    
+    console.log('[DEBUG_ID_MATERIAL] Item agregado al array:', nuevoItem);
+    
+    itemsRequerimiento.push(nuevoItem);
+    renderizarItemsRequerimiento();
+    actualizarResumen();
+}
+
+function renderizarItemsRequerimiento() {
+    const container = document.getElementById('lista-requerimiento');
+    if (itemsRequerimiento.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-sm text-center py-4">Agrega items</p>';
+        return;
+    }
+    const html = itemsRequerimiento.map((item, idx) => `
+        <div class="bg-white dark:bg-slate-700 p-3 rounded-lg border border-gray-200 dark:border-slate-600 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-700/80 transition-colors">
+            <div class="flex-1 min-w-0">
+                <p class="font-medium text-gray-900 dark:text-white text-sm truncate">${item.nombre}</p>
+            </div>
+            <div class="flex items-center gap-2 ml-2 flex-shrink-0">
+                <input type="number" value="${item.cantidad}" min="1" data-index="${idx}" class="input-cantidad w-14 px-2 py-1 border border-gray-300 dark:border-slate-500 rounded text-xs bg-white dark:bg-slate-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500">
+                <button type="button" class="btn-eliminar-item px-2 py-1 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors" data-index="${idx}">
+                    <i class="fas fa-trash text-sm"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+    container.innerHTML = html;
+    
+    // Agregar event listeners
+    document.querySelectorAll('.input-cantidad').forEach(input => {
+        input.addEventListener('change', function() {
+            cambiarCantidad(parseInt(this.dataset.index), this.value);
+        });
+    });
+    
+    document.querySelectorAll('.btn-eliminar-item').forEach(btn => {
+        btn.addEventListener('click', function() {
+            eliminarItem(parseInt(this.dataset.index));
+        });
+    });
+}
+
+function cambiarCantidad(idx, cantidad) {
+    itemsRequerimiento[idx].cantidad = parseInt(cantidad) || 1;
+    actualizarResumen();
+}
+
+function eliminarItem(idx) {
+    itemsRequerimiento.splice(idx, 1);
+    renderizarItemsRequerimiento();
+    actualizarResumen();
+}
+
+function actualizarResumen() {
+    let totalItems = itemsRequerimiento.length;
+    let materiales = itemsRequerimiento.filter(i => i.tipo_item === 'MATERIAL').length;
+    let servicios = itemsRequerimiento.filter(i => i.tipo_item === 'SERVICIO').length;
+    
+    document.getElementById('total-items').textContent = totalItems;
+    document.getElementById('total-materiales').textContent = materiales;
+    document.getElementById('total-servicios').textContent = servicios;
+}
+
+async function guardarRequerimiento(e) {
+    e.preventDefault();
+    if (itemsRequerimiento.length === 0) {
+        alert('Agrega al menos un item');
+        return;
+    }
+    
+    // CAPTURAR CANTIDADES EDITADAS DEL USUARIO
+    const items_finales = [];
+    document.querySelectorAll('[data-index]').forEach((input, idx) => {
+        if (itemsRequerimiento[idx]) {
+            const cantidad_editada = parseInt(input.value) || parseInt(itemsRequerimiento[idx].cantidad) || 1;
+            items_finales.push({
+                id_detalle_presupuesto: itemsRequerimiento[idx].id_detalle_presupuesto,
+                id_material: itemsRequerimiento[idx].id_material,  // ⭐ AGREGAR id_material
+                nombre: itemsRequerimiento[idx].nombre,
+                cantidad: cantidad_editada,  // ⭐ USAR CANTIDAD EDITADA
+                tipo_item: itemsRequerimiento[idx].tipo_item
+                // unidad removida - se obtiene vía id_material → TblMateriales → TblUnidadMedida
+            });
+        }
+    });
+    
+    console.log('[GUARDAR_REQUERIMIENTO] Items finales con cantidades editadas:', items_finales);
+    
+    // ⭐ DEBUG DETALLADO: Ver cada item individual
+    items_finales.forEach((item, idx) => {
+        console.log(`[DEBUG_ID_MATERIAL] Item ${idx}:`, {
+            id_detalle_presupuesto: item.id_detalle_presupuesto,
+            id_material: item.id_material,
+            nombre: item.nombre,
+            tipo_item: item.tipo_item
+        });
+    });
+    
+    try {
+        const response = await fetch('/api/requerimientos/crear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                descripcion: document.getElementById('descripcion').value,
+                observaciones: document.getElementById('observaciones').value,
+                id_presupuesto: parseInt(document.getElementById('id_presupuesto_selected').value) || null,
+                items: items_finales  // ⭐ ENVIAR ITEMS CON CANTIDADES EDITADAS
+            })
+        });
+        const result = await response.json();
+        if (result.success) {
+            alert('✅ Requerimiento creado: ' + (result.codigo || 'REQ-00001'));
+            cerrarModalRequerimiento();
+            cargarRequerimientos();
+        } else {
+            alert('❌ Error: ' + (result.error || 'Error'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al guardar');
+    }
+}
+
+async function cargarRequerimientos() {
+    try {
+        const response = await fetch('/api/requerimientos/obtener');
+        const data = await response.json();
+        if (data.success) {
+            requerimientos = data.data || [];
+            renderizarTabla();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function renderizarTabla() {
+    const tbody = document.getElementById('requerimientos-lista');
+    if (requerimientos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400"><i class="fas fa-inbox mr-2"></i>Sin requerimientos</td></tr>';
+        return;
+    }
+    tbody.innerHTML = requerimientos.map(req => `
+        <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${req.id_requerimiento}</td>
+            <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">${req.codigo}</td>
+            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${req.descripcion}</td>
+            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${req.cantidad}</td>
+            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${req.solicitante}</td>
+            <td class="px-6 py-4 text-sm"><span class="px-2 py-1 rounded-full text-xs font-semibold ${getEstadoBadge(req.estado)}">${req.estado}</span></td>
+            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400" id="flujo-${req.id_requerimiento}">
+                <div class="flujo-visual-loading">
+                    <i class="fas fa-spinner fa-spin text-xs"></i>
+                </div>
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">${new Date(req.fecha_creacion).toLocaleDateString('es-PE')}</td>
+            <td class="px-6 py-4 text-sm flex gap-2">
+                <button onclick="verDetalleRequerimiento(${req.id_requerimiento})" class="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-medium" title="Ver detalle"><i class="fas fa-eye"></i></button>
+                <button onclick="editarRequerimiento(${req.id_requerimiento})" class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium"><i class="fas fa-edit"></i></button>
+                <button onclick="eliminarRequerimiento(${req.id_requerimiento})" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium"><i class="fas fa-trash"></i></button>
+            </td>
+        </tr>
+    `).join('');
+    
+    // Después de renderizar las filas, cargar los componentes visuales de flujo
+    setTimeout(() => {
+        requerimientos.forEach(req => {
+            cargarFlujoVisual(req.id_requerimiento);
+        });
+    }, 100);
+}
+
+function getEstadoBadge(estado) {
+    const badges = {
+        'PENDIENTE': 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
+        'APROBADO': 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
+        'EN_PROCESO': 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+    };
+    return badges[estado] || badges['PENDIENTE'];
+}
+
+
+// ============================================================================
+// FUNCIONES PARA VER DETALLE COMPLETO DE REQUERIMIENTO
+// ============================================================================
+
+// Abrir modal de visualización de detalles
+async function verDetalleRequerimiento(id) {
+    console.log('\n╔════════════════════════════════════════════════════════════════╗');
+    console.log('║        🔍 INICIANDO CARGA DE DETALLE DE REQUERIMIENTO       ║');
+    console.log('╚════════════════════════════════════════════════════════════════╝\n');
+    try {
+        console.log(`[VER_DETALLE] Iniciando carga de requerimiento ID: ${id}`);
+        
+        const response = await fetch(`/api/requerimientos/obtener/${id}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            console.error('[VER_DETALLE] Error:', data.error);
+            alert('Error al cargar el requerimiento: ' + (data.error || 'Desconocido'));
+            return;
+        }
+        
+        const req = data.data.requerimiento;
+        const detalles = data.data.detalles;
+        const resumen = data.data.resumen;
+        
+        console.log('[VER_DETALLE] ✓ Datos cargados exitosamente');
+        console.log('[VER_DETALLE] Código:', req.codigo);
+        console.log('[VER_DETALLE] Estado:', req.estado);
+        console.log('[VER_DETALLE] Detalles:', detalles.length, 'items');
+        
+        // Llenar información general
+        document.getElementById('ver-codigo').textContent = req.codigo || 'N/A';
+        document.getElementById('ver-codigo-titulo').textContent = req.codigo || 'REQ-00001';
+        document.getElementById('ver-id').textContent = req.id_requerimiento || '-';
+        document.getElementById('ver-solicitante').textContent = req.solicitante || '-';
+        document.getElementById('ver-descripcion').textContent = req.descripcion || '-';
+        document.getElementById('ver-observaciones').textContent = req.observaciones || '-';
+        
+        // Fecha de creación
+        if (req.fecha_creacion) {
+            const fecha = new Date(req.fecha_creacion);
+            document.getElementById('ver-fecha').textContent = fecha.toLocaleDateString('es-PE', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        // Estado con color
+        const estadoBadge = document.getElementById('ver-estado-badge');
+        estadoBadge.textContent = req.estado || 'PENDIENTE';
+        const estadoClases = {
+            'PENDIENTE': 'px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+            'APROBADO': 'px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+            'EN_PROCESO': 'px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+            'RECHAZADO': 'px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+            'COMPLETADO': 'px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
+        };
+        estadoBadge.className = estadoClases[req.estado] || estadoClases['PENDIENTE'];
+        
+        // Llenar tabla de detalles (SIN PRECIOS - solo cantidad y unidad)
+        if (detalles && detalles.length > 0) {
+            const tbody = document.getElementById('ver-tabla-detalles');
+            tbody.innerHTML = detalles.map((item, idx) => {
+                return `
+                    <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                        <td class="px-4 py-3 text-xs md:text-sm">
+                            <span class="px-2 py-1 rounded text-xs font-bold inline-block ${
+                                item.tipo_item === 'MATERIAL' 
+                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+                                    : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                            }">
+                                ${item.tipo_item || 'ITEM'}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-xs md:text-sm text-gray-700 dark:text-gray-300 max-w-xs">
+                            ${item.descripcion || '-'}
+                        </td>
+                        <td class="px-4 py-3 text-center text-xs md:text-sm text-gray-700 dark:text-gray-300 font-semibold">
+                            ${parseFloat(item.cantidad || 0).toFixed(2)}
+                        </td>
+                        <td class="px-4 py-3 text-center text-xs md:text-sm text-gray-700 dark:text-gray-300">
+                            ${item.unidad_nombre || item.unidad_abreviatura || 'und'}
+                        </td>
+                        <td class="px-4 py-3 text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                            ${item.observaciones || '-'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            console.log('[VER_DETALLE] ✓ Tabla de detalles renderizada:', detalles.length, 'filas');
+        } else {
+            const tbody = document.getElementById('ver-tabla-detalles');
+            tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400"><i class="fas fa-inbox mr-2"></i>Sin items registrados</td></tr>';
+        }
+        
+        // Actualizar resumen
+        document.getElementById('ver-contador-items').textContent = `${resumen.cantidad_items || 0} items`;
+        document.getElementById('ver-total-items').textContent = resumen.cantidad_items || 0;
+        document.getElementById('ver-total-materiales').textContent = resumen.cantidad_materiales || 0;
+        document.getElementById('ver-total-servicios').textContent = resumen.cantidad_servicios || 0;
+        
+        // Abrir modal
+        document.getElementById('modal-ver-requerimiento').classList.remove('hidden');
+        
+        console.log('[VER_DETALLE] ✓ Modal abierto exitosamente');
+        console.log('╔════════════════════════════════════════════════════════════════╗');
+        console.log('║                        ✅ CARGA COMPLETADA                      ║');
+        console.log('╚════════════════════════════════════════════════════════════════╝\n');
+        
+    } catch (error) {
+        console.error('[VER_DETALLE] ✗ Error fatal:', error);
+        alert('Error al cargar el detalle del requerimiento: ' + error.message);
+    }
+}
+
+// Cerrar modal de visualización
+function cerrarModalVerRequerimiento() {
+    document.getElementById('modal-ver-requerimiento').classList.add('hidden');
+}
+
+// ============================================================================
+// FUNCIONES PARA EDICIÓN DE REQUERIMIENTO
+// ============================================================================
+
+// Abrir modal de edición
+async function editarRequerimiento(id) {
+    try {
+        console.log(`[EDITAR_REQUERIMIENTO] Abriendo modal para ID: ${id}`);
+        
+        const response = await fetch(`/api/requerimientos/obtener/${id}`);
+        const data = await response.json();
+        
+        console.log(`[EDITAR_REQUERIMIENTO] Response recibido:`, data);
+        
+        if (data.success) {
+            const req = data.data.requerimiento;
+            const detalles = data.data.detalles;
+            
+            console.log(`[EDITAR_REQUERIMIENTO] Datos del requerimiento:`, {
+                id: req.id_requerimiento,
+                codigo: req.codigo,
+                usuario_completo: req.usuario_completo,
+                numero_presupuesto: req.numero_presupuesto,
+                estado: req.estado
+            });
+            
+            // Llenar campos del requerimiento
+            document.getElementById('edit-id-requerimiento').value = req.id_requerimiento;
+            document.getElementById('edit-codigo').value = req.codigo;
+            document.getElementById('edit-codigo-titulo').textContent = req.codigo;
+            
+            // Asignar usuario_completo
+            const solicitanteValue = req.usuario_completo || 'N/A';
+            document.getElementById('edit-solicitante').value = solicitanteValue;
+            console.log(`[EDITAR_REQUERIMIENTO] Asignado edit-solicitante: "${solicitanteValue}"`);
+            
+            // Asignar numero_presupuesto
+            const presupuestoValue = req.numero_presupuesto || 'N/A';
+            document.getElementById('edit-presupuesto').value = presupuestoValue;
+            console.log(`[EDITAR_REQUERIMIENTO] Asignado edit-presupuesto: "${presupuestoValue}"`);
+            
+            document.getElementById('edit-estado').value = req.estado;
+            document.getElementById('edit-descripcion').value = req.descripcion;
+            document.getElementById('edit-observaciones').value = req.observaciones || '';
+            
+            // Mostrar items
+            console.log(`[EDITAR_REQUERIMIENTO] Mostrando ${detalles.length} items`);
+            mostrarItemsEdicion(detalles);
+            
+            // Abrir modal
+            console.log(`[EDITAR_REQUERIMIENTO] Abriendo modal`);
+            document.getElementById('modal-editar-requerimiento').classList.remove('hidden');
+            
+            console.log(`[EDITAR_REQUERIMIENTO] ✓ Modal abierto exitosamente`);
+        } else {
+            console.error(`[EDITAR_REQUERIMIENTO] Error en respuesta:`, data);
+            alert('Error al cargar el requerimiento: ' + data.error);
+        }
+    } catch (error) {
+        console.error('[EDITAR_REQUERIMIENTO] Error:', error);
+        alert('Error al cargar el requerimiento: ' + error.message);
+    }
+}
+
+// Mostrar items en la sección de edición (EDITABLES)
+function mostrarItemsEdicion(detalles) {
+    const container = document.getElementById('edit-items-lista');
+    if (detalles.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-sm text-center py-4">Sin items</p>';
+        actualizarResumenEdicion([]);
+        return;
+    }
+    
+    const html = detalles.map((item, idx) => `
+        <div class="bg-white dark:bg-slate-700 p-4 rounded-lg border border-gray-200 dark:border-slate-600 space-y-3">
+            <!-- Material/Tipo (read-only) -->
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold px-2 py-1 rounded ${
+                    item.tipo_item === 'MATERIAL' 
+                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' 
+                        : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                }">
+                    ${item.tipo_item}
+                </span>
+                ${item.material_nombre && item.material_nombre !== 'N/A' ? 
+                    `<span class="text-xs text-gray-600 dark:text-gray-400">${item.material_nombre}</span>` : ''}
+            </div>
+            
+            <!-- Descripción (EDITABLE) -->
+            <div>
+                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Descripción</label>
+                <textarea 
+                    data-id-detalle="${item.id_detalle}"
+                    data-field="descripcion"
+                    rows="2"
+                    class="edit-item-field w-full px-3 py-2 border border-gray-300 dark:border-slate-500 rounded-lg bg-white dark:bg-slate-600 text-gray-900 dark:text-white text-sm resize-none"
+                >${item.descripcion}</textarea>
+            </div>
+            
+            <!-- Cantidad (EDITABLE) -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Cantidad <span class="text-red-500">*</span></label>
+                    <input 
+                        type="number"
+                        data-id-detalle="${item.id_detalle}"
+                        data-field="cantidad"
+                        value="${item.cantidad}"
+                        min="1"
+                        class="edit-item-field w-full px-3 py-2 border border-gray-300 dark:border-slate-500 rounded-lg bg-white dark:bg-slate-600 text-gray-900 dark:text-white text-sm"
+                    />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Unidad</label>
+                    <input 
+                        type="text"
+                        value="${item.unidad_nombre || item.unidad_abreviatura || 'und'}"
+                        disabled
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-slate-500 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white text-sm"
+                    />
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = html;
+    
+    // Agregar event listeners para campos editables
+    document.querySelectorAll('.edit-item-field').forEach(field => {
+        field.addEventListener('change', function() {
+            marcarItemsCambiados();
+        });
+    });
+    
+    actualizarResumenEdicion(detalles);
+}
+
+// Actualizar resumen en edición
+function actualizarResumenEdicion(detalles) {
+    let totalItems = detalles.length;
+    let materiales = detalles.filter(i => i.tipo_item === 'MATERIAL').length;
+    let servicios = detalles.filter(i => i.tipo_item === 'SERVICIO').length;
+    
+    document.getElementById('edit-total-items').textContent = totalItems;
+    document.getElementById('edit-total-materiales').textContent = materiales;
+    document.getElementById('edit-total-servicios').textContent = servicios;
+}
+
+// Cerrar modal de edición
+function cerrarModalEditar() {
+    document.getElementById('modal-editar-requerimiento').classList.add('hidden');
+    limpiarFormEditar();
+}
+
+// Limpiar formulario de edición
+function limpiarFormEditar() {
+    document.getElementById('form-editar-requerimiento').reset();
+    document.getElementById('edit-items-lista').innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-sm text-center py-4">Sin items</p>';
+}
+
+// Guardar cambios del requerimiento (INCLUYENDO ITEMS)
+document.addEventListener('DOMContentLoaded', function() {
+    // Evento para formulario de edición
+    const formEditar = document.getElementById('form-editar-requerimiento');
+    if (formEditar) {
+        formEditar.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('edit-id-requerimiento').value;
+            
+            try {
+                // Recopilar datos editados de los items
+                const detalles_editados = [];
+                document.querySelectorAll('.edit-item-field').forEach(field => {
+                    const id_detalle = field.getAttribute('data-id-detalle');
+                    const field_type = field.getAttribute('data-field');
+                    
+                    // Agrupar por id_detalle
+                    let detalle = detalles_editados.find(d => d.id_detalle == id_detalle);
+                    if (!detalle) {
+                        detalle = { id_detalle: parseInt(id_detalle), descripcion: '', cantidad: 1 };
+                        detalles_editados.push(detalle);
+                    }
+                    
+                    if (field_type === 'descripcion') {
+                        detalle.descripcion = field.value;
+                    } else if (field_type === 'cantidad') {
+                        detalle.cantidad = parseInt(field.value) || 1;
+                    }
+                });
+                
+                console.log('[GUARDAR_EDICION] Detalles editados:', detalles_editados);
+                
+                const response = await fetch(`/api/requerimientos/actualizar/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        descripcion: document.getElementById('edit-descripcion').value,
+                        observaciones: document.getElementById('edit-observaciones').value,
+                        detalles: detalles_editados
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert('✅ Requerimiento actualizado exitosamente');
+                    cerrarModalEditar();
+                    cargarRequerimientos();
+                } else {
+                    alert('❌ Error: ' + (result.error || 'Error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al actualizar');
+            }
+        });
+    }
+});
+
+// Marcar items como cambiados (indicador visual)
+function marcarItemsCambiados() {
+    const containerItems = document.getElementById('edit-items-lista');
+    const items = containerItems.querySelectorAll('[class*="bg-white dark:bg-slate-700"]');
+    items.forEach(item => {
+        item.classList.add('border-yellow-400', 'dark:border-yellow-600');
+    });
+}
+
+// ============================================================================
+// FUNCIONES PARA ELIMINACIÓN DE REQUERIMIENTO
+// ============================================================================
+
+async function eliminarRequerimiento(id) {
+    if (confirm('¿Estás seguro de que deseas eliminar este requerimiento? Esta acción no se puede deshacer.')) {
+        try {
+            const response = await fetch(`/api/requerimientos/eliminar/${id}`, {
+                method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                alert('✅ Requerimiento eliminado exitosamente');
+                cargarRequerimientos();
+            } else {
+                alert('❌ Error: ' + (result.error || 'Error'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al eliminar');
+        }
+    }
+}
+</script>
+{% endblock %}

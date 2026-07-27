@@ -1,0 +1,1153 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
+    <!-- Topbar -->
+    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
+        <div class="px-6 py-4 flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Gestión de Usuarios</h1>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Administra los usuarios del sistema</p>
+            </div>
+            <button id="btn-crear-usuario" class="flex items-center gap-2 px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg">
+                <i class="fas fa-plus"></i>
+                <span>Crear Usuario</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="p-6">
+        <!-- Tabla de Usuarios -->
+        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table id="tabla-usuarios" class="w-full">
+                    <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">ID</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Documento</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Nombre</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Email</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Usuario</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Cargo</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Área</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Estado</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usuarios-lista" class="divide-y divide-gray-200 dark:divide-slate-700">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                            <td colspan="9" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Cargando usuarios...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Crear/Editar Usuario -->
+<div id="modal-usuario" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+        <!-- Header -->
+        <div class="sticky top-0 bg-gradient-to-r from-slate-600 to-slate-700 text-white px-8 py-6 flex items-center justify-between border-b-2 border-slate-700">
+            <div>
+                <h2 id="modal-titulo" class="text-2xl font-bold">Crear Nuevo Usuario</h2>
+                <p class="text-slate-200 text-sm mt-1">Completa los datos del nuevo usuario</p>
+            </div>
+            <button onclick="cerrarModalUsuario()" class="text-white hover:text-gray-200 transition-colors p-2 hover:bg-slate-700 rounded-lg">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+
+        <!-- Formulario -->
+        <form id="form-usuario" class="p-8 space-y-6">
+            <input type="hidden" id="usuario-id" value="">
+
+            <!-- Sección: Datos de Identificación -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-id-card text-slate-600 dark:text-slate-400"></i>
+                    Datos de Identificación
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Tipo de Documento <span class="text-red-500">*</span>
+                        </label>
+                        <select id="tipo_documento" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" required>
+                            <option value="">Seleccionar tipo...</option>
+                            <option value="DNI">DNI</option>
+                            <option value="Carnet">Carnet</option>
+                            <option value="Pasaporte">Pasaporte</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Número de Documento <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="documento_numero" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" placeholder="1234567890" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección: Información Personal -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-user text-slate-600 dark:text-slate-400"></i>
+                    Información Personal
+                </h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Nombres <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="nombres" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" placeholder="Juan" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Apellido Paterno <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="apellido_paterno" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" placeholder="Pérez" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Apellido Materno
+                        </label>
+                        <input type="text" id="apellido_materno" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" placeholder="García">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección: Datos Adicionales Personales -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-calendar text-slate-600 dark:text-slate-400"></i>
+                    Datos Adicionales
+                </h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Fecha de Nacimiento
+                        </label>
+                        <input type="date" id="fecha_nacimiento" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Género
+                        </label>
+                        <select id="genero" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all">
+                            <option value="">Seleccionar género...</option>
+                            <option value="MASCULINO">Masculino</option>
+                            <option value="FEMENINO">Femenino</option>
+                            <option value="OTRO">Otro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Dirección
+                        </label>
+                        <input type="text" id="direccion" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" placeholder="Calle, número, apto...">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección: Contacto -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-envelope text-slate-600 dark:text-slate-400"></i>
+                    Contacto
+                </h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Email <span class="text-red-500">*</span>
+                        </label>
+                        <input type="email" id="email" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" placeholder="usuario@ejemplo.com" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Celular
+                        </label>
+                        <input type="text" id="celular" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" placeholder="3001234567">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Celular Referencia
+                        </label>
+                        <input type="text" id="celular_referencia" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" placeholder="3001234567">
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- Sección: Organización -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-briefcase text-slate-600 dark:text-slate-400"></i>
+                    Organización
+                </h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Empresa <span class="text-red-500">*</span>
+                        </label>
+                        <select id="id_empresa" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" required>
+                            <option value="">Seleccionar empresa...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Área
+                        </label>
+                        <select id="id_area" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all">
+                            <option value="">Seleccionar área...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Cargo
+                        </label>
+                        <select id="id_cargo" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" disabled>
+                            <option value="">Seleccionar cargo...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección: Ubicación Geográfica -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-map-marker-alt text-slate-600 dark:text-slate-400"></i>
+                    Ubicación Geográfica
+                </h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Departamento
+                        </label>
+                        <select id="id_departamento" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all">
+                            <option value="">Seleccionar departamento...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Provincia
+                        </label>
+                        <select id="id_provincia" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" disabled>
+                            <option value="">Seleccionar provincia...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Distrito
+                        </label>
+                        <select id="id_distrito" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" disabled>
+                            <option value="">Seleccionar distrito...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección: Horario de Trabajo -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-clock text-slate-600 dark:text-slate-400"></i>
+                    Horario de Trabajo
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-gray-100 dark:bg-slate-800">
+                                <th class="border border-gray-300 dark:border-slate-600 px-3 py-2 text-left font-semibold text-gray-900 dark:text-gray-100">Día</th>
+                                <th class="border border-gray-300 dark:border-slate-600 px-3 py-2 text-left font-semibold text-gray-900 dark:text-gray-100">¿Laboral?</th>
+                                <th colspan="2" class="border border-gray-300 dark:border-slate-600 px-3 py-2 text-center font-semibold text-gray-900 dark:text-gray-100">Turno 1</th>
+                                <th colspan="2" class="border border-gray-300 dark:border-slate-600 px-3 py-2 text-center font-semibold text-gray-900 dark:text-gray-100">Turno 2</th>
+                            </tr>
+                            <tr class="bg-gray-50 dark:bg-slate-700">
+                                <th class="border border-gray-300 dark:border-slate-600 px-3 py-2"></th>
+                                <th class="border border-gray-300 dark:border-slate-600 px-3 py-2"></th>
+                                <th class="border border-gray-300 dark:border-slate-600 px-3 py-2 text-left font-semibold text-gray-900 dark:text-gray-100 text-xs">Entrada</th>
+                                <th class="border border-gray-300 dark:border-slate-600 px-3 py-2 text-left font-semibold text-gray-900 dark:text-gray-100 text-xs">Salida</th>
+                                <th class="border border-gray-300 dark:border-slate-600 px-3 py-2 text-left font-semibold text-gray-900 dark:text-gray-100 text-xs">Entrada</th>
+                                <th class="border border-gray-300 dark:border-slate-600 px-3 py-2 text-left font-semibold text-gray-900 dark:text-gray-100 text-xs">Salida</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2 text-gray-900 dark:text-gray-100 font-medium">Lunes</td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="checkbox" id="horario_lunes_activo" class="horario-activo" checked>
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_lunes_entrada" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="08:30">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_lunes_salida" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="13:00">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_lunes_entrada2" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="15:00">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_lunes_salida2" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="19:00">
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2 text-gray-900 dark:text-gray-100 font-medium">Martes</td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="checkbox" id="horario_martes_activo" class="horario-activo" checked>
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_martes_entrada" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="08:30">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_martes_salida" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="13:00">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_martes_entrada2" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="15:00">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_martes_salida2" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="19:00">
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2 text-gray-900 dark:text-gray-100 font-medium">Miércoles</td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="checkbox" id="horario_miercoles_activo" class="horario-activo" checked>
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_miercoles_entrada" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="08:30">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_miercoles_salida" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="13:00">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_miercoles_entrada2" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="15:00">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_miercoles_salida2" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="19:00">
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2 text-gray-900 dark:text-gray-100 font-medium">Jueves</td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="checkbox" id="horario_jueves_activo" class="horario-activo" checked>
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_jueves_entrada" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="08:30">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_jueves_salida" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="13:00">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_jueves_entrada2" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="15:00">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_jueves_salida2" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="19:00">
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2 text-gray-900 dark:text-gray-100 font-medium">Viernes</td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="checkbox" id="horario_viernes_activo" class="horario-activo" checked>
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_viernes_entrada" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="08:30">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_viernes_salida" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="13:00">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_viernes_entrada2" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="15:00">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_viernes_salida2" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="19:00">
+                                </td>
+                            </tr>
+                            </tr>
+                            <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2 text-gray-900 dark:text-gray-100 font-medium">Sábado</td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="checkbox" id="horario_sabado_activo" class="horario-activo" checked>
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_sabado_entrada" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="08:30">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_sabado_salida" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" value="13:00">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_sabado_entrada2" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_sabado_salida2" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm">
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2 text-gray-900 dark:text-gray-100 font-medium">Domingo</td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="checkbox" id="horario_domingo_activo" class="horario-activo">
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_domingo_entrada" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" disabled>
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_domingo_salida" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" disabled>
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_domingo_entrada2" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" disabled>
+                                </td>
+                                <td class="border border-gray-300 dark:border-slate-600 px-3 py-2">
+                                    <input type="time" id="horario_domingo_salida2" class="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm" disabled>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Botones -->
+            <div class="flex gap-4 justify-end pt-6 border-t-2 border-gray-200 dark:border-slate-700">
+                <button type="button" onclick="cerrarModalUsuario()" class="px-8 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-all duration-200">
+                    Cancelar
+                </button>
+                <button type="submit" class="px-8 py-3 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2">
+                    <i class="fas fa-save"></i>
+                    <span id="btn-submit-text">Guardar Usuario</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Confirmar Eliminación -->
+<div id="modal-confirmar-eliminar" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-lg shadow-xl p-6 max-w-sm w-full">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Confirmar Eliminación</h3>
+        <p class="text-gray-600 dark:text-gray-400 mb-6">¿Estás seguro de que deseas eliminar el usuario <span id="usuario-a-eliminar" class="font-bold"></span>?</p>
+        <div class="flex gap-3 justify-end">
+            <button onclick="cerrarModalEliminar()" class="px-6 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                Cancelar
+            </button>
+            <button id="btn-confirmar-eliminar" class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors">
+                Eliminar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let usuarioEnEdicion = null;
+let usuarioAEliminar = null;
+
+// Cargar usuarios al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    cargarUsuarios();
+    cargarAreas();
+    cargarEmpresas();
+    cargarDepartamentos();
+});
+
+// Manejar cambios de departamento
+document.getElementById('id_departamento').addEventListener('change', function() {
+    console.log('🔄 [DEPT_CHANGE] Departamento cambió');
+    const idDepartamento = this.value;
+    const selectProvincia = document.getElementById('id_provincia');
+    
+    console.log('📍 [DEPT_CHANGE] Departamento ID:', idDepartamento);
+    
+    if (idDepartamento) {
+        console.log(`🔄 [DEPT_CHANGE] Cargando provincias para departamento ${idDepartamento}...`);
+        fetch(`/api/ubicacion/provincias/${idDepartamento}`)
+            .then(r => {
+                console.log('📡 [DEPT_CHANGE] Response status:', r.status);
+                return r.json();
+            })
+            .then(data => {
+                console.log('✅ [DEPT_CHANGE] Datos recibidos:', data);
+                if (data.success && data.data.length > 0) {
+                    console.log('📊 [DEPT_CHANGE] Provincias obtenidas:', data.data.length);
+                    let html = '<option value="">Seleccionar provincia...</option>';
+                    data.data.forEach(p => {
+                        console.log(`  - [DEPT_CHANGE] Provincia: ${p.nombre} (id: ${p.id_provincia})`);
+                        html += `<option value="${p.id_provincia}">${p.nombre}</option>`;
+                    });
+                    selectProvincia.innerHTML = html;
+                    selectProvincia.disabled = false;
+                    console.log('✅ [DEPT_CHANGE] Dropdown Provincia actualizado. Opciones totales:', selectProvincia.options.length);
+                    // Disparar evento para notificar que se completó
+                    selectProvincia.dispatchEvent(new Event('provincias-loaded'));
+                } else {
+                    console.warn('❌ [DEPT_CHANGE] No hay provincias:', data);
+                    selectProvincia.innerHTML = '<option value="">No hay provincias disponibles</option>';
+                    selectProvincia.disabled = true;
+                }
+            })
+            .catch(e => {
+                console.error('❌ [DEPT_CHANGE] Error al cargar provincias:', e);
+                selectProvincia.disabled = true;
+            });
+        
+        // Limpiar distrito
+        console.log('🧹 [DEPT_CHANGE] Limpiando distrito');
+        document.getElementById('id_distrito').innerHTML = '<option value="">Seleccionar distrito...</option>';
+        document.getElementById('id_distrito').disabled = true;
+    } else {
+        console.log('⚠️ [DEPT_CHANGE] Departamento vacío');
+        selectProvincia.innerHTML = '<option value="">Seleccionar provincia...</option>';
+        selectProvincia.disabled = true;
+        document.getElementById('id_distrito').innerHTML = '<option value="">Seleccionar distrito...</option>';
+        document.getElementById('id_distrito').disabled = true;
+    }
+});
+
+// Manejar cambios de provincia
+document.getElementById('id_provincia').addEventListener('change', function() {
+    console.log('🔄 [PROV_CHANGE] Provincia cambió');
+    const idProvincia = this.value;
+    const selectDistrito = document.getElementById('id_distrito');
+    
+    console.log('📍 [PROV_CHANGE] Provincia ID:', idProvincia);
+    
+    if (idProvincia) {
+        console.log(`🔄 [PROV_CHANGE] Cargando distritos para provincia ${idProvincia}...`);
+        fetch(`/api/ubicacion/distritos/${idProvincia}`)
+            .then(r => {
+                console.log('📡 [PROV_CHANGE] Response status:', r.status);
+                return r.json();
+            })
+            .then(data => {
+                console.log('✅ [PROV_CHANGE] Datos recibidos:', data);
+                if (data.success && data.data.length > 0) {
+                    console.log('📊 [PROV_CHANGE] Distritos obtenidos:', data.data.length);
+                    let html = '<option value="">Seleccionar distrito...</option>';
+                    data.data.forEach(d => {
+                        console.log(`  - [PROV_CHANGE] Distrito: ${d.nombre} (id: ${d.id_distrito})`);
+                        html += `<option value="${d.id_distrito}">${d.nombre}</option>`;
+                    });
+                    selectDistrito.innerHTML = html;
+                    selectDistrito.disabled = false;
+                    console.log('✅ [PROV_CHANGE] Dropdown Distrito actualizado. Opciones totales:', selectDistrito.options.length);
+                    // Disparar evento para notificar que se completó
+                    selectDistrito.dispatchEvent(new Event('distritos-loaded'));
+                } else {
+                    console.warn('❌ [PROV_CHANGE] No hay distritos:', data);
+                    selectDistrito.innerHTML = '<option value="">No hay distritos disponibles</option>';
+                    selectDistrito.disabled = true;
+                }
+            })
+            .catch(e => {
+                console.error('❌ [PROV_CHANGE] Error al cargar distritos:', e);
+                selectDistrito.disabled = true;
+            });
+    } else {
+        console.log('⚠️ [PROV_CHANGE] Provincia vacía');
+        selectDistrito.innerHTML = '<option value="">Seleccionar distrito...</option>';
+        selectDistrito.disabled = true;
+    }
+});
+
+// Abrir modal para crear
+document.getElementById('btn-crear-usuario').addEventListener('click', function() {
+    usuarioEnEdicion = null;
+    document.getElementById('usuario-id').value = '';
+    document.getElementById('modal-titulo').textContent = 'Crear Nuevo Usuario';
+    document.getElementById('btn-submit-text').textContent = 'Guardar Usuario';
+    document.getElementById('form-usuario').reset();
+    
+    // Reset location fields
+    document.getElementById('id_departamento').value = '';
+    document.getElementById('id_provincia').value = '';
+    document.getElementById('id_provincia').disabled = true;
+    document.getElementById('id_distrito').value = '';
+    document.getElementById('id_distrito').disabled = true;
+    
+    document.getElementById('modal-usuario').classList.remove('hidden');
+});
+
+// Cargar usuarios
+function cargarUsuarios() {
+    fetch('/api/usuarios/obtener')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.data.length > 0) {
+                let html = '';
+                data.data.forEach(u => {
+                    html += `
+                        <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${u.num_usuario}</td>
+                            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${u.documento_numero}</td>
+                            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${u.nombres} ${u.apellido_paterno}</td>
+                            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${u.email}</td>
+                            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 font-mono">${u.usuario}</td>
+                            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${u.cargo || 'N/A'}</td>
+                            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${u.area || 'N/A'}</td>
+                            <td class="px-6 py-4 text-sm">
+                                <span class="px-3 py-1 rounded-full text-xs font-semibold ${
+                                    u.estado === 'Activo' 
+                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
+                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300'
+                                }">
+                                    ${u.estado}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-sm space-x-2">
+                                <button onclick="editarUsuario(${u.num_usuario})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="abrirConfirmarEliminar(${u.num_usuario}, '${u.usuario}')" class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                document.getElementById('usuarios-lista').innerHTML = html;
+            } else {
+                document.getElementById('usuarios-lista').innerHTML = `
+                    <tr>
+                        <td colspan="9" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                            No hay usuarios registrados
+                        </td>
+                    </tr>
+                `;
+            }
+        })
+        .catch(e => {
+            console.error('Error:', e);
+            alert('Error al cargar usuarios');
+        });
+}
+
+// Cargar cargos
+function cargarCargos() {
+    fetch('/api/cargos/obtener')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.data.length > 0) {
+                let html = '<option value="">Seleccionar cargo...</option>';
+                data.data.forEach(c => {
+                    html += `<option value="${c.id_cargo}">${c.nombre}</option>`;
+                });
+                document.getElementById('id_cargo').innerHTML = html;
+            }
+        })
+        .catch(e => console.error('Error:', e));
+}
+
+// Cargar áreas
+function cargarAreas() {
+    console.log('🔄 cargarAreas() iniciado');
+    fetch('/api/areas/obtener')
+        .then(r => {
+            console.log('📡 Response status:', r.status);
+            return r.json();
+        })
+        .then(data => {
+            console.log('✅ Datos recibidos:', data);
+            if (data.success && data.data.length > 0) {
+                console.log('📊 Áreas:', data.data);
+                let html = '<option value="">Seleccionar área...</option>';
+                data.data.forEach(a => {
+                    console.log(`  - Área: ${a.nombre} (id: ${a.id_area})`);
+                    html += `<option value="${a.nombre}" data-id="${a.id_area}">${a.nombre}</option>`;
+                });
+                document.getElementById('id_area').innerHTML = html;
+                console.log('✅ Dropdown Área actualizado');
+            } else {
+                console.warn('❌ No hay áreas o error:', data);
+            }
+        })
+        .catch(e => {
+            console.error('❌ Error al cargar áreas:', e);
+            alert('Error al cargar áreas: ' + e.message);
+        });
+}
+
+// Cuando cambia el área, cargar cargos de esa área
+document.getElementById('id_area').addEventListener('change', function() {
+    console.log('🔄 [AREA_CHANGE] Área cambió');
+    const selectedOption = this.options[this.selectedIndex];
+    const idArea = selectedOption.getAttribute('data-id');
+    const selectCargo = document.getElementById('id_cargo');
+    
+    console.log('📍 [AREA_CHANGE] Área seleccionada:', selectedOption.value, '| ID:', idArea);
+    
+    if (idArea) {
+        console.log(`🔄 [AREA_CHANGE] Cargando cargos para área ${idArea}...`);
+        fetch(`/api/cargos/por-area/${idArea}`)
+            .then(r => {
+                console.log('📡 [AREA_CHANGE] Response status:', r.status);
+                return r.json();
+            })
+            .then(data => {
+                console.log('✅ [AREA_CHANGE] Datos recibidos:', data);
+                if (data.success && data.data.length > 0) {
+                    console.log('📊 [AREA_CHANGE] Cargos obtenidos:', data.data.length);
+                    let html = '<option value="">Seleccionar cargo...</option>';
+                    data.data.forEach(c => {
+                        console.log(`  - [AREA_CHANGE] Cargo: ${c.nombre} (id: ${c.id_cargo})`);
+                        html += `<option value="${c.nombre}" data-id="${c.id_cargo}">${c.nombre}</option>`;
+                    });
+                    selectCargo.innerHTML = html;
+                    selectCargo.disabled = false;
+                    console.log('✅ [AREA_CHANGE] Dropdown Cargo actualizado. Opciones totales:', selectCargo.options.length);
+                    // Disparar evento para notificar que se completó
+                    selectCargo.dispatchEvent(new Event('cargos-loaded'));
+                } else {
+                    console.warn('❌ [AREA_CHANGE] No hay cargos:', data);
+                    selectCargo.innerHTML = '<option value="">No hay cargos disponibles</option>';
+                    selectCargo.disabled = true;
+                }
+            })
+            .catch(e => {
+                console.error('❌ [AREA_CHANGE] Error al cargar cargos:', e);
+            });
+    } else {
+        console.warn('⚠️ [AREA_CHANGE] No hay idArea, manteniendo Cargo deshabilitado');
+        selectCargo.innerHTML = '<option value="">Seleccionar cargo...</option>';
+        selectCargo.disabled = true;
+    }
+});
+
+// Cargar empresas
+function cargarEmpresas() {
+    console.log('🔄 cargarEmpresas() iniciado');
+    fetch('/api/empresas/listar')
+        .then(r => {
+            console.log('📡 Response status:', r.status);
+            return r.json();
+        })
+        .then(data => {
+            console.log('✅ Datos recibidos:', data);
+            if (data.success && data.data.length > 0) {
+                console.log('📊 Empresas:', data.data);
+                let html = '<option value="">Seleccionar empresa...</option>';
+                data.data.forEach(e => {
+                    console.log(`  - Empresa: ${e.nombre} (id: ${e.id_empresa})`);
+                    html += `<option value="${e.nombre}" data-id="${e.id_empresa}">${e.nombre}</option>`;
+                });
+                document.getElementById('id_empresa').innerHTML = html;
+                console.log('✅ Dropdown Empresa actualizado');
+            } else {
+                console.warn('❌ No hay empresas o error:', data);
+            }
+        })
+        .catch(e => {
+            console.error('❌ Error al cargar empresas:', e);
+            alert('Error al cargar empresas: ' + e.message);
+        });
+}
+
+// Cargar departamentos
+function cargarDepartamentos() {
+    fetch('/api/ubicacion/departamentos')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.data.length > 0) {
+                let html = '<option value="">Seleccionar departamento...</option>';
+                data.data.forEach(d => {
+                    html += `<option value="${d.id_departamento}">${d.nombre}</option>`;
+                });
+                document.getElementById('id_departamento').innerHTML = html;
+            }
+        })
+        .catch(e => console.error('Error:', e));
+}
+
+// Editar usuario
+function editarUsuario(id) {
+    // Reset form first to clear any previous values
+    document.getElementById('form-usuario').reset();
+    
+    fetch(`/api/usuarios/obtener/${id}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const u = data.data;
+                usuarioEnEdicion = u.num_usuario;
+                
+                console.log('[EDITAR] 📋 Datos recibidos:', u);
+                console.log('[EDITAR] ✅ cargo_nombre:', u.cargo_nombre);
+                console.log('[EDITAR] ✅ empresa_nombre:', u.empresa_nombre);
+                console.log('[EDITAR] ✅ area_nombre:', u.area_nombre);
+                console.log('[EDITAR] ✅ departamento_nombre:', u.departamento_nombre);
+                console.log('[EDITAR] ✅ provincia_nombre:', u.provincia_nombre);
+                console.log('[EDITAR] ✅ distrito_nombre:', u.distrito_nombre);
+                
+                // DATOS DE IDENTIFICACIÓN
+                document.getElementById('usuario-id').value = u.num_usuario;
+                document.getElementById('tipo_documento').value = u.tipo_documento;
+                document.getElementById('documento_numero').value = u.documento_numero;
+                
+                // INFORMACIÓN PERSONAL
+                document.getElementById('nombres').value = u.nombres;
+                document.getElementById('apellido_paterno').value = u.apellido_paterno;
+                document.getElementById('apellido_materno').value = u.apellido_materno;
+                
+                // DATOS ADICIONALES
+                document.getElementById('fecha_nacimiento').value = u.fecha_nacimiento || '';
+                document.getElementById('genero').value = u.genero || '';
+                document.getElementById('direccion').value = u.direccion || '';
+                
+                // CARGAR HORARIOS DE TRABAJO
+                console.log('[EDITAR] 📅 Cargando horarios:', u.horarios);
+                if (u.horarios && u.horarios.length > 0 && u.horarios.length === 7) {
+                    const diaMapping = {
+                        'LUNES': 'lunes',
+                        'MARTES': 'martes',
+                        'MIÉRCOLES': 'miercoles',
+                        'JUEVES': 'jueves',
+                        'VIERNES': 'viernes',
+                        'SÁBADO': 'sabado',
+                        'DOMINGO': 'domingo'
+                    };
+                    
+                    u.horarios.forEach(horario => {
+                        const diaKey = diaMapping[horario['dia_semana']];
+                        if (diaKey) {
+                            const checkboxId = `horario_${diaKey}_activo`;
+                            const entrada1Id = `horario_${diaKey}_entrada`;
+                            const salida1Id = `horario_${diaKey}_salida`;
+                            const entrada2Id = `horario_${diaKey}_entrada2`;
+                            const salida2Id = `horario_${diaKey}_salida2`;
+                            
+                            const checkbox = document.getElementById(checkboxId);
+                            const entrada1Input = document.getElementById(entrada1Id);
+                            const salida1Input = document.getElementById(salida1Id);
+                            const entrada2Input = document.getElementById(entrada2Id);
+                            const salida2Input = document.getElementById(salida2Id);
+                            
+                            if (checkbox && entrada1Input && salida1Input && entrada2Input && salida2Input) {
+                                checkbox.checked = horario['es_activo'] === 1;
+                                entrada1Input.value = horario['hora_entrada'] || '';
+                                salida1Input.value = horario['hora_salida'] || '';
+                                entrada2Input.value = horario['hora_entrada2'] || '';
+                                salida2Input.value = horario['hora_salida2'] || '';
+                                
+                                // Habilitar/deshabilitar campos
+                                const isActive = horario['es_activo'] === 1;
+                                entrada1Input.disabled = !isActive;
+                                salida1Input.disabled = !isActive;
+                                entrada2Input.disabled = !isActive;
+                                salida2Input.disabled = !isActive;
+                                
+                                console.log(`[EDITAR] Horario cargado: ${horario['dia_semana']}`);
+                            }
+                        }
+                    });
+                } else {
+                    // Si NO hay horarios en BD, dejar todo desmarcado y vacío
+                    console.log('[EDITAR] [WARN] No hay horarios en BD, inicializando vacío');
+                    const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+                    
+                    dias.forEach(dia => {
+                        const checkboxId = `horario_${dia}_activo`;
+                        const entrada1Id = `horario_${dia}_entrada`;
+                        const salida1Id = `horario_${dia}_salida`;
+                        const entrada2Id = `horario_${dia}_entrada2`;
+                        const salida2Id = `horario_${dia}_salida2`;
+                        
+                        const checkbox = document.getElementById(checkboxId);
+                        const entrada1Input = document.getElementById(entrada1Id);
+                        const salida1Input = document.getElementById(salida1Id);
+                        const entrada2Input = document.getElementById(entrada2Id);
+                        const salida2Input = document.getElementById(salida2Id);
+                        
+                        if (checkbox && entrada1Input && salida1Input && entrada2Input && salida2Input) {
+                            checkbox.checked = false;
+                            entrada1Input.value = '';
+                            salida1Input.value = '';
+                            entrada2Input.value = '';
+                            salida2Input.value = '';
+                            entrada1Input.disabled = true;
+                            salida1Input.disabled = true;
+                            entrada2Input.disabled = true;
+                            salida2Input.disabled = true;
+                            console.log(`[EDITAR] Horario sin dato: ${dia} (desmarcado)`);
+                        }
+                    });
+                }
+                
+                // CONTACTO
+                document.getElementById('email').value = u.email;
+                document.getElementById('celular').value = u.celular || '';
+                document.getElementById('celular_referencia').value = u.celular_referencia || '';
+                
+                // ORGANIZACIÓN - Seleccionar EMPRESA por nombre
+                console.log('[EDITAR] 🔄 Seleccionando empresa:', u.empresa_nombre);
+                const empresaSelect = document.getElementById('id_empresa');
+                for (let i = 0; i < empresaSelect.options.length; i++) {
+                    if (empresaSelect.options[i].textContent.trim() === u.empresa_nombre) {
+                        empresaSelect.selectedIndex = i;
+                        console.log('[EDITAR] ✅ Empresa seleccionada en índice:', i);
+                        break;
+                    }
+                }
+                
+                // ORGANIZACIÓN - Seleccionar ÁREA por nombre y disparar cambio
+                console.log('[EDITAR] 🔄 Seleccionando área:', u.area_nombre);
+                const areaSelect = document.getElementById('id_area');
+                for (let i = 0; i < areaSelect.options.length; i++) {
+                    if (areaSelect.options[i].textContent.trim() === u.area_nombre) {
+                        areaSelect.selectedIndex = i;
+                        console.log('[EDITAR] ✅ Área seleccionada en índice:', i);
+                        // Trigger cambio para cargar cargos
+                        areaSelect.dispatchEvent(new Event('change'));
+                        break;
+                    }
+                }
+                
+                // ORGANIZACIÓN - Seleccionar CARGO por nombre cuando se carguen
+                const cargoSelect = document.getElementById('id_cargo');
+                const selectCargoWhenLoaded = function() {
+                    console.log('[EDITAR] 📍 Evento cargos-loaded recibido');
+                    console.log('[EDITAR] 🔄 Seleccionando cargo:', u.cargo_nombre);
+                    console.log('[EDITAR] 📊 Opciones disponibles en cargo:', Array.from(cargoSelect.options).map(o => o.textContent));
+                    for (let i = 0; i < cargoSelect.options.length; i++) {
+                        if (cargoSelect.options[i].textContent.trim() === u.cargo_nombre) {
+                            cargoSelect.selectedIndex = i;
+                            console.log('[EDITAR] ✅ Cargo seleccionado en índice:', i);
+                            break;
+                        }
+                    }
+                    cargoSelect.removeEventListener('cargos-loaded', selectCargoWhenLoaded);
+                };
+                cargoSelect.addEventListener('cargos-loaded', selectCargoWhenLoaded);
+                
+                // UBICACIÓN GEOGRÁFICA - Departamento
+                console.log('[EDITAR] 🔄 Seleccionando departamento:', u.departamento_nombre);
+                const deptSelect = document.getElementById('id_departamento');
+                for (let i = 0; i < deptSelect.options.length; i++) {
+                    if (deptSelect.options[i].textContent.trim() === u.departamento_nombre) {
+                        deptSelect.selectedIndex = i;
+                        console.log('[EDITAR] ✅ Departamento seleccionado en índice:', i);
+                        deptSelect.dispatchEvent(new Event('change'));
+                        break;
+                    }
+                }
+                
+                // UBICACIÓN GEOGRÁFICA - Provincia cuando se cargue
+                const provSelect = document.getElementById('id_provincia');
+                const selectProvinciaWhenLoaded = function() {
+                    console.log('[EDITAR] 📍 Evento provincias-loaded recibido');
+                    console.log('[EDITAR] 🔄 Seleccionando provincia:', u.provincia_nombre);
+                    console.log('[EDITAR] 📊 Opciones disponibles en provincia:', Array.from(provSelect.options).map(o => o.textContent));
+                    for (let i = 0; i < provSelect.options.length; i++) {
+                        if (provSelect.options[i].textContent.trim() === u.provincia_nombre) {
+                            provSelect.selectedIndex = i;
+                            console.log('[EDITAR] ✅ Provincia seleccionada en índice:', i);
+                            provSelect.dispatchEvent(new Event('change'));
+                            break;
+                        }
+                    }
+                    provSelect.removeEventListener('provincias-loaded', selectProvinciaWhenLoaded);
+                };
+                provSelect.addEventListener('provincias-loaded', selectProvinciaWhenLoaded);
+                
+                // UBICACIÓN GEOGRÁFICA - Distrito cuando se cargue
+                const distSelect = document.getElementById('id_distrito');
+                const selectDistritoWhenLoaded = function() {
+                    console.log('[EDITAR] 📍 Evento distritos-loaded recibido');
+                    console.log('[EDITAR] 🔄 Seleccionando distrito:', u.distrito_nombre);
+                    console.log('[EDITAR] 📊 Opciones disponibles en distrito:', Array.from(distSelect.options).map(o => o.textContent));
+                    for (let i = 0; i < distSelect.options.length; i++) {
+                        if (distSelect.options[i].textContent.trim() === u.distrito_nombre) {
+                            distSelect.selectedIndex = i;
+                            console.log('[EDITAR] ✅ Distrito seleccionado en índice:', i);
+                            break;
+                        }
+                    }
+                    distSelect.removeEventListener('distritos-loaded', selectDistritoWhenLoaded);
+                };
+                distSelect.addEventListener('distritos-loaded', selectDistritoWhenLoaded);
+                
+                document.getElementById('modal-titulo').textContent = 'Editar Usuario';
+                document.getElementById('btn-submit-text').textContent = 'Guardar Cambios';
+                document.getElementById('modal-usuario').classList.remove('hidden');
+                
+                console.log('[EDITAR] ✅ Modal cargado correctamente');
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(e => {
+            console.error('[EDITAR] ❌ Error:', e);
+            alert('Error al cargar usuario');
+        });
+}
+
+// Extraer datos de horarios desde el formulario
+function extraerHorarios() {
+    const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+    const horarios = [];
+    
+    const diaMapping = {
+        'lunes': 'LUNES',
+        'martes': 'MARTES',
+        'miercoles': 'MIÉRCOLES',
+        'jueves': 'JUEVES',
+        'viernes': 'VIERNES',
+        'sabado': 'SÁBADO',
+        'domingo': 'DOMINGO'
+    };
+    
+    dias.forEach(dia => {
+        const checkboxId = `horario_${dia}_activo`;
+        const entrada1Id = `horario_${dia}_entrada`;
+        const salida1Id = `horario_${dia}_salida`;
+        const entrada2Id = `horario_${dia}_entrada2`;
+        const salida2Id = `horario_${dia}_salida2`;
+        
+        const isChecked = document.getElementById(checkboxId).checked;
+        const entrada1 = document.getElementById(entrada1Id).value;
+        const salida1 = document.getElementById(salida1Id).value;
+        const entrada2 = document.getElementById(entrada2Id).value;
+        const salida2 = document.getElementById(salida2Id).value;
+        
+        horarios.push({
+            dia_semana: diaMapping[dia],
+            es_activo: isChecked ? 1 : 0,
+            hora_entrada: isChecked && entrada1 ? entrada1 : null,
+            hora_salida: isChecked && salida1 ? salida1 : null,
+            hora_entrada2: isChecked && entrada2 ? entrada2 : null,
+            hora_salida2: isChecked && salida2 ? salida2 : null
+        });
+    });
+    
+    return horarios;
+}
+
+// Guardar usuario
+document.getElementById('form-usuario').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    console.log('[SUBMIT] 📋 Iniciando submit del formulario');
+    
+    // Extraer IDs desde data attributes
+    const empresaOption = document.getElementById('id_empresa').options[document.getElementById('id_empresa').selectedIndex];
+    const areaOption = document.getElementById('id_area').options[document.getElementById('id_area').selectedIndex];
+    const cargoOption = document.getElementById('id_cargo').options[document.getElementById('id_cargo').selectedIndex];
+    
+    const idEmpresa = empresaOption.getAttribute('data-id');
+    const idArea = areaOption.getAttribute('data-id');
+    const idCargo = cargoOption.getAttribute('data-id');
+    
+    console.log('[SUBMIT] 🔍 IDs extraídos:');
+    console.log('  - id_empresa:', idEmpresa);
+    console.log('  - id_area:', idArea);
+    console.log('  - id_cargo:', idCargo);
+    
+    const datos = {
+        documento_numero: document.getElementById('documento_numero').value,
+        tipo_documento: document.getElementById('tipo_documento').value,
+        nombres: document.getElementById('nombres').value,
+        apellido_paterno: document.getElementById('apellido_paterno').value,
+        apellido_materno: document.getElementById('apellido_materno').value,
+        email: document.getElementById('email').value,
+        celular: document.getElementById('celular').value,
+        celular_referencia: document.getElementById('celular_referencia').value,
+        fecha_nacimiento: document.getElementById('fecha_nacimiento').value || null,
+        genero: document.getElementById('genero').value || null,
+        direccion: document.getElementById('direccion').value || null,
+        id_empresa: idEmpresa,
+        id_cargo: idCargo,
+        id_distrito: document.getElementById('id_distrito').value,
+        horarios: extraerHorarios()
+    };
+    
+    console.log('[SUBMIT] 📤 Datos a enviar:');
+    console.log(datos);
+    
+    const url = usuarioEnEdicion 
+        ? `/api/usuarios/actualizar/${usuarioEnEdicion}`
+        : '/api/usuarios/crear';
+    
+    const metodo = usuarioEnEdicion ? 'PUT' : 'POST';
+    const operacion = usuarioEnEdicion ? 'Actualizar' : 'Crear';
+    
+    console.log(`[SUBMIT] 🚀 ${operacion} usuario: ${url} (${metodo})`);
+    
+    fetch(url, {
+        method: metodo,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(datos)
+    })
+    .then(r => r.json())
+    .then(data => {
+        console.log(`[SUBMIT] ✅ Respuesta del servidor:`, data);
+        if (data.success) {
+            console.log(`[SUBMIT] 🎉 ${operacion} exitoso: ${data.message}`);
+            alert(data.message);
+            cerrarModalUsuario();
+            cargarUsuarios();
+        } else {
+            console.error(`[SUBMIT] ❌ Error: ${data.error}`);
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(e => {
+        console.error('[SUBMIT] ❌ Error de red:', e);
+        alert('Error al guardar usuario');
+    });
+});
+
+// Abrir confirmación eliminar
+function abrirConfirmarEliminar(id, usuario) {
+    usuarioAEliminar = id;
+    document.getElementById('usuario-a-eliminar').textContent = usuario;
+    document.getElementById('modal-confirmar-eliminar').classList.remove('hidden');
+}
+
+// Confirmar eliminación
+document.getElementById('btn-confirmar-eliminar').addEventListener('click', function() {
+    if (usuarioAEliminar) {
+        fetch(`/api/usuarios/eliminar/${usuarioAEliminar}`, { method: 'DELETE' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    cerrarModalEliminar();
+                    cargarUsuarios();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(e => {
+                console.error('Error:', e);
+                alert('Error al eliminar usuario');
+            });
+    }
+});
+
+// Manejar checkboxes de horarios (habilitar/deshabilitar horas)
+document.querySelectorAll('.horario-activo').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const dia = this.id.replace('horario_', '').replace('_activo', '');
+        const entradaInput = document.getElementById(`horario_${dia}_entrada`);
+        const salidaInput = document.getElementById(`horario_${dia}_salida`);
+        
+        if (this.checked) {
+            entradaInput.disabled = false;
+            salidaInput.disabled = false;
+        } else {
+            entradaInput.disabled = true;
+            salidaInput.disabled = true;
+        }
+    });
+});
+
+// Cerrar modales
+function cerrarModalUsuario() {
+    document.getElementById('modal-usuario').classList.add('hidden');
+}
+
+function cerrarModalEliminar() {
+    document.getElementById('modal-confirmar-eliminar').classList.add('hidden');
+    usuarioAEliminar = null;
+}
+</script>
+{% endblock %}

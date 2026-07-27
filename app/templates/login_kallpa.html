@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kallpa - Iniciar Sesión</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(3deg); }
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 40px rgba(34, 197, 94, 0.4), 0 0 80px rgba(34, 197, 94, 0.2); }
+            50% { box-shadow: 0 0 60px rgba(74, 222, 128, 0.6), 0 0 120px rgba(74, 222, 128, 0.3); }
+        }
+
+        .slide-in {
+            animation: slideIn 0.8s ease-out;
+        }
+
+        .float-animation {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .glow-animation {
+            animation: glow 3s ease-in-out infinite;
+        }
+
+        .form-input {
+            background: rgba(30, 41, 59, 0.8);
+            border: 2px solid rgba(100, 116, 139, 0.5);
+            color: white;
+            padding: 14px 18px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .form-input:hover {
+            border-color: rgba(34, 197, 94, 0.6);
+            background: rgba(30, 41, 59, 0.95);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: rgb(34, 197, 94);
+            background: rgba(30, 41, 59, 1);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+        }
+
+        .form-input::placeholder {
+            color: rgba(148, 163, 184, 0.6);
+        }
+
+        .form-label {
+            color: rgba(226, 232, 240, 0.95);
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 14px 24px;
+            background: linear-gradient(135deg, #22c55e 0%, #4ade80 50%, #22c55e 100%);
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(34, 197, 94, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(34, 197, 94, 0.6);
+            background: linear-gradient(135deg, #4ade80 0%, #86efac 50%, #4ade80 100%);
+        }
+
+        .btn-secondary {
+            width: 100%;
+            padding: 14px 24px;
+            background: rgba(71, 85, 105, 0.3);
+            color: rgba(226, 232, 240, 0.9);
+            font-weight: 600;
+            font-size: 1rem;
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(71, 85, 105, 0.5);
+            border-color: rgba(148, 163, 184, 0.6);
+        }
+
+        .glass-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #065f46 100%);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 min-h-screen">
+    <!-- Fondo animado -->
+    <div class="fixed inset-0 -z-10 bg-gradient-to-b from-green-900 via-emerald-700 to-slate-950"></div>
+
+    <!-- Elementos decorativos flotantes -->
+    <div class="fixed top-20 right-10 w-96 h-96 bg-green-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse -z-5"></div>
+    <div class="fixed top-1/2 left-1/2 w-96 h-96 bg-emerald-400 rounded-full mix-blend-multiply filter blur-3xl opacity-25 animate-pulse -z-5" style="animation-delay: 2s;"></div>
+    <div class="fixed bottom-20 left-10 w-80 h-80 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse -z-5" style="animation-delay: 4s;"></div>
+
+    <div class="min-h-screen flex items-center justify-center px-4 py-12">
+        <div class="w-full max-w-sm slide-in">
+            <!-- Header con Logo KallMax -->
+            <div class="text-center mb-10 float-animation">
+                <!-- Logo -->
+                <div class="mb-6 flex justify-center">
+                    <div class="relative group">
+                        <div class="absolute -inset-4 bg-gradient-to-r from-green-600 via-emerald-500 to-teal-400 rounded-full blur-2xl opacity-60 group-hover:opacity-90 animate-pulse transition duration-1000"></div>
+                        <div class="relative bg-white p-2 rounded-2xl shadow-2xl group-hover:shadow-green-500/50 transition-all duration-500 group-hover:scale-105">
+                            <img src="{{ url_for('static', filename='images/Logo Kallpa.png') }}" alt="Kallpa Logo" class="h-20 w-20 drop-shadow-lg group-hover:rotate-3 transition-transform duration-700">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Nombre Kallpa -->
+                <h1 class="text-4xl md:text-5xl font-black mb-2 tracking-tight leading-none">
+                    <span class="bg-gradient-to-r from-white via-green-100 to-white bg-clip-text text-transparent drop-shadow-2xl">
+                        Kallpa
+                    </span>
+                </h1>
+                <p class="text-green-200 font-semibold text-sm tracking-wider mb-6">SISTEMA DE MARCACIÓN</p>
+                
+                <!-- Mensaje de bienvenida -->
+                <div class="bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl p-4 mb-6">
+                    <h2 class="text-lg font-bold text-white mb-1">¡Bienvenido a Kallpa!</h2>
+                    <p class="text-sm text-green-100 flex items-center justify-center gap-2">
+                        <i class="fas fa-key text-green-300"></i>
+                        Inicia sesión para continuar
+                    </p>
+                </div>
+            </div>
+
+            <!-- Card Formulario -->
+            <div class="glass-card rounded-2xl p-7 shadow-2xl">
+                <!-- Formulario -->
+                <form method="POST" action="{{ url_for('auth.login') }}" class="space-y-5">
+                    
+                    <!-- Usuario -->
+                    <div>
+                        <label for="usuario" class="form-label">
+                            <i class="fas fa-user mr-2 text-green-400"></i>Usuario o Email
+                        </label>
+                        <input 
+                            type="text" 
+                            id="usuario" 
+                            name="email" 
+                            placeholder="Ingresa tu usuario"
+                            required
+                            autocomplete="off"
+                            class="form-input w-full"
+                        >
+                    </div>
+
+                    <!-- Contraseña -->
+                    <div>
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock mr-2 text-green-400"></i>Contraseña
+                        </label>
+                        <div class="relative">
+                            <input 
+                                type="password" 
+                                id="password" 
+                                name="password" 
+                                placeholder="Ingresa tu contraseña"
+                                required
+                                autocomplete="off"
+                                class="form-input w-full pr-12"
+                            >
+                            <button 
+                                type="button" 
+                                onclick="togglePassword()" 
+                                class="absolute right-4 top-1/2 -translate-y-1/2 text-green-400 hover:text-green-300 transition-all duration-300 p-2"
+                            >
+                                <i class="fas fa-eye text-base" id="toggleIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Recuérdame -->
+                    <div class="flex items-center">
+                        <label class="flex items-center cursor-pointer group">
+                            <input 
+                                type="checkbox" 
+                                name="remember"
+                                class="w-4 h-4 rounded border-2 border-green-600 bg-slate-800 accent-green-600 cursor-pointer"
+                            >
+                            <span class="ml-2 text-green-100 font-medium text-sm group-hover:text-green-200 transition-colors">Recuérdame</span>
+                        </label>
+                    </div>
+
+                    <!-- Campo oculto para redirección -->
+                    <input type="hidden" name="redirect_to" value="{{ redirect_to or 'marcacion' }}">
+
+                    <!-- Botón Login -->
+                    <button type="submit" class="btn-primary mt-6">
+                        <i class="fas fa-arrow-right mr-2"></i>
+                        Iniciar Sesión
+                    </button>
+
+                    <!-- Botón Volver -->
+                    <a href="{{ url_for('auth.show_welcome') }}" class="btn-secondary inline-flex items-center justify-center">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Volver al inicio
+                    </a>
+                </form>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-8">
+                <p class="text-white/60 text-xs font-medium">
+                    <i class="fas fa-shield-alt mr-2"></i>Sistema seguro de marcación y asistencia
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('toggleIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        }
+
+        // Efecto de escala en inputs
+        const inputs = document.querySelectorAll('.form-input');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.style.transform = 'scale(1.01)';
+            });
+            input.addEventListener('blur', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
+    <!-- Topbar -->
+    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
+        <div class="px-6 py-4 flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Gestión de O.T (Órdenes de Trabajo)</h1>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Administra las órdenes de trabajo del proyecto</p>
+            </div>
+            <button id="btn-crear-ot" class="flex items-center gap-2 px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg">
+                <i class="fas fa-plus"></i>
+                <span>Crear O.T</span>
+            </button>
+        </div>
+    </button>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="p-6">
+        <!-- Tabla de O.T -->
+        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table id="tabla-ot" class="w-full">
+                    <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">ID</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Número O.T</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Descripción</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Proyecto</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Estado</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Fecha</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ot-lista" class="divide-y divide-gray-200 dark:divide-slate-700">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                            <td colspan="7" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Cargando O.T...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Crear/Editar O.T -->
+<div id="modal-ot" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <!-- Header -->
+        <div class="sticky top-0 bg-gradient-to-r from-slate-600 to-slate-700 text-white px-8 py-6 flex items-center justify-between border-b-2 border-slate-700">
+            <div>
+                <h2 id="modal-titulo" class="text-2xl font-bold">Crear Nueva O.T</h2>
+                <p class="text-slate-200 text-sm mt-1">Completa los datos de la orden de trabajo</p>
+            </div>
+            <button onclick="cerrarModalOT()" class="text-white hover:text-gray-200 transition-colors p-2 hover:bg-slate-700 rounded-lg">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+
+        <!-- Formulario -->
+        <form id="form-ot" class="p-8 space-y-6">
+            <input type="hidden" id="ot-id" value="">
+
+            <!-- Sección: Información Básica -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-slate-600 dark:text-slate-400"></i>
+                    Información Básica
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Número O.T <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="numero_ot" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" placeholder="OT-001" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Estado <span class="text-red-500">*</span>
+                        </label>
+                        <select id="estado" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" required>
+                            <option value="">Seleccionar estado...</option>
+                            <option value="PENDIENTE">Pendiente</option>
+                            <option value="EN_PROCESO">En Proceso</option>
+                            <option value="COMPLETADA">Completada</option>
+                            <option value="CANCELADA">Cancelada</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección: Descripción -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-pencil-alt text-slate-600 dark:text-slate-400"></i>
+                    Descripción
+                </h3>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Descripción de la O.T <span class="text-red-500">*</span>
+                    </label>
+                    <textarea id="descripcion" rows="4" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all resize-none" placeholder="Describe la orden de trabajo..." required></textarea>
+                </div>
+            </div>
+
+            <!-- Sección: Proyecto -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-building text-slate-600 dark:text-slate-400"></i>
+                    Proyecto
+                </h3>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Nombre del Proyecto <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="proyecto" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" placeholder="Nombre del proyecto" required>
+                </div>
+            </div>
+
+            <!-- Sección: Presupuesto (Sub-menú) -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-file-invoice-dollar text-slate-600 dark:text-slate-400"></i>
+                    Presupuesto
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Monto Presupuestado (S/.) <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number" id="monto_presupuestado" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" placeholder="0.00" min="0" step="0.01" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Monto Gastado (S/.)
+                        </label>
+                        <input type="number" id="monto_gastado" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all" placeholder="0.00" min="0" step="0.01" readonly>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Observaciones Presupuesto
+                    </label>
+                    <textarea id="obs_presupuesto" rows="2" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all resize-none" placeholder="Observaciones sobre el presupuesto..."></textarea>
+                </div>
+            </div>
+
+            <!-- Sección: Notas Adicionales -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-sticky-note text-slate-600 dark:text-slate-400"></i>
+                    Notas Adicionales
+                </h3>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Observaciones
+                    </label>
+                    <textarea id="observaciones" rows="3" class="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all resize-none" placeholder="Notas adicionales..."></textarea>
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="flex gap-4 justify-end pt-6 border-t border-gray-200 dark:border-slate-700">
+                <button type="button" onclick="cerrarModalOT()" class="px-6 py-3 bg-gray-300 hover:bg-gray-400 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors">
+                    Cancelar
+                </button>
+                <button type="submit" class="px-6 py-3 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors">
+                    <i class="fas fa-save mr-2"></i>Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Estado global
+let ots = [];
+let ot_actual = null;
+
+// Inicializar cuando carga la página
+document.addEventListener('DOMContentLoaded', function() {
+    cargarOTs();
+    
+    // Event listeners
+    document.getElementById('btn-crear-ot').addEventListener('click', abrirModalOT);
+    document.getElementById('form-ot').addEventListener('submit', guardarOT);
+});
+
+// Cargar lista de O.T
+async function cargarOTs() {
+    try {
+        const response = await fetch('/api/ot/obtener');
+        const data = await response.json();
+        
+        if (data.success) {
+            ots = data.data || [];
+            renderizarTabla();
+        } else {
+            console.error('Error al cargar O.T:', data.error);
+            mostrarError('Error al cargar las órdenes de trabajo');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarError('Error de conexión');
+    }
+}
+
+// Renderizar tabla de O.T
+function renderizarTabla() {
+    const tbody = document.getElementById('ot-lista');
+    
+    if (ots.length === 0) {
+        tbody.innerHTML = `
+            <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                <td colspan="7" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                    <i class="fas fa-inbox mr-2"></i>No hay órdenes de trabajo registradas
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = ots.map(ot => `
+        <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${ot.id_ot || '-'}</td>
+            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 font-medium">${ot.numero_ot || '-'}</td>
+            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${ot.descripcion || '-'}</td>
+            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${ot.proyecto || '-'}</td>
+            <td class="px-6 py-4 text-sm">
+                <span class="px-3 py-1 rounded-full text-xs font-semibold ${getEstadoBadge(ot.estado)}">
+                    ${ot.estado || 'PENDIENTE'}
+                </span>
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">${ot.fecha_creacion ? new Date(ot.fecha_creacion).toLocaleDateString('es-PE') : '-'}</td>
+            <td class="px-6 py-4 text-sm flex gap-2">
+                <button onclick="editarOT(${ot.id_ot})" class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-medium transition-colors" title="Editar">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="eliminarOT(${ot.id_ot})" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-medium transition-colors" title="Eliminar">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Obtener clase del badge según estado
+function getEstadoBadge(estado) {
+    const badges = {
+        'PENDIENTE': 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
+        'EN_PROCESO': 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200',
+        'COMPLETADA': 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
+        'CANCELADA': 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+    };
+    return badges[estado] || badges['PENDIENTE'];
+}
+
+// Abrir modal para crear
+function abrirModalOT() {
+    ot_actual = null;
+    limpiarForm();
+    document.getElementById('modal-titulo').textContent = 'Crear Nueva O.T';
+    document.getElementById('modal-ot').classList.remove('hidden');
+}
+
+// Editar O.T
+async function editarOT(id) {
+    try {
+        const response = await fetch(`/api/ot/obtener/${id}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            ot_actual = data.data;
+            llenarForm(data.data);
+            document.getElementById('modal-titulo').textContent = 'Editar O.T';
+            document.getElementById('modal-ot').classList.remove('hidden');
+        } else {
+            mostrarError('Error al cargar la O.T');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarError('Error de conexión');
+    }
+}
+
+// Guardar O.T
+async function guardarOT(e) {
+    e.preventDefault();
+    
+    const datos = {
+        numero_ot: document.getElementById('numero_ot').value,
+        descripcion: document.getElementById('descripcion').value,
+        proyecto: document.getElementById('proyecto').value,
+        estado: document.getElementById('estado').value,
+        monto_presupuestado: parseFloat(document.getElementById('monto_presupuestado').value),
+        monto_gastado: parseFloat(document.getElementById('monto_gastado').value),
+        obs_presupuesto: document.getElementById('obs_presupuesto').value,
+        observaciones: document.getElementById('observaciones').value
+    };
+    
+    try {
+        let response;
+        let url = '/api/ot/crear';
+        let metodo = 'POST';
+        
+        if (ot_actual) {
+            url = `/api/ot/actualizar/${ot_actual.id_ot}`;
+            metodo = 'PUT';
+        }
+        
+        const options = {
+            method: metodo,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(datos)
+        };
+        
+        response = await fetch(url, options);
+        const resultado = await response.json();
+        
+        if (resultado.success) {
+            mostrarExito(ot_actual ? 'O.T actualizada' : 'O.T creada');
+            cerrarModalOT();
+            cargarOTs();
+        } else {
+            mostrarError(resultado.error || 'Error al guardar');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarError('Error de conexión');
+    }
+}
+
+// Eliminar O.T
+async function eliminarOT(id) {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta O.T?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/ot/eliminar/${id}`, {
+            method: 'DELETE'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarExito('O.T eliminada');
+            cargarOTs();
+        } else {
+            mostrarError(data.error || 'Error al eliminar');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarError('Error de conexión');
+    }
+}
+
+// Llenar formulario con datos
+function llenarForm(ot) {
+    document.getElementById('ot-id').value = ot.id_ot || '';
+    document.getElementById('numero_ot').value = ot.numero_ot || '';
+    document.getElementById('descripcion').value = ot.descripcion || '';
+    document.getElementById('proyecto').value = ot.proyecto || '';
+    document.getElementById('estado').value = ot.estado || 'PENDIENTE';
+    document.getElementById('monto_presupuestado').value = ot.monto_presupuestado || '';
+    document.getElementById('monto_gastado').value = ot.monto_gastado || '';
+    document.getElementById('obs_presupuesto').value = ot.obs_presupuesto || '';
+    document.getElementById('observaciones').value = ot.observaciones || '';
+}
+
+// Limpiar formulario
+function limpiarForm() {
+    document.getElementById('form-ot').reset();
+    document.getElementById('ot-id').value = '';
+}
+
+// Cerrar modal
+function cerrarModalOT() {
+    document.getElementById('modal-ot').classList.add('hidden');
+    limpiarForm();
+}
+
+// Mostrar error
+function mostrarError(mensaje) {
+    alert(`❌ ${mensaje}`);
+}
+
+// Mostrar éxito
+function mostrarExito(mensaje) {
+    alert(`✅ ${mensaje}`);
+}
+</script>
+{% endblock %}

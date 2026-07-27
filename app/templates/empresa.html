@@ -1,0 +1,874 @@
+{% extends "base.html" %}
+
+{% block title %}Empresa - Kallpa{% endblock %}
+
+{% block header_title %}Gestión de Empresa{% endblock %}
+{% block header_subtitle %}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Botón Registrar Nueva Empresa -->
+    <div class="flex justify-end">
+        <button onclick="abrirModalNuevaEmpresa()" class="px-6 py-3 rounded-lg bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white font-medium transition-all shadow-lg shadow-slate-500/30 flex items-center gap-2">
+            <i class="fas fa-plus"></i>
+            Registrar Nueva Empresa
+        </button>
+    </div>
+
+    <!-- Tabla de Empresas -->
+    <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
+        <!-- Header de la Tabla -->
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-slate-700">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white">Empresas Registradas</h2>
+        </div>
+
+        <!-- Contenido de la Tabla -->
+        <div class="overflow-x-auto">
+            <div id="empresasContainer" class="text-center text-gray-500 dark:text-gray-400 py-12">
+                <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                <p>Cargando empresas...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Cargar empresas al iniciar
+    document.addEventListener('DOMContentLoaded', cargarEmpresas);
+
+    function cargarEmpresas() {
+        fetch('{{ url_for("main.obtener_empresas") }}', {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('empresasContainer');
+            
+            if (data.success && data.data && data.data.length > 0) {
+                let html = '<table class="w-full text-sm"><thead class="bg-gray-50 dark:bg-slate-700 border-b border-gray-200 dark:border-slate-600">';
+                html += '<tr>';
+                html += '<th class="text-left px-6 py-4 font-semibold text-gray-900 dark:text-white">ID</th>';
+                html += '<th class="text-left px-6 py-4 font-semibold text-gray-900 dark:text-white">RUC</th>';
+                html += '<th class="text-left px-6 py-4 font-semibold text-gray-900 dark:text-white">Nombre</th>';
+                html += '<th class="text-left px-6 py-4 font-semibold text-gray-900 dark:text-white">Latitud</th>';
+                html += '<th class="text-left px-6 py-4 font-semibold text-gray-900 dark:text-white">Longitud</th>';
+                html += '<th class="text-left px-6 py-4 font-semibold text-gray-900 dark:text-white">Radio (m)</th>';
+                html += '<th class="text-left px-6 py-4 font-semibold text-gray-900 dark:text-white">Estado</th>';
+                html += '<th class="text-center px-6 py-4 font-semibold text-gray-900 dark:text-white">Acciones</th>';
+                html += '</tr></thead>';
+                html += '<tbody>';
+                
+                data.data.forEach(empresa => {
+                    const estado = empresa.activa === 1 ? 'Activa' : 'Inactiva';
+                    const estadoColor = empresa.activa === 1 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+                    
+                    html += `<tr class="border-b border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700">
+                        <td class="px-6 py-4 text-gray-900 dark:text-white font-medium">${empresa.id_empresa}</td>
+                        <td class="px-6 py-4 text-gray-700 dark:text-gray-300 font-mono text-xs">${empresa.ruc}</td>
+                        <td class="px-6 py-4 text-gray-700 dark:text-gray-300">${empresa.nombre}</td>
+                        <td class="px-6 py-4 text-gray-700 dark:text-gray-300">${parseFloat(empresa.latitud).toFixed(6)}</td>
+                        <td class="px-6 py-4 text-gray-700 dark:text-gray-300">${parseFloat(empresa.longitud).toFixed(6)}</td>
+                        <td class="px-6 py-4 text-gray-700 dark:text-gray-300">${empresa.radio_metros}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold ${estadoColor}">${estado}</span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <div class="flex items-center justify-center gap-2">
+                                <button onclick="editarEmpresa(${empresa.id_empresa})" class="p-2 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="confirmarEliminar(${empresa.id_empresa}, '${empresa.nombre}')" class="p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 dark:text-gray-400 py-12">
+                        <i class="fas fa-inbox text-3xl mb-2"></i>
+                        <p>No hay empresas registradas</p>
+                        <p class="text-sm mt-2">Crea una nueva empresa para comenzar</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('empresasContainer').innerHTML = `
+                <div class="text-center text-red-500 dark:text-red-400 py-12">
+                    <i class="fas fa-exclamation-circle text-3xl mb-2"></i>
+                    <p>Error al cargar las empresas</p>
+                </div>
+            `;
+        });
+    }
+
+    function editarEmpresa(id) {
+        // Fetch empresa data
+        fetch(`/api/empresa/obtener/${id}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                abrirModalEditarEmpresa(data.data);
+            } else {
+                mostrarNotificacion('Error al cargar datos de la empresa', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion('Error de conexión', 'error');
+        });
+    }
+
+    function abrirModalEditarEmpresa(empresa) {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4';
+        modal.id = 'modal-editar-empresa';
+        modal.innerHTML = `
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full animate-scale-in">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 p-6 rounded-t-2xl">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                            <i class="fas fa-edit text-2xl text-white"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Editar Empresa</h3>
+                            <p class="text-blue-200 text-sm">Modifica los datos de la empresa</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Body -->
+                <form id="form-editar-empresa" class="p-6 space-y-4">
+                    <input type="hidden" name="id_empresa" value="${empresa.id_empresa}">
+                    
+                    <!-- RUC -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-barcode text-slate-600 dark:text-slate-400 mr-2"></i>
+                            RUC <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            name="ruc"
+                            value="${empresa.ruc}"
+                            placeholder="10123456789"
+                            maxlength="11"
+                            pattern="[0-9]{11}"
+                            required
+                            class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">11 dígitos numéricos</p>
+                    </div>
+
+                    <!-- Nombre -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-tag text-slate-600 dark:text-slate-400 mr-2"></i>
+                            Nombre de la Empresa <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            name="nombre"
+                            value="${empresa.nombre}"
+                            placeholder="Ej: Kallpa Centro"
+                            required
+                            class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    </div>
+
+                    <!-- Grid: Latitud y Longitud -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Latitud -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-map-marker-alt text-slate-600 dark:text-slate-400 mr-2"></i>
+                                Latitud <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="number" 
+                                name="latitud"
+                                value="${empresa.latitud}"
+                                placeholder="-12.0464"
+                                step="0.0000001"
+                                min="-90"
+                                max="90"
+                                required
+                                class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        </div>
+
+                        <!-- Longitud -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-map-marker-alt text-slate-600 dark:text-slate-400 mr-2"></i>
+                                Longitud <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="number" 
+                                name="longitud"
+                                value="${empresa.longitud}"
+                                placeholder="-77.0428"
+                                step="0.0000001"
+                                min="-180"
+                                max="180"
+                                required
+                                class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        </div>
+                    </div>
+
+                    <!-- Radio en Metros -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-circle-notch text-slate-600 dark:text-slate-400 mr-2"></i>
+                            Radio de Marcación (metros) <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="number" 
+                            name="radio_metros"
+                            value="${empresa.radio_metros}"
+                            placeholder="150"
+                            min="1"
+                            max="5000"
+                            required
+                            class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Radio permitido para que los usuarios registren marcaciones</p>
+                    </div>
+
+                    <!-- Logo (Compacto) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-image text-slate-600 dark:text-slate-400 mr-2"></i>
+                            Logo (PNG, máx 5MB)
+                        </label>
+                        <div id="drop-zone-editar-${empresa.id_empresa}" class="border-2 border-dashed border-green-300 dark:border-green-700 rounded-lg p-3 text-center cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/10 transition-colors">
+                            <input type="file" id="file-input-editar-${empresa.id_empresa}" accept=".png" style="display:none;">
+                            <i class="fas fa-cloud-upload-alt text-xl text-green-600 dark:text-green-400"></i>
+                            <p class="text-gray-700 dark:text-gray-300 text-xs font-medium mt-1">Arrastra PNG aquí o haz clic</p>
+                        </div>
+                        <div id="file-name-editar-${empresa.id_empresa}" class="hidden mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded text-xs">
+                            <i class="fas fa-check-circle text-green-600 dark:text-green-400 mr-1"></i>
+                            <span id="file-display-editar-${empresa.id_empresa}" class="text-green-800 dark:text-green-300"></span>
+                        </div>
+                    </div>
+
+                    <!-- Mensaje de información -->
+                    <div class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <p class="text-sm text-blue-800 dark:text-blue-300">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            <span class="text-red-500">*</span> Campos obligatorios
+                        </p>
+                    </div>
+                </form>
+                </form>
+                
+                <!-- Footer -->
+                <div class="p-6 bg-gray-50 dark:bg-slate-700/30 rounded-b-2xl flex gap-3 border-t border-gray-200 dark:border-slate-700">
+                    <button 
+                        type="button"
+                        onclick="cerrarModalEditarEmpresa()"
+                        class="flex-1 px-6 py-3 bg-gray-200 dark:bg-slate-600 hover:bg-gray-300 dark:hover:bg-slate-500 text-gray-700 dark:text-gray-200 font-semibold rounded-lg transition-all">
+                        <i class="fas fa-times mr-2"></i>
+                        Cancelar
+                    </button>
+                    <button 
+                        type="button"
+                        onclick="guardarEditarEmpresa(event)"
+                        class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-600 text-white font-semibold rounded-lg transition-all">
+                        <i class="fas fa-save mr-2"></i>
+                        Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                cerrarModalEditarEmpresa();
+            }
+        });
+        
+        // Configurar drag & drop para editar
+        const dropZoneEditar = document.getElementById(`drop-zone-editar-${empresa.id_empresa}`);
+        const fileInputEditar = document.getElementById(`file-input-editar-${empresa.id_empresa}`);
+        const fileNameEditar = document.getElementById(`file-name-editar-${empresa.id_empresa}`);
+        const fileDisplayEditar = document.getElementById(`file-display-editar-${empresa.id_empresa}`);
+        
+        if (dropZoneEditar) {
+            dropZoneEditar.addEventListener('click', () => fileInputEditar.click());
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZoneEditar.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZoneEditar.addEventListener(eventName, () => {
+                    dropZoneEditar.style.backgroundColor = 'rgba(34, 197, 94, 0.1)';
+                }, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZoneEditar.addEventListener(eventName, () => {
+                    dropZoneEditar.style.backgroundColor = 'transparent';
+                }, false);
+            });
+            
+            dropZoneEditar.addEventListener('drop', handleDropEditar, false);
+            fileInputEditar.addEventListener('change', handleSelectFileEditar, false);
+            
+            function handleDropEditar(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                fileInputEditar.files = files;
+                handleSelectFileEditar();
+            }
+            
+            function handleSelectFileEditar() {
+                if (fileInputEditar.files.length > 0) {
+                    const file = fileInputEditar.files[0];
+                    if (file.type !== 'image/png') {
+                        mostrarNotificacion('Solo se permiten archivos PNG', 'error');
+                        fileInputEditar.value = '';
+                        fileNameEditar.classList.add('hidden');
+                        return;
+                    }
+                    if (file.size > 5 * 1024 * 1024) {
+                        mostrarNotificacion('El archivo no puede ser mayor a 5 MB', 'error');
+                        fileInputEditar.value = '';
+                        fileNameEditar.classList.add('hidden');
+                        return;
+                    }
+                    fileDisplayEditar.textContent = file.name;
+                    fileNameEditar.classList.remove('hidden');
+                }
+            }
+        }
+    }
+
+    function cerrarModalEditarEmpresa() {
+        const modal = document.getElementById('modal-editar-empresa');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    function guardarEditarEmpresa(event) {
+        const form = document.getElementById('form-editar-empresa');
+        if (!form) return;
+        
+        const id = form.id_empresa.value;
+        const ruc = form.ruc.value.trim();
+        const nombre = form.nombre.value.trim();
+        const latitud = parseFloat(form.latitud.value);
+        const longitud = parseFloat(form.longitud.value);
+        const radio_metros = parseInt(form.radio_metros.value);
+        
+        // Validaciones
+        if (!ruc) {
+            mostrarNotificacion('El RUC es requerido', 'error');
+            return;
+        }
+        
+        if (ruc.length !== 11 || !/^[0-9]{11}$/.test(ruc)) {
+            mostrarNotificacion('El RUC debe tener exactamente 11 dígitos', 'error');
+            return;
+        }
+        
+        if (!nombre) {
+            mostrarNotificacion('El nombre es requerido', 'error');
+            return;
+        }
+        
+        if (!latitud || !longitud) {
+            mostrarNotificacion('Latitud y Longitud son requeridas', 'error');
+            return;
+        }
+        
+        // Validar rangos de coordenadas
+        if (isNaN(latitud) || latitud < -90 || latitud > 90) {
+            mostrarNotificacion('La latitud debe estar entre -90 y 90', 'error');
+            return;
+        }
+        
+        if (isNaN(longitud) || longitud < -180 || longitud > 180) {
+            mostrarNotificacion('La longitud debe estar entre -180 y 180', 'error');
+            return;
+        }
+        
+        if (!radio_metros || parseInt(radio_metros) <= 0) {
+            mostrarNotificacion('El radio debe ser mayor a 0', 'error');
+            return;
+        }
+        
+        // Deshabilitar botón
+        const btnGuardar = event.target;
+        const textoOriginal = btnGuardar.innerHTML;
+        btnGuardar.disabled = true;
+        btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Guardando...';
+        
+        const fileInput = document.getElementById(`file-input-editar-${id}`);
+        
+        // Enviar datos
+        fetch(`/api/empresa/actualizar/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                ruc: ruc,
+                nombre: nombre,
+                latitud: latitud,
+                longitud: longitud,
+                radio_metros: radio_metros
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Si hay archivo de logo, cargarlo
+                if (fileInput && fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('id_empresa', id);
+                    
+                    return fetch('/api/empresa/logo/subir', {
+                        method: 'POST',
+                        body: formData
+                    }).then(response => response.json());
+                } else {
+                    return { success: true, message: 'Empresa actualizada' };
+                }
+            } else {
+                throw new Error(data.error || 'Error al guardar la empresa');
+            }
+        })
+        .then(data => {
+            if (data.success || data.message) {
+                mostrarNotificacion('Empresa actualizada exitosamente', 'success');
+                cerrarModalEditarEmpresa();
+                setTimeout(() => cargarEmpresas(), 1000);
+            } else {
+                mostrarNotificacion(data.error || 'Error al actualizar', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion('Error de conexión', 'error');
+        })
+        .finally(() => {
+            btnGuardar.disabled = false;
+            btnGuardar.innerHTML = textoOriginal;
+        });
+    }
+
+    function confirmarEliminar(id, nombre) {
+        if (confirm(`¿Estás seguro de que deseas eliminar la empresa "${nombre}"?`)) {
+            eliminarEmpresa(id);
+        }
+    }
+
+    function eliminarEmpresa(id) {
+        const btn = event.target.closest('button');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        fetch(`{{ url_for("main.eliminar_empresa", id_empresa=0) }}`.replace('0', id), {
+            method: 'DELETE',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarNotificacion('Empresa eliminada exitosamente', 'success');
+                setTimeout(() => cargarEmpresas(), 1000);
+            } else {
+                mostrarNotificacion(data.error || 'Error al eliminar', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-trash"></i>';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion('Error de conexión', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-trash"></i>';
+        });
+    }
+
+    function abrirModalNuevaEmpresa() {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4';
+        modal.id = 'modal-nueva-empresa';
+        modal.innerHTML = `
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full animate-scale-in">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-slate-600 to-slate-700 dark:from-slate-700 dark:to-slate-800 p-6 rounded-t-2xl">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                            <i class="fas fa-building text-2xl text-white"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Registrar Nueva Empresa</h3>
+                            <p class="text-slate-200 text-sm">Completa los datos requeridos</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Body -->
+                <form id="form-nueva-empresa" class="p-6 space-y-4">
+                    <!-- RUC -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-barcode text-slate-600 dark:text-slate-400 mr-2"></i>
+                            RUC <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            name="ruc"
+                            placeholder="10123456789"
+                            maxlength="11"
+                            pattern="[0-9]{11}"
+                            required
+                            class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">11 dígitos numéricos</p>
+                    </div>
+
+                    <!-- Nombre -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-tag text-slate-600 dark:text-slate-400 mr-2"></i>
+                            Nombre de la Empresa <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            name="nombre"
+                            placeholder="Ej: Kallpa Centro"
+                            required
+                            class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all">
+                    </div>
+
+                    <!-- Grid: Latitud y Longitud -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Latitud -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-map-marker-alt text-slate-600 dark:text-slate-400 mr-2"></i>
+                                Latitud <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="number" 
+                                name="latitud"
+                                placeholder="-12.0464"
+                                step="0.0000001"
+                                min="-90"
+                                max="90"
+                                required
+                                class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all">
+                        </div>
+
+                        <!-- Longitud -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-map-marker-alt text-slate-600 dark:text-slate-400 mr-2"></i>
+                                Longitud <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="number" 
+                                name="longitud"
+                                placeholder="-77.0428"
+                                step="0.0000001"
+                                min="-180"
+                                max="180"
+                                required
+                                class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all">
+                        </div>
+                    </div>
+
+                    <!-- Radio en Metros -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-circle-notch text-slate-600 dark:text-slate-400 mr-2"></i>
+                            Radio de Marcación (metros) <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="number" 
+                            name="radio_metros"
+                            placeholder="150"
+                            min="1"
+                            max="5000"
+                            value="100"
+                            required
+                            class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Radio permitido para que los usuarios registren marcaciones</p>
+                    </div>
+
+                    <!-- Logo -->
+                    <!-- Logo (Compacto) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-image text-slate-600 dark:text-slate-400 mr-2"></i>
+                            Logo (PNG, máx 5MB)
+                        </label>
+                        <div id="drop-zone-crear" class="border-2 border-dashed border-green-300 dark:border-green-700 rounded-lg p-3 text-center cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/10 transition-colors">
+                            <input type="file" id="file-input-crear" accept=".png" style="display:none;">
+                            <i class="fas fa-cloud-upload-alt text-xl text-green-600 dark:text-green-400"></i>
+                            <p class="text-gray-700 dark:text-gray-300 text-xs font-medium mt-1">Arrastra PNG aquí o haz clic</p>
+                        </div>
+                        <div id="file-name-crear" class="hidden mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded text-xs">
+                            <i class="fas fa-check-circle text-green-600 dark:text-green-400 mr-1"></i>
+                            <span id="file-display-crear" class="text-green-800 dark:text-green-300"></span>
+                        </div>
+                    </div>
+
+                    <!-- Mensaje de información -->
+                    <div class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <p class="text-sm text-blue-800 dark:text-blue-300">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            <span class="text-red-500">*</span> Campos obligatorios
+                        </p>
+                    </div>
+                </form>
+                
+                <!-- Footer -->
+                <div class="p-6 bg-gray-50 dark:bg-slate-700/30 rounded-b-2xl flex gap-3 border-t border-gray-200 dark:border-slate-700">
+                    <button 
+                        type="button"
+                        onclick="cerrarModalNuevaEmpresa()"
+                        class="flex-1 px-6 py-3 bg-gray-200 dark:bg-slate-600 hover:bg-gray-300 dark:hover:bg-slate-500 text-gray-700 dark:text-gray-200 font-semibold rounded-lg transition-all">
+                        <i class="fas fa-times mr-2"></i>
+                        Cancelar
+                    </button>
+                    <button 
+                        type="button"
+                        onclick="guardarNuevaEmpresa()"
+                        class="flex-1 px-6 py-3 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white font-semibold rounded-lg transition-all shadow-lg shadow-slate-500/30">
+                        <i class="fas fa-save mr-2"></i>
+                        Guardar Empresa
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Cerrar al hacer clic fuera
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                cerrarModalNuevaEmpresa();
+            }
+        });
+        
+        // Configurar drag & drop para crear
+        const dropZoneCrear = document.getElementById('drop-zone-crear');
+        const fileInputCrear = document.getElementById('file-input-crear');
+        const fileNameCrear = document.getElementById('file-name-crear');
+        const fileDisplayCrear = document.getElementById('file-display-crear');
+        
+        if (dropZoneCrear) {
+            dropZoneCrear.addEventListener('click', () => fileInputCrear.click());
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZoneCrear.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZoneCrear.addEventListener(eventName, () => {
+                    dropZoneCrear.style.backgroundColor = 'rgba(34, 197, 94, 0.1)';
+                }, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZoneCrear.addEventListener(eventName, () => {
+                    dropZoneCrear.style.backgroundColor = 'transparent';
+                }, false);
+            });
+            
+            dropZoneCrear.addEventListener('drop', handleDropCrear, false);
+            fileInputCrear.addEventListener('change', handleSelectFileCrear, false);
+            
+            function handleDropCrear(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                fileInputCrear.files = files;
+                handleSelectFileCrear();
+            }
+            
+            function handleSelectFileCrear() {
+                if (fileInputCrear.files.length > 0) {
+                    const file = fileInputCrear.files[0];
+                    if (file.type !== 'image/png') {
+                        mostrarNotificacion('Solo se permiten archivos PNG', 'error');
+                        fileInputCrear.value = '';
+                        fileNameCrear.classList.add('hidden');
+                        return;
+                    }
+                    if (file.size > 5 * 1024 * 1024) {
+                        mostrarNotificacion('El archivo no puede ser mayor a 5 MB', 'error');
+                        fileInputCrear.value = '';
+                        fileNameCrear.classList.add('hidden');
+                        return;
+                    }
+                    fileDisplayCrear.textContent = file.name;
+                    fileNameCrear.classList.remove('hidden');
+                }
+            }
+        }
+    }
+
+    function cerrarModalNuevaEmpresa() {
+        const modal = document.getElementById('modal-nueva-empresa');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    function guardarNuevaEmpresa() {
+        const form = document.getElementById('form-nueva-empresa');
+        if (!form) return;
+        
+        const ruc = form.ruc.value.trim();
+        const nombre = form.nombre.value.trim();
+        const latitud = parseFloat(form.latitud.value);
+        const longitud = parseFloat(form.longitud.value);
+        const radio_metros = parseInt(form.radio_metros.value);
+        const fileInput = document.getElementById('file-input-crear');
+        
+        // Validaciones básicas
+        if (!ruc) {
+            mostrarNotificacion('El RUC es requerido', 'error');
+            return;
+        }
+        
+        if (ruc.length !== 11 || !/^[0-9]{11}$/.test(ruc)) {
+            mostrarNotificacion('El RUC debe tener exactamente 11 dígitos', 'error');
+            return;
+        }
+        
+        if (!nombre) {
+            mostrarNotificacion('El nombre es requerido', 'error');
+            return;
+        }
+        
+        if (!latitud || !longitud) {
+            mostrarNotificacion('Latitud y Longitud son requeridas', 'error');
+            return;
+        }
+        
+        // Validar rangos de coordenadas
+        if (isNaN(latitud) || latitud < -90 || latitud > 90) {
+            mostrarNotificacion('La latitud debe estar entre -90 y 90', 'error');
+            return;
+        }
+        
+        if (isNaN(longitud) || longitud < -180 || longitud > 180) {
+            mostrarNotificacion('La longitud debe estar entre -180 y 180', 'error');
+            return;
+        }
+        
+        if (!radio_metros || parseInt(radio_metros) <= 0) {
+            mostrarNotificacion('El radio debe ser mayor a 0', 'error');
+            return;
+        }
+        
+        // Deshabilitar botón
+        const btnGuardar = event.target;
+        const textoOriginal = btnGuardar.innerHTML;
+        btnGuardar.disabled = true;
+        btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Guardando...';
+        
+        // Enviar datos de empresa
+        fetch('{{ url_for("main.crear_empresa") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                ruc: ruc,
+                nombre: nombre,
+                latitud: parseFloat(latitud),
+                longitud: parseFloat(longitud),
+                radio_metros: parseInt(radio_metros)
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const id_empresa_nueva = data.id_empresa;
+                
+                // Si hay archivo de logo, cargarlo
+                if (fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('id_empresa', id_empresa_nueva);
+                    
+                    return fetch('/api/empresa/logo/subir', {
+                        method: 'POST',
+                        body: formData
+                    }).then(response => response.json());
+                } else {
+                    return { success: true, message: 'Empresa creada sin logo' };
+                }
+            } else {
+                throw new Error(data.error || 'Error al guardar la empresa');
+            }
+        })
+        .then(data => {
+            if (data.success || data.message) {
+                mostrarNotificacion('Empresa creada exitosamente', 'success');
+                cerrarModalNuevaEmpresa();
+                setTimeout(() => cargarEmpresas(), 1000);
+            } else {
+                mostrarNotificacion(data.error || 'Error al guardar la empresa', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion('Error de conexión', 'error');
+        })
+        .finally(() => {
+            btnGuardar.disabled = false;
+            btnGuardar.innerHTML = textoOriginal;
+        });
+    }
+
+    function mostrarNotificacion(mensaje, tipo) {
+        const notificacion = document.createElement('div');
+        const bgColor = tipo === 'success' ? 'bg-green-100 dark:bg-green-900/30 border-green-500 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 border-red-500 text-red-700 dark:text-red-300';
+        const icono = tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+        
+        notificacion.className = `fixed top-4 right-4 ${bgColor} border px-6 py-3 rounded-lg shadow-lg z-[80]`;
+        notificacion.innerHTML = `<i class="fas ${icono} mr-2"></i>${mensaje}`;
+        
+        document.body.appendChild(notificacion);
+        setTimeout(() => notificacion.remove(), 4000);
+    }
+</script>
+{% endblock %}

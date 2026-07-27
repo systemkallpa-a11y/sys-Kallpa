@@ -1,39 +1,172 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block title %}Dashboard - KallMax{% endblock %}
+{% block title %}Dashboard - Kallpa{% endblock %}
 
-{% block header_title %}
-<span class="text-gray-900 dark:text-white">Dashboard</span>
-{% endblock %}
-
-{% block header_subtitle %}
-<span class="flex items-center text-gray-600 dark:text-gray-400">
-    <span class="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse mr-2"></span>
-    Panel de Control
-</span>
-{% endblock %}
+{% block header_title %}Dashboard{% endblock %}
+{% block header_subtitle %}Bienvenido, {{ session.get('user_name', 'Usuario') }}{% endblock %}
 
 {% block content %}
-<!-- Background -->
-<div class="fixed inset-0 -z-10 bg-gradient-to-br from-gray-50/50 via-white to-gray-50/50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900"></div>
+<div class="space-y-6">
+    <!-- STATS GRID -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        <!-- Stat Card 1 -->
+        <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6 hover:shadow-lg transition-shadow">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-user-check text-slate-700 dark:text-slate-300 text-lg"></i>
+                </div>
+                <span class="text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-1 rounded-full font-semibold">+12%</span>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">Asistencias Hoy</p>
+            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-2">--</p>
+        </div>
 
-<div class="max-w-4xl mx-auto">
-    
-    <!-- Welcome Banner - Professional & Minimal -->
-    <div class="relative overflow-hidden bg-gradient-to-br from-slate-700 via-slate-600 to-slate-800 dark:from-slate-800 dark:via-slate-900 dark:to-slate-950 rounded-2xl shadow-lg p-16 min-h-[400px] flex items-center justify-center border border-slate-600/30">
-        <div class="relative text-center">
-            <h1 class="text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
-                Bienvenido a Kallmax
-            </h1>
-            <p class="text-lg text-slate-200 max-w-2xl mx-auto mb-12 font-light">
-                Tu plataforma profesional para gestionar propiedades inmobiliarias con confianza y eficiencia
-            </p>
-            <div class="flex gap-4 justify-center flex-wrap">
+        <!-- Stat Card 2 -->
+        <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6 hover:shadow-lg transition-shadow">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-hourglass-end text-slate-700 dark:text-slate-300 text-lg"></i>
+                </div>
+                <span class="text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-1 rounded-full font-semibold">OK</span>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">Horas Trabajadas</p>
+            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-2">--</p>
+        </div>
+
+        <!-- Stat Card 3 -->
+        <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6 hover:shadow-lg transition-shadow">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-exclamation-triangle text-slate-700 dark:text-slate-300 text-lg"></i>
+                </div>
+                <span class="text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-1 rounded-full font-semibold">0</span>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">Tardanzas</p>
+            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-2">--</p>
+        </div>
+
+        <!-- Stat Card 4 -->
+        <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6 hover:shadow-lg transition-shadow">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-times-circle text-slate-700 dark:text-slate-300 text-lg"></i>
+                </div>
+                <span class="text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-1 rounded-full font-semibold">0</span>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">Faltas</p>
+            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-2">--</p>
+        </div>
+    </div>
+
+    <!-- USER INFO CARD -->
+    <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Información Personal</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="border-l-4 border-slate-600 pl-4">
+                <p class="text-gray-500 dark:text-gray-400 text-sm">Nombre</p>
+                <p class="text-gray-900 dark:text-white font-semibold">{{ session.get('user_name', '--') }}</p>
+            </div>
+            <div class="border-l-4 border-slate-600 pl-4">
+                <p class="text-gray-500 dark:text-gray-400 text-sm">Documento</p>
+                <p class="text-gray-900 dark:text-white font-semibold">{{ session.get('user_documento', '--') }}</p>
+            </div>
+            <div class="border-l-4 border-slate-600 pl-4">
+                <p class="text-gray-500 dark:text-gray-400 text-sm">Cargo</p>
+                <p class="text-gray-900 dark:text-white font-semibold">{{ session.get('user_cargo', '--') }}</p>
+            </div>
+            <div class="border-l-4 border-slate-600 pl-4">
+                <p class="text-gray-500 dark:text-gray-400 text-sm">Área</p>
+                <p class="text-gray-900 dark:text-white font-semibold">{{ session.get('user_area', '--') }}</p>
             </div>
         </div>
     </div>
 
+    <!-- HISTORIAL TABLE -->
+    <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white">Historial de Marcaciones</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Últimos 7 días</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors font-medium text-sm">
+                    <i class="fas fa-download mr-2"></i>Descargar
+                </button>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto">
+            <div id="historialContainer" class="text-center text-gray-500 dark:text-gray-400 py-12">
+                <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                <p>Cargando historial...</p>
+            </div>
+        </div>
+    </div>
 </div>
+
 {% endblock %}
 
+{% block scripts %}
+<script>
+    // Cargar historial de marcaciones
+    function cargarHistorial() {
+        fetch('{{ url_for("main.obtener_historial_marcacion") }}', {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('historialContainer');
+            
+            if (data.success && data.data && data.data.length > 0) {
+                let html = '<table class="w-full text-sm"><thead class="bg-gray-50 dark:bg-slate-700 border-b border-gray-200 dark:border-slate-600">';
+                html += '<tr><th class="text-left px-6 py-4 font-semibold text-gray-900 dark:text-white">Fecha</th>';
+                html += '<th class="text-left px-6 py-4 font-semibold text-gray-900 dark:text-white">Hora</th>';
+                html += '<th class="text-left px-6 py-4 font-semibold text-gray-900 dark:text-white">Tipo</th>';
+                html += '<th class="text-center px-6 py-4 font-semibold text-gray-900 dark:text-white">Estado</th></tr></thead>';
+                html += '<tbody>';
+                
+                data.data.forEach(item => {
+                    const fecha = new Date(item.fecha_marcacion + 'T' + item.hora_marcacion);
+                    const fechaFormato = fecha.toLocaleDateString('es-ES');
+                    const horaFormato = fecha.toLocaleTimeString('es-ES');
+                    const tipo = item.tipo_marcacion === 'ENTRADA' ? 'Entrada' : 'Salida';
+                    const badgeColor = item.tipo_marcacion === 'ENTRADA' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+                    
+                    html += `<tr class="border-b border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700">
+                        <td class="px-6 py-4 text-gray-900 dark:text-white font-medium">${fechaFormato}</td>
+                        <td class="px-6 py-4 text-gray-700 dark:text-gray-300">${horaFormato}</td>
+                        <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs font-semibold ${badgeColor}">${tipo}</span></td>
+                        <td class="px-6 py-4 text-center"><i class="fas fa-check-circle text-green-600 dark:text-green-400"></i></td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 dark:text-gray-400 py-12">
+                        <i class="fas fa-inbox text-3xl mb-2"></i>
+                        <p>No hay marcaciones en los últimos 7 días</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('historialContainer').innerHTML = `
+                <div class="text-center text-red-500 dark:text-red-400 py-12">
+                    <i class="fas fa-exclamation-circle text-3xl mb-2"></i>
+                    <p>Error al cargar el historial</p>
+                </div>
+            `;
+        });
+    }
 
+    // Cargar al iniciar
+    document.addEventListener('DOMContentLoaded', cargarHistorial);
+</script>
+{% endblock %}

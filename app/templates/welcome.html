@@ -1,142 +1,546 @@
 <!DOCTYPE html>
-<html lang="es" class="dark">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bienvenido</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Kallpa - Sistema de Marcación</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @keyframes gradient-shift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
+
+        html, body {
+            width: 100%;
+            height: 100%;
         }
-        
-        .gradient-text {
-            background: linear-gradient(135deg, #16a34a 0%, #0d9488 50%, #06b6d4 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0d1f0d 0%, #1a3a1a 50%, #0a0a0a 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #e0e0e0;
+            overflow-x: hidden;
         }
-        
-        .float-animation {
-            animation: float 6s ease-in-out infinite;
+
+        /* Elementos decorativos */
+        .bg-decoration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.05;
+            pointer-events: none;
+            z-index: 0;
         }
-        
-        .gradient-bg {
-            background: linear-gradient(-45deg, #16a34a, #0d9488, #06b6d4, #16a34a);
-            background-size: 400% 400%;
-            animation: gradient-shift 15s ease infinite;
+
+        .dot {
+            position: absolute;
+            background: radial-gradient(circle, rgba(76, 175, 80, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .dot1 {
+            width: 400px;
+            height: 400px;
+            top: -200px;
+            left: -200px;
+        }
+
+        .dot2 {
+            width: 300px;
+            height: 300px;
+            bottom: -150px;
+            right: -150px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header con logo */
+        header {
+            padding: 40px 0 30px 0;
+            text-align: center;
+            border-bottom: 2px solid rgba(76, 175, 80, 0.1);
+            margin-bottom: 40px;
+        }
+
+        .logo-container {
+            margin-bottom: 20px;
+        }
+
+        .logo-img {
+            max-height: 80px;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 15px rgba(76, 175, 80, 0.2));
+        }
+
+        .tagline {
+            font-size: 16px;
+            color: #ffffff;
+            font-style: italic;
+            margin-bottom: 8px;
+            font-weight: 300;
+            letter-spacing: 0.5px;
+        }
+
+        .description {
+            font-size: 14px;
+            color: #ffffff;
+            font-weight: 300;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 40px 0;
+        }
+
+        /* Cards Grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin: 50px 0;
+        }
+
+        .card {
+            background: linear-gradient(135deg, rgba(20, 40, 20, 0.8) 0%, rgba(15, 30, 15, 0.6) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(76, 175, 80, 0.2);
+            border-radius: 12px;
+            padding: 28px;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(76, 175, 80, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .card:hover::before {
+            left: 100%;
+        }
+
+        .card:hover {
+            background: linear-gradient(135deg, rgba(30, 60, 30, 0.9) 0%, rgba(20, 40, 20, 0.8) 100%);
+            border: 1px solid rgba(76, 175, 80, 0.4);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(76, 175, 80, 0.15);
+        }
+
+        .card-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 32px;
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(56, 142, 60, 0.1) 100%);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .card-icon i {
+            color: #4CAF50;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #4CAF50;
+            margin-bottom: 10px;
+            letter-spacing: 0.3px;
+        }
+
+        .card-description {
+            font-size: 13px;
+            color: #d0d0d0;
+            line-height: 1.6;
+        }
+
+        /* Stats */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin: 40px 0;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 20px;
+            background: rgba(76, 175, 80, 0.05);
+            border: 1px solid rgba(76, 175, 80, 0.15);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .stat:hover {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4CAF50;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #d0d0d0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* CTA Buttons */
+        .cta-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 40px 0 0 0;
+        }
+
+        .btn {
+            padding: 14px 36px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: 0.3px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+            color: white;
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.25);
+            border: 1px solid rgba(76, 175, 80, 0.5);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(76, 175, 80, 0.35);
+            background: linear-gradient(135deg, #45a049 0%, #2e7d32 100%);
+        }
+
+        .btn-primary:active {
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #4CAF50;
+            border: 2px solid rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(76, 175, 80, 0.1);
+            border: 2px solid rgba(76, 175, 80, 0.7);
+            color: #66BB6A;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            color: #b0b0b0;
+            font-size: 12px;
+            border-top: 1px solid rgba(76, 175, 80, 0.1);
+            margin-top: auto;
+        }
+
+        footer a {
+            color: #4CAF50;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        footer a:hover {
+            color: #66BB6A;
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header {
+                padding: 30px 0 20px 0;
+                margin-bottom: 30px;
+            }
+
+            .logo-img {
+                max-height: 60px;
+            }
+
+            .tagline {
+                font-size: 14px;
+            }
+
+            .description {
+                font-size: 12px;
+            }
+
+            .cards-grid {
+                gap: 18px;
+                margin: 35px 0;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .card-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 28px;
+            }
+
+            .card-title {
+                font-size: 16px;
+            }
+
+            .card-description {
+                font-size: 12px;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+                padding: 12px 24px;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .stat {
+                padding: 15px;
+            }
+
+            .stat-number {
+                font-size: 24px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                font-size: 14px;
+            }
+
+            header {
+                padding: 20px 0 15px 0;
+                margin-bottom: 20px;
+            }
+
+            .logo-img {
+                max-height: 50px;
+            }
+
+            .main-content {
+                padding: 20px 0;
+            }
+
+            .cards-grid {
+                gap: 15px;
+                margin: 25px 0;
+            }
+
+            .card {
+                padding: 18px;
+            }
+
+            .stat-number {
+                font-size: 20px;
+            }
+
+            .btn {
+                font-size: 14px;
+                padding: 10px 20px;
+            }
+        }
+
+        /* Animaciones */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        header, .card, .stat, .cta-buttons {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        .card {
+            animation-delay: 0.1s;
+        }
+
+        .card:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .card:nth-child(3) {
+            animation-delay: 0.3s;
         }
     </style>
 </head>
-<body class="bg-slate-950">
-    <!-- Fondo animado -->
-    <div class="fixed inset-0 -z-10 bg-gradient-to-b from-purple-900 via-purple-700 to-slate-950"></div>
+<body>
+    <!-- Decoración de fondo -->
+    <div class="bg-decoration">
+        <div class="dot dot1"></div>
+        <div class="dot dot2"></div>
+    </div>
 
-    <!-- Elementos decorativos flotantes -->
-    <div class="fixed top-20 right-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse -z-5"></div>
-    <div class="fixed top-1/2 left-1/2 w-72 h-72 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse -z-5 animation-delay-4000"></div>
-
-    <!-- ========== SECCIÓN INICIAL ========== -->
-    <div id="seccionInicial" class="min-h-screen flex flex-col items-center justify-center px-4 py-8 sm:py-12 transition-all duration-500" style="opacity: 1; pointer-events: auto;">
-        <div class="max-w-4xl w-full">
-            <!-- Logo y Título -->
-            <div class="text-center mb-6 sm:mb-10 md:mb-12 float-animation">
-                <div class="mb-4 sm:mb-6 flex justify-center">
-                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="h-16 sm:h-20 md:h-24 lg:h-32 w-auto drop-shadow-2xl">
-                </div>
-                <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black gradient-text mb-2 sm:mb-3 px-4"></h1>
-                <p class="text-sm sm:text-base md:text-lg lg:text-xl text-gray-200 font-bold px-4">Gestiona tus propiedades y proyectos inmobiliarios de forma profesional</p>
+    <div class="container">
+        <!-- Header con logo -->
+        <header>
+            <div class="logo-container">
+                <img src="{{ url_for('static', filename='images/Logo Kallpa.png') }}" alt="Kallpa" class="logo-img">
             </div>
+            <div class="tagline">Sistema de Marcación y Asistencia</div>
+            <div class="description">Control eficiente de entrada y salida de personal</div>
+        </header>
 
-            <!-- Grid de características -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-10 md:mb-12">
-                <!-- Feature 1 -->
-                <div class="group bg-slate-800/50 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-700/50 hover:shadow-2xl hover:shadow-purple-500/10 transition-all duration-500 hover:-translate-y-2">
-                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-500 shadow-lg shadow-purple-500/30">
-                        <i class="fas fa-home text-white text-lg sm:text-xl"></i>
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Features Cards -->
+            <div class="cards-grid">
+                <!-- Card 1 -->
+                <div class="card">
+                    <div class="card-icon">
+                        <i class="fas fa-clock"></i>
                     </div>
-                    <h3 class="text-base sm:text-lg font-bold text-white mb-2">Gestión de Propiedades</h3>
-                    <p class="text-xs sm:text-sm text-gray-400">Controla todas tus propiedades inmobiliarias en un solo lugar</p>
+                    <div class="card-title">Marcación</div>
+                    <div class="card-description">Registra tu entrada y salida de forma instantánea y confiable</div>
                 </div>
 
-                <!-- Feature 2 -->
-                <div class="group bg-slate-800/50 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-700/50 hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-500 hover:-translate-y-2">
-                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-500 shadow-lg shadow-emerald-500/30">
-                        <i class="fas fa-users text-white text-lg sm:text-xl"></i>
+                <!-- Card 2 -->
+                <div class="card">
+                    <div class="card-icon">
+                        <i class="fas fa-chart-bar"></i>
                     </div>
-                    <h3 class="text-base sm:text-lg font-bold text-white mb-2">Gestión de Clientes</h3>
-                    <p class="text-xs sm:text-sm text-gray-400">Administra contactos y seguimiento de clientes eficientemente</p>
+                    <div class="card-title">Dashboard</div>
+                    <div class="card-description">Visualiza tu historial, reportes y estadísticas en tiempo real</div>
                 </div>
 
-                <!-- Feature 3 -->
-                <div class="group bg-slate-800/50 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-slate-700/50 hover:shadow-2xl hover:shadow-cyan-500/10 transition-all duration-500 hover:-translate-y-2">
-                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-500 shadow-lg shadow-cyan-500/30">
-                        <i class="fas fa-chart-line text-white text-lg sm:text-xl"></i>
+                <!-- Card 3 -->
+                <div class="card">
+                    <div class="card-icon">
+                        <i class="fas fa-shield-alt"></i>
                     </div>
-                    <h3 class="text-base sm:text-lg font-bold text-white mb-2">Análisis y Reportes</h3>
-                    <p class="text-xs sm:text-sm text-gray-400">Visualiza métricas y datos en tiempo real para tomar mejores decisiones</p>
-                </div>
-            </div>
-
-            <!-- Estadísticas -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-10 md:mb-12">
-                <div class="text-center">
-                    <h2 class="text-xl sm:text-2xl md:text-3xl font-black bg-gradient-to-r from-purple-600 to-purple-600 bg-clip-text text-transparent">1,200+</h2>
-                    <p class="text-xs sm:text-sm text-gray-400 mt-1">Propiedades listadas</p>
-                </div>
-                <div class="text-center">
-                    <h2 class="text-xl sm:text-2xl md:text-3xl font-black bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">850+</h2>
-                    <p class="text-xs sm:text-sm text-gray-400 mt-1">Transacciones exitosas</p>
-                </div>
-                <div class="text-center">
-                    <h2 class="text-xl sm:text-2xl md:text-3xl font-black bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">99%</h2>
-                    <p class="text-xs sm:text-sm text-gray-400 mt-1">Satisfacción</p>
-                </div>
-                <div class="text-center">
-                    <h2 class="text-xl sm:text-2xl md:text-3xl font-black bg-gradient-to-r from-cyan-600 to-purple-600 bg-clip-text text-transparent">15 años</h2>
-                    <p class="text-xs sm:text-sm text-gray-400 mt-1">Experiencia inmobiliaria</p>
+                    <div class="card-title">Seguridad y Privacidad</div>
+                    <div class="card-description">Tus datos están protegidos con los más altos estándares de seguridad</div>
                 </div>
             </div>
 
-            <!-- Botones de acción -->
-            <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center px-4 sm:px-0">
-                <a href="{{ url_for('auth.login') }}" class="group relative inline-flex items-center justify-center px-6 sm:px-8 md:px-10 py-3 sm:py-3.5 text-sm sm:text-base md:text-lg font-bold text-white bg-gradient-to-r from-purple-600 to-purple-600 rounded-xl sm:rounded-2xl shadow-xl shadow-purple-500/40 hover:shadow-2xl hover:shadow-purple-500/60 transition-all duration-500 hover:scale-105 overflow-hidden">
-                    <span class="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></span>
-                    <span class="relative flex items-center">
-                        Iniciar Sesión
-                        <i class="fas fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform"></i>
-                    </span>
+            <!-- Statistics -->
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Precisión</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">0ms</div>
+                    <div class="stat-label">Latencia</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">24/7</div>
+                    <div class="stat-label">Disponible</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">2026</div>
+                    <div class="stat-label">Lanzamiento</div>
+                </div>
+            </div>
+
+            <!-- CTA Buttons -->
+            <div class="cta-buttons">
+                <a href="{{ url_for('auth.login') }}?redirect=marcacion" class="btn btn-primary">
+                    <i class="fas fa-clock"></i>
+                    Marcación
                 </a>
-                <a href="{{ url_for('auth.proyectos') }}" class="inline-flex items-center justify-center px-6 sm:px-8 md:px-10 py-3 sm:py-3.5 text-sm sm:text-base md:text-lg font-bold text-purple-400 bg-slate-800/50 border-2 border-purple-900/50 rounded-xl sm:rounded-2xl backdrop-blur-xl hover:bg-purple-900/20 transition-all duration-500 hover:scale-105">
-                    Conoce más
-                    <i class="fas fa-chevron-right ml-2"></i>
+                <a href="{{ url_for('auth.login') }}?redirect=dashboard" class="btn btn-primary">
+                    <i class="fas fa-chart-bar"></i>
+                    Dashboard
                 </a>
-            </div>
-
-            <!-- Footer -->
-            <div class="text-center mt-8 sm:mt-12 md:mt-16 pt-6 sm:pt-8 border-t border-slate-700">
-                <p class="text-xs sm:text-sm text-gray-400 px-4">
-                    © 2026. Todos los derechos reservados. • 
-                    <a href="#" class="text-purple-400 hover:underline">Privacidad</a> • 
-                    <a href="#" class="text-purple-400 hover:underline">Términos</a>
-                </p>
             </div>
         </div>
     </div>
 
-    <!-- Script para funciones -->
+    <!-- Footer -->
+    <footer>
+        <p>© 2026 Kallpa - Todos los derechos reservados | 
+            <a href="#">Privacidad</a> | 
+            <a href="#">Términos</a>
+        </p>
+    </footer>
+
     <script>
-        // Mejorar scroll en móviles
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('Página de bienvenida cargada');
-        });
+        // NO redirigir automáticamente - mostrar welcome siempre
+        // El usuario puede hacer click en los botones para ir a Marcación o Dashboard
+        
+        // Smooth scroll (si aplica)
+        const statsLink = document.querySelector('a[href="#stats"]');
+        if (statsLink) {
+            statsLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                const stats = document.querySelector('.stats');
+                if (stats) {
+                    stats.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                }
+            });
+        }
     </script>
+
 </body>
 </html>
