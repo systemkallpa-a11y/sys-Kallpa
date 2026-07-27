@@ -1,5 +1,5 @@
 """
-Configuración de base de datos para KallMax
+Configuración de base de datos para Kallpa
 Lee las credenciales desde variables de entorno
 """
 import os
@@ -13,12 +13,12 @@ load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
 
 class DatabaseConfig:
-    """Configuración de base de datos - KALLMAX"""
+    """Configuración de base de datos - KALLPA"""
     HOST = os.getenv('DB_HOST', 'localhost')
     PORT = int(os.getenv('DB_PORT', 3306))
     USER = os.getenv('DB_USER', 'root')
     PASSWORD = os.getenv('DB_PASSWORD', '')
-    DATABASE = os.getenv('DB_NAME', 'kallgwkn_kallmax_bd')
+    DATABASE = os.getenv('DB_NAME', 'kallgwkn_kallpa_bd')
     
     @classmethod
     def get_connection_params(cls):

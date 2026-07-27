@@ -40,7 +40,7 @@ def create_app():
             os.makedirs(log_dir)
         
         # Archivo de log con rotación (10MB máximo, mantener 5 backups)
-        log_file = os.path.join(log_dir, 'kallmax_app.log')
+        log_file = os.path.join(log_dir, 'kallpa_app.log')
         file_handler = RotatingFileHandler(log_file, maxBytes=10240000, backupCount=5)
         file_handler.setFormatter(logging.Formatter(
             '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
@@ -49,7 +49,7 @@ def create_app():
         app.logger.addHandler(file_handler)
         
         app.logger.setLevel(logging.INFO)
-        app.logger.info('KallMax Application startup')
+        app.logger.info('Kallpa Application startup')
     
     # Register blueprints - Solo lo necesario para Kallpa
     from app.routes import main_bp, auth_bp

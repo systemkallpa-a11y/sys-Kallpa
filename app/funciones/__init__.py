@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Modulo de funciones de negocio para KallMax
+Modulo de funciones de negocio para Kallpa
 Estructura modular con interfaces
 """
 

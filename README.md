@@ -1,4 +1,4 @@
-# KallMax - Sistema de Gestión Inmobiliaria
+# Kallpa - Sistema de Gestión Inmobiliaria
 
 Sistema de gestión para corredores inmobiliarios desarrollado con Flask y MySQL.
 
@@ -15,7 +15,7 @@ Sistema de gestión para corredores inmobiliarios desarrollado con Flask y MySQL
 
 ## 📝 Descripción
 
-KallMax es un sistema de gestión para corredores inmobiliarios que incluye:
+Kallpa es un sistema de gestión para corredores inmobiliarios que incluye:
 - Gestión de usuarios y asesores
 - Sistema de autenticación
 - Gestión de clientes
@@ -39,7 +39,7 @@ KallMax es un sistema de gestión para corredores inmobiliarios que incluye:
 
 ```bash
 git clone <repository-url>
-cd sys-Kallmax
+cd sys-Kallpa
 ```
 
 ### 2. Crear entorno virtual
@@ -68,7 +68,7 @@ DB_HOST=localhost
 DB_PORT=3306
 DB_USER=kallgwkn_user
 DB_PASSWORD=TU_PASSWORD_AQUI
-DB_NAME=kallgwkn_kallmax_bd
+DB_NAME=kallgwkn_kallpa_bd
 ```
 
 ### 5. Ejecutar aplicación
@@ -91,7 +91,7 @@ python verificar_conexion.py
 
 ### Producción: Namecheap
 
-**URL:** https://kallmaxcorredores.com
+**URL:** https://kallpainmovilaria.com
 
 #### Subir archivos con WinSCP:
 
@@ -101,7 +101,7 @@ python verificar_conexion.py
    - Password: `#215292159xD`
 
 2. **Subir archivos desde `namecheap_deploy/`:**
-   - Todos los archivos → `/home/kallgwkn/kallmax_app/`
+   - Todos los archivos → `/home/kallugwo/kallpa/`
 
 3. **Editar `.env` en servidor:**
    ```env
@@ -112,17 +112,17 @@ python verificar_conexion.py
    DB_PORT=3306
    DB_USER=kallgwkn_user
    DB_PASSWORD=PASSWORD_MYSQL_REAL
-   DB_NAME=kallgwkn_kallmax_bd
+   DB_NAME=kallgwkn_kallpa_bd
    ```
 
 4. **Reiniciar aplicación:**
    - cPanel → Setup Python App → Restart
-   - O crear archivo: `touch ~/kallmax_app/tmp/restart.txt`
+   - O crear archivo: `touch ~/kallpa/tmp/restart.txt`
 
 #### Logs de Producción:
 
 ```bash
-tail -f ~/kallmax_app/logs/kallmax.log
+tail -f ~/kallpa/logs/kallpa.log
 ```
 
 ---
@@ -135,20 +135,20 @@ tail -f ~/kallmax_app/logs/kallmax.log
 Host: localhost
 Port: 3306
 User: kallgwkn_user
-Database: kallgwkn_kallmax_bd
+Database: kallgwkn_kallpa_bd
 Password: [Obtener desde cPanel → MySQL Databases]
 ```
 
 ### Backup de Base de Datos:
 
-- **Archivo:** `kallmax_backup_fixed.sql`
+- **Archivo:** `kallpa_backup.sql`
 - **Estado:** Ya importado en Namecheap
 
 ### Importar backup (si es necesario):
 
 1. Ir a phpMyAdmin en cPanel
-2. Seleccionar base de datos `kallgwkn_kallmax_bd`
-3. Importar → Seleccionar archivo `kallmax_backup_fixed.sql`
+2. Seleccionar base de datos `kallgwkn_kallpa_bd`
+3. Importar → Seleccionar archivo `kallpa_backup.sql`
 4. Click en "Importar"
 
 ---
@@ -156,7 +156,7 @@ Password: [Obtener desde cPanel → MySQL Databases]
 ## 📁 Estructura del Proyecto
 
 ```
-sys-Kallmax/
+sys-Kallpa/
 ├── app/
 │   ├── funciones/          # Funciones de negocio
 │   ├── routes/             # Rutas de Flask
@@ -216,7 +216,7 @@ python generar_secret_key.py
 
 Si encuentras problemas:
 
-1. Revisar logs: `~/kallmax_app/logs/kallmax.log`
+1. Revisar logs: `~/kallpa/logs/kallpa.log`
 2. Verificar credenciales en `.env`
 3. Ejecutar `python verificar_conexion.py`
 4. Revisar documentación en `README_MIGRACION.md`
@@ -226,9 +226,9 @@ Si encuentras problemas:
 ## 📝 Notas
 
 - **Base de Datos:** Migrada de servidor externo a Namecheap (localhost)
-- **Producción:** https://kallmaxcorredores.com
-- **Backup BD:** `kallmax_backup_fixed.sql` (sin DEFINER)
+- **Producción:** https://kallpainmovilaria.com
+- **Backup BD:** `kallpa_backup.sql` (sin DEFINER)
 
 ---
 
-**Desarrollado para KallMax Corredores Inmobiliarios**
+**Desarrollado para Kallpa Inmobiliaria**
