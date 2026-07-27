@@ -30,7 +30,7 @@ echo ""
 
 # Step 3: Specifically ensure reportlab works
 echo "🔧 Ensuring reportlab and Pillow compatibility..."
-python3 -m pip install --user reportlab==3.6.8 Pillow==9.0.0 --upgrade
+python3 -m pip install --user reportlab==3.6.8 Pillow==8.4.0 --upgrade
 echo "✓ reportlab and Pillow verified"
 echo ""
 
