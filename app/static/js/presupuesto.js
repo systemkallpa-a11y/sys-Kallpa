@@ -8,6 +8,7 @@ let servicios_agregados = [];
 let id_contador_material = 0;
 let id_contador_servicio = 0;
 let materiales_disponibles = [];
+let desglose_editado_manualmente = false; // ⭐ Detecta si usuario editó campos manualmente
 
 // Inicializar cuando carga la página
 document.addEventListener('DOMContentLoaded', function() {
@@ -41,7 +42,17 @@ document.addEventListener('DOMContentLoaded', function() {
     campos_desglose.forEach(campo_id => {
         const campo = document.getElementById(campo_id);
         if (campo) {
-            campo.addEventListener('input', actualizarTotales);
+            // ⭐ MARCAR COMO EDITADO MANUALMENTE cuando el usuario cambia el valor
+            campo.addEventListener('input', function() {
+                // Solo marcar como editado si el usuario realmente escribió algo
+                // (no cuando se actualiza programáticamente)
+                if (document.activeElement === this) {
+                    desglose_editado_manualmente = true;
+                    console.log('[DESGLOSE] Campo editado manualmente:', campo_id, '→ bandera = true');
+                }
+                actualizarTotales();
+            });
+            
             campo.addEventListener('change', actualizarTotales);
             
             // ⭐ SELECCIONAR TODO AL HACER FOCUS (facilita reemplazar valor)
@@ -82,6 +93,9 @@ document.addEventListener('DOMContentLoaded', function() {
 async function cargarDatosPresupuestoParaEditar(id_presupuesto) {
     try {
         console.log('[EDITAR] Cargando presupuesto:', id_presupuesto);
+        
+        // ⭐ RESETEAR BANDERA DE EDICIÓN MANUAL
+        desglose_editado_manualmente = false;
         
         // Usar el nuevo endpoint mejorado que retorna datos listos
         const response = await fetch(`/api/presupuestos/obtener-para-editar/${id_presupuesto}`);
@@ -700,8 +714,13 @@ function actualizarTotales() {
     const suma_esperada = (subtotal_base * 0.30); // 10% + 15% + 5% = 30%
     const diferencia = Math.abs(suma_actual - suma_esperada);
     
-    // Si la diferencia es mayor a 1 sol o todos están en cero, recalcular
-    const debe_recalcular = (diferencia > 1.0 || suma_actual === 0) && subtotal_base > 0;
+    // ⭐ FIX: Si todos los campos están en CERO exacto, SIEMPRE recalcular cuando hay subtotal
+    // Esto permite que después de "Limpiar Desglose", los campos se actualicen al cambiar materiales
+    const todos_en_cero = (gastos_actuales === 0 && utilidad_actuales === 0 && supervision_actuales === 0);
+    
+    // ⭐ NO RECALCULAR si el usuario editó manualmente (a menos que todos estén en cero)
+    // Si la diferencia es mayor a 1 sol O todos están en cero, recalcular
+    const debe_recalcular = !desglose_editado_manualmente && (todos_en_cero || diferencia > 1.0) && subtotal_base > 0;
     
     let gastos_generales, utilidad, supervision_obra;
     
@@ -721,7 +740,8 @@ function actualizarTotales() {
             gastos_generales: gastos_generales.toFixed(2),
             utilidad: utilidad.toFixed(2),
             supervision_obra: supervision_obra.toFixed(2),
-            motivo: debe_recalcular ? 'Cambio significativo detectado' : 'Campos en cero'
+            motivo: debe_recalcular ? 'Cambio significativo detectado' : 'Campos en cero',
+            desglose_editado: desglose_editado_manualmente
         });
     } else {
         // ⭐ USAR VALORES EXISTENTES (editados por el usuario)
@@ -735,7 +755,8 @@ function actualizarTotales() {
             supervision_obra: supervision_obra.toFixed(2),
             suma_actual: suma_actual.toFixed(2),
             suma_esperada: suma_esperada.toFixed(2),
-            diferencia: diferencia.toFixed(2)
+            diferencia: diferencia.toFixed(2),
+            desglose_editado: desglose_editado_manualmente
         });
     }
     
@@ -797,6 +818,10 @@ function calcularPorcentajesAutomaticos() {
         return;
     }
     
+    // ⭐ RESETEAR BANDERA: el usuario pidió cálculo automático
+    desglose_editado_manualmente = false;
+    console.log('[CALCULAR_AUTO] Bandera reseteada → desglose_editado_manualmente = false');
+    
     // Calcular porcentajes automáticos
     const gastos_generales = subtotal_base * 0.10;  // 10%
     const utilidad = subtotal_base * 0.15;          // 15%
@@ -814,13 +839,40 @@ function calcularPorcentajesAutomaticos() {
 }
 
 function limpiarDesglose() {
-    // Limpiar campos editables
-    document.getElementById('gastos-generales').value = '0';
-    document.getElementById('utilidad').value = '0';
-    document.getElementById('supervision-obra').value = '0';
+    // ⭐ RESETEAR BANDERA: el usuario pidió limpiar
+    desglose_editado_manualmente = false;
+    console.log('[LIMPIAR_DESGLOSE] Bandera reseteada → desglose_editado_manualmente = false');
     
-    // Recalcular totales
-    actualizarTotales();
+    // Limpiar campos editables a 0
+    document.getElementById('gastos-generales').value = '0.00';
+    document.getElementById('utilidad').value = '0.00';
+    document.getElementById('supervision-obra').value = '0.00';
+    
+    // ⭐ NO llamar actualizarTotales() aquí para evitar recálculo inmediato
+    // ⭐ En su lugar, actualizar manualmente los displays con valores en 0
+    
+    const total_materiales = materiales_agregados.reduce((sum, m) => sum + (m.cantidad * m.precio_unitario), 0);
+    const total_servicios = servicios_agregados.reduce((sum, s) => sum + (s.cantidad * s.precio_unitario), 0);
+    const subtotal_base = total_materiales + total_servicios;
+    
+    // IGV sobre el subtotal base solamente (sin desglose)
+    const igv = subtotal_base * 0.18;
+    
+    // Totales con desglose en 0
+    const total_desglose = 0 + 0 + 0 + igv; // gastos + utilidad + supervision + igv
+    const monto_total = subtotal_base + total_desglose;
+    
+    // Actualizar displays de desglose a 0
+    document.getElementById('display-gastos').textContent = 'S/. 0.00';
+    document.getElementById('display-utilidad').textContent = 'S/. 0.00';
+    document.getElementById('display-supervision').textContent = 'S/. 0.00';
+    document.getElementById('display-igv').textContent = `S/. ${igv.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    
+    // Actualizar totales
+    document.getElementById('total-desglose').textContent = `S/. ${total_desglose.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    document.getElementById('total-presupuesto').textContent = `S/. ${monto_total.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    
+    console.log('[LIMPIAR_DESGLOSE] Campos puestos en 0. Esperando cambios de usuario para recalcular.');
     
     mostrarExito('Desglose limpiado. Todos los campos en 0');
 }
@@ -844,6 +896,9 @@ function cerrarModalPresupuesto() {
 
 function limpiarForm() {
     console.log('[LIMPIAR_FORM] Iniciando limpieza completa...');
+    
+    // ⭐ RESETEAR BANDERA DE EDICIÓN MANUAL
+    desglose_editado_manualmente = false;
     
     // ⭐ 1. LIMPIAR FORMULARIO BASE
     const form = document.getElementById('form-presupuesto');
