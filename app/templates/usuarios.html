@@ -1141,12 +1141,36 @@ document.querySelectorAll('.horario-activo').forEach(checkbox => {
             salida1Input.disabled = false;
             entrada2Input.disabled = false;
             salida2Input.disabled = false;
+            
+            // Si los campos están vacíos, copiar horarios de LUNES como plantilla
+            const lunesEntrada1 = document.getElementById('horario_lunes_entrada').value;
+            const lunesSalida1 = document.getElementById('horario_lunes_salida').value;
+            const lunesEntrada2 = document.getElementById('horario_lunes_entrada2').value;
+            const lunesSalida2 = document.getElementById('horario_lunes_salida2').value;
+            
+            // Solo copiar si LUNES tiene datos y el día actual está vacío
+            if (lunesEntrada1 && !entrada1Input.value) {
+                entrada1Input.value = lunesEntrada1;
+            }
+            if (lunesSalida1 && !salida1Input.value) {
+                salida1Input.value = lunesSalida1;
+            }
+            if (lunesEntrada2 && !entrada2Input.value) {
+                entrada2Input.value = lunesEntrada2;
+            }
+            if (lunesSalida2 && !salida2Input.value) {
+                salida2Input.value = lunesSalida2;
+            }
         } else {
-            // Deshabilitar todos los campos
+            // Deshabilitar todos los campos y limpiarlos
             entrada1Input.disabled = true;
             salida1Input.disabled = true;
             entrada2Input.disabled = true;
             salida2Input.disabled = true;
+            entrada1Input.value = '';
+            salida1Input.value = '';
+            entrada2Input.value = '';
+            salida2Input.value = '';
         }
     });
 });
