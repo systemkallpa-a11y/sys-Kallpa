@@ -795,17 +795,49 @@ function editarUsuario(id) {
                 
                 // CARGAR HORARIOS DE TRABAJO
                 console.log('[EDITAR] 📅 Cargando horarios:', u.horarios);
-                if (u.horarios && u.horarios.length > 0) {
-                    const diaMapping = {
-                        'LUNES': 'lunes',
-                        'MARTES': 'martes',
-                        'MIÉRCOLES': 'miercoles',
-                        'JUEVES': 'jueves',
-                        'VIERNES': 'viernes',
-                        'SÁBADO': 'sabado',
-                        'DOMINGO': 'domingo'
-                    };
+                
+                // Mapeo de días de la BD al frontend
+                const diaMapping = {
+                    'LUNES': 'lunes',
+                    'MARTES': 'martes',
+                    'MIÉRCOLES': 'miercoles',
+                    'JUEVES': 'jueves',
+                    'VIERNES': 'viernes',
+                    'SÁBADO': 'sabado',
+                    'DOMINGO': 'domingo'
+                };
+                
+                // PASO 1: INICIALIZAR TODOS LOS DÍAS EN VACÍO (desmarcados y disabled)
+                const todosDias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+                
+                todosDias.forEach(dia => {
+                    const checkboxId = `horario_${dia}_activo`;
+                    const entrada1Id = `horario_${dia}_entrada`;
+                    const salida1Id = `horario_${dia}_salida`;
+                    const entrada2Id = `horario_${dia}_entrada2`;
+                    const salida2Id = `horario_${dia}_salida2`;
                     
+                    const checkbox = document.getElementById(checkboxId);
+                    const entrada1Input = document.getElementById(entrada1Id);
+                    const salida1Input = document.getElementById(salida1Id);
+                    const entrada2Input = document.getElementById(entrada2Id);
+                    const salida2Input = document.getElementById(salida2Id);
+                    
+                    if (checkbox && entrada1Input && salida1Input && entrada2Input && salida2Input) {
+                        checkbox.checked = false;
+                        entrada1Input.value = '';
+                        salida1Input.value = '';
+                        entrada2Input.value = '';
+                        salida2Input.value = '';
+                        entrada1Input.disabled = true;
+                        salida1Input.disabled = true;
+                        entrada2Input.disabled = true;
+                        salida2Input.disabled = true;
+                    }
+                });
+                
+                // PASO 2: CARGAR SOLO LOS DÍAS QUE VIENEN DE LA BD
+                if (u.horarios && u.horarios.length > 0) {
                     u.horarios.forEach(horario => {
                         const diaKey = diaMapping[horario['dia_semana']];
                         if (diaKey) {
@@ -828,48 +860,19 @@ function editarUsuario(id) {
                                 entrada2Input.value = horario['hora_entrada2'] || '';
                                 salida2Input.value = horario['hora_salida2'] || '';
                                 
-                                // Habilitar/deshabilitar campos (todos los turnos)
+                                // Habilitar/deshabilitar campos según es_activo
                                 const isActive = horario['es_activo'] === 1;
                                 entrada1Input.disabled = !isActive;
                                 salida1Input.disabled = !isActive;
                                 entrada2Input.disabled = !isActive;
                                 salida2Input.disabled = !isActive;
                                 
-                                console.log(`[EDITAR] Horario cargado: ${horario['dia_semana']}, Turno2: ${horario['hora_entrada2']} - ${horario['hora_salida2']}`);
+                                console.log(`[EDITAR] ✅ Horario cargado: ${horario['dia_semana']}, T1: ${horario['hora_entrada']}-${horario['hora_salida']}, T2: ${horario['hora_entrada2']}-${horario['hora_salida2']}`);
                             }
                         }
                     });
                 } else {
-                    // Si NO hay horarios en BD, dejar todo desmarcado y vacío
-                    console.log('[EDITAR] [WARN] No hay horarios en BD, inicializando vacío');
-                    const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
-                    
-                    dias.forEach(dia => {
-                        const checkboxId = `horario_${dia}_activo`;
-                        const entrada1Id = `horario_${dia}_entrada`;
-                        const salida1Id = `horario_${dia}_salida`;
-                        const entrada2Id = `horario_${dia}_entrada2`;
-                        const salida2Id = `horario_${dia}_salida2`;
-                        
-                        const checkbox = document.getElementById(checkboxId);
-                        const entrada1Input = document.getElementById(entrada1Id);
-                        const salida1Input = document.getElementById(salida1Id);
-                        const entrada2Input = document.getElementById(entrada2Id);
-                        const salida2Input = document.getElementById(salida2Id);
-                        
-                        if (checkbox && entrada1Input && salida1Input && entrada2Input && salida2Input) {
-                            checkbox.checked = false;
-                            entrada1Input.value = '';
-                            salida1Input.value = '';
-                            entrada2Input.value = '';
-                            salida2Input.value = '';
-                            entrada1Input.disabled = true;
-                            salida1Input.disabled = true;
-                            entrada2Input.disabled = true;
-                            salida2Input.disabled = true;
-                            console.log(`[EDITAR] Horario sin dato: ${dia} (desmarcado)`);
-                        }
-                    });
+                    console.log('[EDITAR] ℹ️  No hay horarios en BD para este usuario');
                 }
                 
                 // CONTACTO
