@@ -49,7 +49,7 @@ def validate_user_kallpa(usuario, password):
             JOIN TblPersona p ON u.num_documento = p.num_documento
             LEFT JOIN TblCargo c ON u.id_cargo = c.id_cargo
             LEFT JOIN TblArea a ON c.id_area = a.id_area
-            WHERE u.usuario = %s AND u.password_hash = %s AND u.estado = 'Activo'
+            WHERE u.usuario = %s AND u.password = %s AND u.estado = 'Activo'
             LIMIT 1
         """
         
