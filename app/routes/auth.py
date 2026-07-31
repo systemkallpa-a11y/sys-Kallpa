@@ -23,6 +23,7 @@ def validate_user_kallpa(usuario, password):
     """Validar credenciales de usuario Kallpa"""
     connection = get_db_connection()
     if not connection:
+        print(f"[DEBUG] No se pudo conectar a la BD")
         return None
     
     try:
@@ -30,6 +31,19 @@ def validate_user_kallpa(usuario, password):
         
         # Encriptar la contraseña
         password_hash = hash_password(password)
+        print(f"[DEBUG] Usuario: {usuario}, Password hash: {password_hash}")
+        
+        # Primero verificar si existe el usuario
+        simple_query = "SELECT usuario, password, estado FROM TblUsuario WHERE usuario = %s"
+        cursor.execute(simple_query, (usuario,))
+        simple_result = cursor.fetchone()
+        print(f"[DEBUG] Usuario encontrado: {simple_result}")
+        
+        if simple_result:
+            print(f"[DEBUG] Password en BD: {simple_result['password']}")
+            print(f"[DEBUG] Password calculado: {password_hash}")
+            print(f"[DEBUG] Passwords coinciden: {simple_result['password'] == password_hash}")
+            print(f"[DEBUG] Estado: {simple_result['estado']}")
         
         # Query: JOINear TblUsuario con TblPersona, TblCargo y TblArea
         query = """
@@ -49,13 +63,13 @@ def validate_user_kallpa(usuario, password):
             JOIN TblPersona p ON u.num_documento = p.num_documento
             LEFT JOIN TblCargo c ON u.id_cargo = c.id_cargo
             LEFT JOIN TblArea a ON c.id_area = a.id_area
-            WHERE u.usuario = %s AND u.password = %s AND u.estado = 'Activo'
+            WHERE u.usuario = %s AND u.password = %s AND u.estado = 'ACTIVO'
             LIMIT 1
         """
         
         cursor.execute(query, (usuario, password_hash))
         user_result = cursor.fetchone()
-        cursor.close()
+        print(f"[DEBUG] Resultado final: {user_result}")
         
         if not user_result:
             return None
@@ -76,7 +90,7 @@ def validate_user_kallpa(usuario, password):
         }
         
     except Error as e:
-        print(f"Error en validación: {e}")
+        print(f"[DEBUG] Error en validación: {e}")
         return None
     finally:
         if connection.is_connected():
