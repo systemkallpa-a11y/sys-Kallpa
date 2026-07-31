@@ -828,14 +828,14 @@ function editarUsuario(id) {
                                 entrada2Input.value = horario['hora_entrada2'] || '';
                                 salida2Input.value = horario['hora_salida2'] || '';
                                 
-                                // Habilitar/deshabilitar campos
+                                // Habilitar/deshabilitar campos (todos los turnos)
                                 const isActive = horario['es_activo'] === 1;
                                 entrada1Input.disabled = !isActive;
                                 salida1Input.disabled = !isActive;
                                 entrada2Input.disabled = !isActive;
                                 salida2Input.disabled = !isActive;
                                 
-                                console.log(`[EDITAR] Horario cargado: ${horario['dia_semana']}`);
+                                console.log(`[EDITAR] Horario cargado: ${horario['dia_semana']}, Turno2: ${horario['hora_entrada2']} - ${horario['hora_salida2']}`);
                             }
                         }
                     });
@@ -1127,15 +1127,23 @@ document.getElementById('btn-confirmar-eliminar').addEventListener('click', func
 document.querySelectorAll('.horario-activo').forEach(checkbox => {
     checkbox.addEventListener('change', function() {
         const dia = this.id.replace('horario_', '').replace('_activo', '');
-        const entradaInput = document.getElementById(`horario_${dia}_entrada`);
-        const salidaInput = document.getElementById(`horario_${dia}_salida`);
+        const entrada1Input = document.getElementById(`horario_${dia}_entrada`);
+        const salida1Input = document.getElementById(`horario_${dia}_salida`);
+        const entrada2Input = document.getElementById(`horario_${dia}_entrada2`);
+        const salida2Input = document.getElementById(`horario_${dia}_salida2`);
         
         if (this.checked) {
-            entradaInput.disabled = false;
-            salidaInput.disabled = false;
+            // Habilitar todos los campos (Turno 1 y Turno 2)
+            entrada1Input.disabled = false;
+            salida1Input.disabled = false;
+            entrada2Input.disabled = false;
+            salida2Input.disabled = false;
         } else {
-            entradaInput.disabled = true;
-            salidaInput.disabled = true;
+            // Deshabilitar todos los campos
+            entrada1Input.disabled = true;
+            salida1Input.disabled = true;
+            entrada2Input.disabled = true;
+            salida2Input.disabled = true;
         }
     });
 });
