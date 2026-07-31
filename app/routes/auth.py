@@ -24,7 +24,7 @@ def validate_user_kallpa(usuario, password):
     connection = get_db_connection()
     if not connection:
         print(f"[DEBUG] No se pudo conectar a la BD")
-        return None
+        return {'error': 'No se pudo conectar a la base de datos'}
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -72,7 +72,7 @@ def validate_user_kallpa(usuario, password):
         print(f"[DEBUG] Resultado final: {user_result}")
         
         if not user_result:
-            return None
+            return {'error': 'Usuario o contraseña incorrectos'}
         
         # Autenticación exitosa
         return {
@@ -91,7 +91,7 @@ def validate_user_kallpa(usuario, password):
         
     except Error as e:
         print(f"[DEBUG] Error en validación: {e}")
-        return None
+        return {'error': f'Error en la validación: {str(e)}'}
     finally:
         if connection.is_connected():
             cursor.close()
@@ -139,11 +139,6 @@ def login():
         # Validar credenciales
         current_app.logger.info(f"[LOGIN KALLPA] Validando credenciales...")
         result = validate_user_kallpa(usuario, password)
-        
-        if result is None:
-            current_app.logger.error(f"[LOGIN KALLPA] ERROR: validate_user_kallpa retornó None")
-            flash('Error de conexión con la base de datos', 'error')
-            return render_template('login_kallpa.html', redirect_to=redirect_to)
         
         if 'error' in result:
             current_app.logger.error(f"[LOGIN KALLPA] ERROR de autenticación: {result['error']}")
