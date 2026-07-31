@@ -44,6 +44,11 @@ document.addEventListener('DOMContentLoaded', function() {
             campo.addEventListener('input', actualizarTotales);
             campo.addEventListener('change', actualizarTotales);
             
+            // ⭐ SELECCIONAR TODO AL HACER FOCUS (facilita reemplazar valor)
+            campo.addEventListener('focus', function() {
+                this.select();
+            });
+            
             // ⭐ PREVENIR QUE ENTER GUARDE EL FORMULARIO
             campo.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
