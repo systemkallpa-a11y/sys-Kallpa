@@ -34,15 +34,15 @@ def validate_user_kallpa(usuario, password):
         print(f"[DEBUG] Usuario: {usuario}, Password hash: {password_hash}")
         
         # Primero verificar si existe el usuario
-        simple_query = "SELECT usuario, password, estado FROM TblUsuario WHERE usuario = %s"
+        simple_query = "SELECT usuario, password_hash, estado FROM TblUsuario WHERE usuario = %s"
         cursor.execute(simple_query, (usuario,))
         simple_result = cursor.fetchone()
         print(f"[DEBUG] Usuario encontrado: {simple_result}")
         
         if simple_result:
-            print(f"[DEBUG] Password en BD: {simple_result['password']}")
+            print(f"[DEBUG] Password en BD: {simple_result['password_hash']}")
             print(f"[DEBUG] Password calculado: {password_hash}")
-            print(f"[DEBUG] Passwords coinciden: {simple_result['password'] == password_hash}")
+            print(f"[DEBUG] Passwords coinciden: {simple_result['password_hash'] == password_hash}")
             print(f"[DEBUG] Estado: {simple_result['estado']}")
         
         # Query: JOINear TblUsuario con TblPersona, TblCargo y TblArea
