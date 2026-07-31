@@ -795,7 +795,7 @@ function editarUsuario(id) {
                 
                 // CARGAR HORARIOS DE TRABAJO
                 console.log('[EDITAR] 📅 Cargando horarios:', u.horarios);
-                if (u.horarios && u.horarios.length > 0 && u.horarios.length === 7) {
+                if (u.horarios && u.horarios.length > 0) {
                     const diaMapping = {
                         'LUNES': 'lunes',
                         'MARTES': 'martes',
