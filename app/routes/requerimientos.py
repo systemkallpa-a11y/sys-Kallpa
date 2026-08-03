@@ -743,8 +743,9 @@ def puede_aprobar_requerimiento(id_requerimiento):
         
         # 1. Obtener cargo del usuario
         cursor.execute("""
-            SELECT id_cargo FROM TblUsuarioCargo 
-            WHERE num_documento = %s LIMIT 1
+            SELECT id_cargo FROM TblUsuario 
+            WHERE num_documento = %s AND estado = 'Activo'
+            LIMIT 1
         """, (num_documento,))
         
         cargo_result = cursor.fetchone()
@@ -799,8 +800,9 @@ def aprobar_requerimiento(id_requerimiento):
         
         # 1. Verificar que el usuario es aprobador para ESTE requerimiento
         cursor.execute("""
-            SELECT uc.id_cargo FROM TblUsuarioCargo uc
-            WHERE uc.num_documento = %s LIMIT 1
+            SELECT id_cargo FROM TblUsuario
+            WHERE num_documento = %s AND estado = 'Activo'
+            LIMIT 1
         """, (num_documento,))
         
         cargo_result = cursor.fetchone()
