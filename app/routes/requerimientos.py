@@ -126,8 +126,7 @@ def obtener_requerimiento(id_requerimiento):
                 CONCAT(COALESCE(p.nombres, ''), ' ', COALESCE(p.apellido_paterno, ''), ' ', COALESCE(p.apellido_materno, '')) as usuario_completo,
                 pr.numero_presupuesto
             FROM TblRequerimiento tr
-            LEFT JOIN TblUsuario u ON tr.num_usuario = u.num_documento
-            LEFT JOIN TblPersona p ON u.num_documento = p.num_documento
+            LEFT JOIN TblPersona p ON tr.num_usuario = p.num_documento
             LEFT JOIN TblPresupuesto pr ON tr.id_presupuesto = pr.id_presupuesto
             WHERE tr.id_requerimiento = %s
         """, (id_requerimiento,))
