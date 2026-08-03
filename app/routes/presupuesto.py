@@ -487,9 +487,22 @@ def crear_presupuesto():
         print(f"[CREAR_PRESUPUESTO] ───────────────────────────────────────────")
         
         try:
+            # Obtener valores de desglose (con valores por defecto si no existen)
+            gastos_generales = float(datos.get('gastos_generales', 0))
+            utilidad = float(datos.get('utilidad', 0))
+            supervision_obra = float(datos.get('supervision_obra', 0))
+            
+            print(f"[CREAR_PRESUPUESTO] Desglose:")
+            print(f"  - Gastos Generales: {gastos_generales}")
+            print(f"  - Utilidad: {utilidad}")
+            print(f"  - Supervisión Obra: {supervision_obra}")
+            
             # Llamar SP con los parámetros (incluyendo num_documento del usuario autenticado)
             cursor.execute("""
                 CALL sp_CrearPresupuestoCompleto(
+                    %s,
+                    %s,
+                    %s,
                     %s,
                     %s,
                     %s,
@@ -503,6 +516,9 @@ def crear_presupuesto():
                 int(datos.get('id_obra')),
                 num_documento,
                 datos.get('comentarios', ''),
+                gastos_generales,
+                utilidad,
+                supervision_obra,
                 materiales_json,
                 servicios_json
             ))

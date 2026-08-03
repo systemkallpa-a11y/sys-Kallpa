@@ -1534,3 +1534,155 @@ window.cargarPresupuestos = async function() {
         console.error('[PRESUPUESTOS] Error al cargar flujos:', error);
     }
 };
+
+
+// ============================================================================
+// MODAL: CREAR NUEVO MATERIAL
+// ============================================================================
+
+async function abrirModalNuevoMaterial() {
+    console.log('[NUEVO_MATERIAL] Abriendo modal...');
+    
+    // Mostrar modal primero
+    document.getElementById('modal-nuevo-material').classList.remove('hidden');
+    
+    // Limpiar formulario
+    document.getElementById('form-nuevo-material').reset();
+    
+    // Mostrar que el código se generará automáticamente
+    const codigoInput = document.getElementById('nuevo-codigo');
+    codigoInput.value = 'Se generará automáticamente';
+    codigoInput.disabled = true;
+    
+    // Cargar categorías y unidades
+    await Promise.all([
+        cargarCategoriasParaMaterial(),
+        cargarUnidadesMedida()
+    ]);
+    
+    // Focus en el campo de nombre (ya que código es automático)
+    setTimeout(() => {
+        document.getElementById('nuevo-nombre').focus();
+    }, 100);
+}
+
+function cerrarModalNuevoMaterial() {
+    document.getElementById('modal-nuevo-material').classList.add('hidden');
+    document.getElementById('form-nuevo-material').reset();
+}
+
+async function cargarCategoriasParaMaterial() {
+    try {
+        const response = await fetch('/api/presupuestos/combo/categorias');
+        const data = await response.json();
+        
+        if (data.success) {
+            const select = document.getElementById('nuevo-categoria');
+            select.innerHTML = '<option value="">Sin categoría</option>';
+            data.data.forEach(c => {
+                select.innerHTML += `<option value="${c.id_categoria}">${c.nombre}</option>`;
+            });
+        }
+    } catch (error) {
+        console.error('[NUEVO_MATERIAL] Error al cargar categorías:', error);
+    }
+}
+
+async function cargarUnidadesMedida() {
+    try {
+        console.log('[UNIDADES] Cargando unidades de medida...');
+        const response = await fetch('/api/presupuestos/combo/unidades');
+        console.log('[UNIDADES] Response status:', response.status);
+        
+        const data = await response.json();
+        console.log('[UNIDADES] Data recibida:', data);
+        
+        if (data.success) {
+            const select = document.getElementById('nuevo-unidad');
+            if (!select) {
+                console.error('[UNIDADES] ❌ Elemento nuevo-unidad NO encontrado');
+                return;
+            }
+            
+            select.innerHTML = '<option value="">Seleccionar...</option>';
+            data.data.forEach(u => {
+                select.innerHTML += `<option value="${u.id_unidad}">${u.nombre}</option>`;
+            });
+            console.log('[UNIDADES] ✓ Cargadas', data.data.length, 'unidades');
+        } else {
+            console.error('[UNIDADES] ❌ Error:', data.error);
+        }
+    } catch (error) {
+        console.error('[UNIDADES] ❌ Error al cargar unidades:', error);
+    }
+}
+
+async function guardarNuevoMaterial() {
+    console.log('[NUEVO_MATERIAL] Guardando...');
+    
+    // Validar formulario
+    const form = document.getElementById('form-nuevo-material');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    // Obtener valores (SIN código, precio, stocks - se generan/ponen en 0 automáticamente)
+    const nombre = document.getElementById('nuevo-nombre').value.trim();
+    const descripcion = document.getElementById('nuevo-descripcion').value.trim();
+    const id_categoria = document.getElementById('nuevo-categoria').value || null;
+    const id_unidad = document.getElementById('nuevo-unidad').value;
+    const observaciones = document.getElementById('nuevo-observaciones').value.trim();
+    
+    if (!nombre || !id_unidad) {
+        mostrarError('Complete los campos obligatorios: Nombre y Unidad de Medida');
+        return;
+    }
+    
+    const datos = {
+        // ⭐ Solo campos esenciales, el resto va en 0
+        nombre: nombre,
+        descripcion: descripcion || null,
+        id_categoria: id_categoria ? parseInt(id_categoria) : null,
+        id_unidad: parseInt(id_unidad),
+        observaciones: observaciones || null
+        // precio_unitario: 0 (por defecto en SP)
+        // cantidad_stock: 0 (por defecto en SP)
+        // cantidad_minima: 0 (por defecto en SP)
+    };
+    
+    console.log('[NUEVO_MATERIAL] Datos a enviar:', datos);
+    
+    try {
+        const response = await fetch('/api/materiales/crear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datos)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('[NUEVO_MATERIAL] ✓ Material creado:', result.data);
+            mostrarExito(`Material creado correctamente con código ${result.data.codigo_material}`);
+            cerrarModalNuevoMaterial();
+            
+            // Agregar automáticamente el material recién creado al presupuesto
+            const materialCreado = result.data;
+            agregarMaterialDeBusqueda(
+                materialCreado.id_material,
+                materialCreado.nombre,
+                materialCreado.codigo_material,
+                materialCreado.categoria || 'Sin categoría',
+                materialCreado.unidad_medida || 'Unidad'
+            );
+            
+        } else {
+            console.error('[NUEVO_MATERIAL] ✗ Error:', result.error);
+            mostrarError(result.error || 'Error al crear material');
+        }
+    } catch (error) {
+        console.error('[NUEVO_MATERIAL] Error de conexión:', error);
+        mostrarError('Error de conexión');
+    }
+}

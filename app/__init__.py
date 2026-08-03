@@ -54,12 +54,16 @@ def create_app():
     # Register blueprints - Solo lo necesario para Kallpa
     from app.routes import main_bp, auth_bp
     from app.routes.presupuesto_pdf import pdf_bp
+    from app.routes.requerimientos_pdf import requerimientos_pdf_bp
     from app.routes.empresa_logo import logo_bp
+    from app.routes.materiales import materiales_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(pdf_bp)
+    app.register_blueprint(requerimientos_pdf_bp)
     app.register_blueprint(logo_bp)
+    app.register_blueprint(materiales_bp)
     
     # Asegurar que todas las respuestas HTML tengan charset UTF-8
     @app.after_request

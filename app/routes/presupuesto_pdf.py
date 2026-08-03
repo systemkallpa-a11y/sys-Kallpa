@@ -185,14 +185,33 @@ def descargar_presupuesto_pdf(id_presupuesto):
         
         if presupuesto.get('empresa_logo'):
             try:
-                # Guardar logo temporal desde BLOB
+                from PIL import Image as PILImage
+                
+                # Leer el BLOB como imagen
+                image_data = presupuesto['empresa_logo']
+                image = PILImage.open(io.BytesIO(image_data))
+                
+                # Convertir a RGB si es necesario (elimina canal alpha)
+                if image.mode in ('RGBA', 'LA', 'P'):
+                    # Crear fondo blanco
+                    background = PILImage.new('RGB', image.size, (255, 255, 255))
+                    if image.mode == 'P':
+                        image = image.convert('RGBA')
+                    background.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
+                    image = background
+                elif image.mode != 'RGB':
+                    image = image.convert('RGB')
+                
+                # Guardar como PNG temporal
                 temp_logo = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
-                temp_logo.write(presupuesto['empresa_logo'])
+                image.save(temp_logo.name, 'PNG')
                 temp_logo.close()
                 logo_path = temp_logo.name
-                print(f"[PDF] ✓ Logo de empresa cargado dinámicamente")
+                print(f"[PDF] ✓ Logo de empresa cargado y convertido dinámicamente")
             except Exception as e:
                 print(f"[PDF] ⚠ Error al cargar logo de empresa: {e}")
+                import traceback
+                print(f"[PDF] ⚠ Traceback: {traceback.format_exc()}")
                 logo_path = None
         
         # Si no hay logo de empresa, usar logo por defecto
