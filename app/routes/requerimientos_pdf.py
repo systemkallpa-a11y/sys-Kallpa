@@ -71,30 +71,14 @@ def descargar_requerimiento_pdf(id_requerimiento):
         
         print(f"\n[PDF-REQ] Iniciando generación de PDF para requerimiento: {id_requerimiento}")
         
-        # Obtener datos del requerimiento CON EMPRESA Y LOGO
-        query_requerimiento = """
-            SELECT 
-                tr.id_requerimiento,
-                tr.codigo,
-                tr.descripcion,
-                tr.observaciones,
-                tr.estado,
-                tr.fecha_creacion,
-                tr.id_presupuesto,
-                tr.num_usuario,
-                CONCAT(COALESCE(p.nombres, ''), ' ', COALESCE(p.apellido_paterno, ''), ' ', COALESCE(p.apellido_materno, '')) as solicitante_nombre,
-                e.nombre as nombre_empresa,
-                e.logo as empresa_logo,
-                pres.numero_presupuesto
-            FROM TblRequerimiento tr
-            LEFT JOIN TblPersona p ON tr.num_usuario = p.num_documento
-            LEFT JOIN TblPresupuesto pres ON tr.id_presupuesto = pres.id_presupuesto
-            LEFT JOIN TblEmpresa e ON pres.id_empresa = e.id_empresa
-            WHERE tr.id_requerimiento = %s
-        """
+        # Obtener datos del requerimiento usando SP (incluye solicitante)
+        cursor.callproc('sp_ObtenerRequerimiento', [id_requerimiento])
         
-        cursor.execute(query_requerimiento, (id_requerimiento,))
-        requerimiento = cursor.fetchone()
+        # Obtener resultado del SP
+        requerimiento = None
+        for result in cursor.stored_results():
+            requerimiento = result.fetchone()
+            break
         
         if not requerimiento:
             cursor.close()
@@ -103,26 +87,40 @@ def descargar_requerimiento_pdf(id_requerimiento):
             return jsonify({'success': False, 'error': 'Requerimiento no encontrado'}), 404
         
         print(f"[PDF-REQ] ✓ Requerimiento encontrado: {requerimiento['codigo']}")
+        print(f"[PDF-REQ] ✓ Solicitante: {requerimiento.get('usuario_completo', 'N/A')}")
         
-        # Obtener detalles (items) del requerimiento
-        query_detalles = """
-            SELECT 
-                rd.id_detalle,
-                rd.tipo_item,
-                rd.descripcion,
-                rd.cantidad,
-                rd.observaciones,
-                COALESCE(m.codigo_material, '') as codigo_material,
-                COALESCE(um.abreviatura, '') as unidad
-            FROM TblRequerimientoDetalle rd
-            LEFT JOIN TblMateriales m ON rd.id_material = m.id_material
-            LEFT JOIN TblUnidadMedida um ON m.id_unidad = um.id_unidad
-            WHERE rd.id_requerimiento = %s
-            ORDER BY rd.tipo_item DESC, rd.id_detalle
-        """
+        # Obtener datos de empresa y logo (si tiene presupuesto asociado)
+        nombre_empresa = 'KALLPA'
+        empresa_logo = None
         
-        cursor.execute(query_detalles, (id_requerimiento,))
-        detalles = cursor.fetchall()
+        if requerimiento.get('id_presupuesto'):
+            query_empresa = """
+                SELECT 
+                    e.nombre as nombre_empresa,
+                    e.logo as empresa_logo
+                FROM TblPresupuesto pres
+                LEFT JOIN TblEmpresa e ON pres.id_empresa = e.id_empresa
+                WHERE pres.id_presupuesto = %s
+            """
+            cursor.execute(query_empresa, (requerimiento['id_presupuesto'],))
+            empresa_data = cursor.fetchone()
+            
+            if empresa_data:
+                nombre_empresa = empresa_data.get('nombre_empresa') or 'KALLPA'
+                empresa_logo = empresa_data.get('empresa_logo')
+                print(f"[PDF-REQ] ✓ Empresa: {nombre_empresa}")
+        
+        # Agregar datos de empresa al dict de requerimiento
+        requerimiento['nombre_empresa'] = nombre_empresa
+        requerimiento['empresa_logo'] = empresa_logo
+        
+        # Obtener detalles (items) del requerimiento usando SP
+        cursor.callproc('sp_ObtenerRequerimientoDetalles', [id_requerimiento])
+        
+        detalles = []
+        for result in cursor.stored_results():
+            detalles = result.fetchall()
+            break
         
         print(f"[PDF-REQ] ✓ Detalles obtenidos: {len(detalles)} items")
         
@@ -290,7 +288,7 @@ def descargar_requerimiento_pdf(id_requerimiento):
         story.append(info_table_1)
         
         # Tabla 2: SOLICITANTE, PRESUPUESTO, DESCRIPCIÓN
-        solicitante = (requerimiento.get('solicitante_nombre') or 'N/A').strip()
+        solicitante = (requerimiento.get('usuario_completo') or 'N/A').strip()
         numero_pres = requerimiento.get('numero_presupuesto') or 'N/A'
         descripcion = requerimiento.get('descripcion') or 'N/A'
         
@@ -348,10 +346,10 @@ def descargar_requerimiento_pdf(id_requerimiento):
             table_data = table_headers + [[
                 str(idx + 1),
                 item['tipo_item'] or 'ITEM',
-                item['codigo_material'] or '',
+                item.get('material_codigo') or '',
                 item['descripcion'] or '',
                 str(item['cantidad'] or 0),
-                item['unidad'] or ''
+                item.get('unidad_abreviatura') or ''
             ] for idx, item in enumerate(detalles)]
             
             details_table = Table(table_data, colWidths=[0.4*inch, 0.8*inch, 0.9*inch, 3.0*inch, 0.8*inch, 0.7*inch])
