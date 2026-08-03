@@ -198,6 +198,72 @@ def registrar_marcacion():
     
     except Exception as e:
         current_app.logger.error(f"Error general en marcación: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Error en el servidor'}), 500
+
+
+@main_bp.route('/api/marcacion/estado', methods=['GET'])
+@login_required
+def obtener_estado_marcacion():
+    """Obtener el estado actual de marcación del usuario (última entrada sin salida)"""
+    from flask import current_app
+    
+    try:
+        num_documento = session.get('user_documento')
+        
+        if not num_documento:
+            return jsonify({'success': False, 'error': 'Usuario no identificado'}), 401
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            # Obtener la última marcación del día
+            cursor.execute("""
+                SELECT 
+                    id_marcacion,
+                    tipo_marcacion,
+                    fecha_hora,
+                    DATE_FORMAT(fecha_hora, '%H:%i:%s') as hora_marcacion
+                FROM TblMarcacion
+                WHERE num_documento = %s
+                    AND DATE(fecha_hora) = CURDATE()
+                ORDER BY fecha_hora DESC
+                LIMIT 1
+            """, (num_documento,))
+            
+            ultima_marcacion = cursor.fetchone()
+            
+            cursor.close()
+            connection.close()
+            
+            if ultima_marcacion:
+                return jsonify({
+                    'success': True,
+                    'tiene_marcacion': True,
+                    'ultima_marcacion': ultima_marcacion['tipo_marcacion'],
+                    'hora': ultima_marcacion['hora_marcacion'],
+                    'puede_marcar_entrada': ultima_marcacion['tipo_marcacion'] == 'SALIDA',
+                    'puede_marcar_salida': ultima_marcacion['tipo_marcacion'] == 'ENTRADA'
+                }), 200
+            else:
+                return jsonify({
+                    'success': True,
+                    'tiene_marcacion': False,
+                    'ultima_marcacion': None,
+                    'puede_marcar_entrada': True,
+                    'puede_marcar_salida': False
+                }), 200
+        
+        except Error as e:
+            current_app.logger.error(f"Error SQL en estado marcación: {str(e)}")
+            return jsonify({'success': False, 'error': 'Error en la base de datos'}), 500
+    
+    except Exception as e:
+        current_app.logger.error(f"Error general en estado marcación: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Error en el servidor'}), 500
         return jsonify({'success': False, 'error': 'Error del servidor'}), 500
 
 @main_bp.route('/api/marcacion/historial', methods=['GET'])

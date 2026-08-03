@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kallpa - Sistema de Marcación</title>
+    <title>Kallpa Corporación - Sistema de Gestión</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -12,535 +12,710 @@
             box-sizing: border-box;
         }
 
-        html, body {
-            width: 100%;
-            height: 100%;
-        }
-
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0d1f0d 0%, #1a3a1a 50%, #0a0a0a 100%);
+            background: #f5f5f5;
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            color: #e0e0e0;
-            overflow-x: hidden;
         }
 
-        /* Elementos decorativos */
-        .bg-decoration {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0.05;
-            pointer-events: none;
-            z-index: 0;
+        /* Top Bar */
+        .top-bar {
+            background: linear-gradient(135deg, #7B1FA2 0%, #9C27B0 100%);
+            color: white;
+            padding: 10px 0;
+            font-size: 13px;
         }
 
-        .dot {
-            position: absolute;
-            background: radial-gradient(circle, rgba(76, 175, 80, 0.3) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-
-        .dot1 {
-            width: 400px;
-            height: 400px;
-            top: -200px;
-            left: -200px;
-        }
-
-        .dot2 {
-            width: 300px;
-            height: 300px;
-            bottom: -150px;
-            right: -150px;
-        }
-
-        .container {
-            max-width: 1200px;
+        .top-bar-content {
+            max-width: 1400px;
             margin: 0 auto;
             padding: 0 20px;
-            width: 100%;
-            position: relative;
-            z-index: 1;
-            flex: 1;
             display: flex;
-            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        /* Header con logo */
-        header {
-            padding: 40px 0 30px 0;
-            text-align: center;
-            border-bottom: 2px solid rgba(76, 175, 80, 0.1);
-            margin-bottom: 40px;
-        }
-
-        .logo-container {
-            margin-bottom: 20px;
-        }
-
-        .logo-img {
-            max-height: 80px;
-            width: auto;
-            object-fit: contain;
-            filter: drop-shadow(0 4px 15px rgba(76, 175, 80, 0.2));
-        }
-
-        .tagline {
-            font-size: 16px;
-            color: #ffffff;
-            font-style: italic;
-            margin-bottom: 8px;
-            font-weight: 300;
-            letter-spacing: 0.5px;
-        }
-
-        .description {
-            font-size: 14px;
-            color: #ffffff;
-            font-weight: 300;
-        }
-
-        /* Main Content */
-        .main-content {
-            flex: 1;
+        .top-bar-left {
             display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 40px 0;
-        }
-
-        /* Cards Grid */
-        .cards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 25px;
-            margin: 50px 0;
         }
 
-        .card {
-            background: linear-gradient(135deg, rgba(20, 40, 20, 0.8) 0%, rgba(15, 30, 15, 0.6) 100%);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(76, 175, 80, 0.2);
-            border-radius: 12px;
-            padding: 28px;
-            text-align: center;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(76, 175, 80, 0.1), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .card:hover::before {
-            left: 100%;
-        }
-
-        .card:hover {
-            background: linear-gradient(135deg, rgba(30, 60, 30, 0.9) 0%, rgba(20, 40, 20, 0.8) 100%);
-            border: 1px solid rgba(76, 175, 80, 0.4);
-            transform: translateY(-8px);
-            box-shadow: 0 20px 40px rgba(76, 175, 80, 0.15);
-        }
-
-        .card-icon {
-            width: 70px;
-            height: 70px;
-            border-radius: 12px;
+        .top-bar-left span {
             display: flex;
             align-items: center;
-            justify-content: center;
-            margin: 0 auto 15px;
-            font-size: 32px;
-            background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(56, 142, 60, 0.1) 100%);
-            border: 1px solid rgba(76, 175, 80, 0.3);
+            gap: 8px;
         }
 
-        .card-icon i {
-            color: #4CAF50;
-        }
-
-        .card-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #4CAF50;
-            margin-bottom: 10px;
-            letter-spacing: 0.3px;
-        }
-
-        .card-description {
-            font-size: 13px;
-            color: #d0d0d0;
-            line-height: 1.6;
-        }
-
-        /* Stats */
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        .top-bar-right {
+            display: flex;
             gap: 15px;
-            margin: 40px 0;
         }
 
-        .stat {
-            text-align: center;
+        .top-bar-right a {
+            color: white;
+            text-decoration: none;
+            transition: opacity 0.3s;
+        }
+
+        /* Header */
+        .main-header {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo img {
+            height: 50px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .header-btn {
+            padding: 10px 24px;
+            border-radius: 25px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .btn-marcacion {
+            background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+            color: white;
+        }
+
+        .btn-marcacion:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-dashboard {
+            background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+            color: white;
+        }
+
+        .btn-dashboard:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(156, 39, 176, 0.3);
+        }
+
+        /* Hero */
+        .hero-banner {
+            background: linear-gradient(135deg, #7B1FA2 0%, #9C27B0 50%, #E91E63 100%);
+            color: white;
+            padding: 80px 20px;
+        }
+
+        .hero-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            align-items: center;
+        }
+
+        .hero-left h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .hero-left p {
+            font-size: 18px;
+            margin-bottom: 30px;
+        }
+
+        .hero-features {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .feature-box {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
             padding: 20px;
-            background: rgba(76, 175, 80, 0.05);
-            border: 1px solid rgba(76, 175, 80, 0.15);
-            border-radius: 8px;
-            transition: all 0.3s ease;
+            border-radius: 12px;
         }
 
-        .stat:hover {
-            background: rgba(76, 175, 80, 0.1);
-            border: 1px solid rgba(76, 175, 80, 0.3);
-        }
-
-        .stat-number {
-            font-size: 28px;
-            font-weight: bold;
-            color: #4CAF50;
+        .feature-box h3 {
+            font-size: 32px;
             margin-bottom: 5px;
         }
 
-        .stat-label {
-            font-size: 12px;
-            color: #d0d0d0;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        .feature-box p {
+            font-size: 13px;
         }
 
-        /* CTA Buttons */
-        .cta-buttons {
+        .hero-right {
+            text-align: center;
+        }
+
+        .hero-image {
+            width: 100%;
+            height: 400px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
             display: flex;
-            gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin: 40px 0 0 0;
-        }
-
-        .btn {
-            padding: 14px 36px;
-            font-size: 15px;
-            font-weight: 600;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-flex;
             align-items: center;
-            gap: 10px;
-            letter-spacing: 0.3px;
+            justify-content: center;
+            font-size: 120px;
+            color: rgba(255,255,255,0.3);
         }
 
-        .btn-primary {
+        /* Sections */
+        section {
+            padding: 80px 20px;
+        }
+
+        .section-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 42px;
+            margin-bottom: 50px;
+            color: #333;
+        }
+
+        .section-title span {
+            color: #9C27B0;
+            font-weight: 700;
+        }
+
+        /* Misión y Visión */
+        .mision-vision {
+            background: white;
+        }
+
+        .mv-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+        }
+
+        .mv-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 40px;
+            border-radius: 15px;
+            border-left: 5px solid #9C27B0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .mv-card h3 {
+            font-size: 28px;
+            color: #9C27B0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .mv-card h3 i {
+            font-size: 36px;
+        }
+
+        .mv-card p {
+            font-size: 16px;
+            line-height: 1.8;
+            color: #555;
+        }
+
+        /* Proyectos */
+        .proyectos {
+            background: #f8f9fa;
+        }
+
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+
+        .project-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+        .project-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .project-image {
+            width: 100%;
+            height: 200px;
             background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 64px;
             color: white;
-            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.25);
-            border: 1px solid rgba(76, 175, 80, 0.5);
         }
 
-        .btn-primary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 35px rgba(76, 175, 80, 0.35);
-            background: linear-gradient(135deg, #45a049 0%, #2e7d32 100%);
+        .project-info {
+            padding: 25px;
         }
 
-        .btn-primary:active {
-            transform: translateY(-1px);
+        .project-info h3 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 10px;
         }
 
-        .btn-secondary {
-            background: transparent;
-            color: #4CAF50;
-            border: 2px solid rgba(76, 175, 80, 0.4);
+        .project-info p {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
         }
 
-        .btn-secondary:hover {
-            background: rgba(76, 175, 80, 0.1);
-            border: 2px solid rgba(76, 175, 80, 0.7);
-            color: #66BB6A;
+        /* Organigrama */
+        .organigrama {
+            background: white;
+        }
+
+        .org-chart {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .org-level {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .org-box {
+            background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 200px;
+            box-shadow: 0 4px 15px rgba(156, 39, 176, 0.3);
+        }
+
+        .org-box.gerencia {
+            background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .org-box h4 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .org-box p {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        /* Equipo */
+        .equipo {
+            background: #f8f9fa;
+        }
+
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .team-member {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .team-member:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .team-photo {
+            width: 100%;
+            height: 250px;
+            background: linear-gradient(135deg, #9C27B0 0%, #E91E63 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+            color: white;
+        }
+
+        .team-info {
+            padding: 25px;
+        }
+
+        .team-info h3 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .team-info .cargo {
+            font-size: 14px;
+            color: #9C27B0;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .team-info p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
         }
 
         /* Footer */
         footer {
+            background: #1a1a1a;
+            color: white;
+            padding: 40px 20px 20px;
             text-align: center;
-            padding: 20px 0;
-            color: #b0b0b0;
-            font-size: 12px;
-            border-top: 1px solid rgba(76, 175, 80, 0.1);
-            margin-top: auto;
         }
 
-        footer a {
-            color: #4CAF50;
-            text-decoration: none;
-            transition: color 0.3s ease;
+        /* WhatsApp */
+        .whatsapp-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: #25D366;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 32px;
+            box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 1000;
         }
 
-        footer a:hover {
-            color: #66BB6A;
-            text-decoration: underline;
+        .whatsapp-btn:hover {
+            transform: scale(1.1);
         }
 
         /* Responsive */
-        @media (max-width: 768px) {
-            header {
-                padding: 30px 0 20px 0;
-                margin-bottom: 30px;
+        @media (max-width: 968px) {
+            .hero-content, .mv-grid {
+                grid-template-columns: 1fr;
             }
 
-            .logo-img {
-                max-height: 60px;
+            .hero-left h1 {
+                font-size: 36px;
             }
 
-            .tagline {
-                font-size: 14px;
+            .section-title {
+                font-size: 32px;
             }
 
-            .description {
-                font-size: 12px;
-            }
-
-            .cards-grid {
-                gap: 18px;
-                margin: 35px 0;
-            }
-
-            .card {
-                padding: 20px;
-            }
-
-            .card-icon {
-                width: 60px;
-                height: 60px;
-                font-size: 28px;
-            }
-
-            .card-title {
-                font-size: 16px;
-            }
-
-            .card-description {
-                font-size: 12px;
-            }
-
-            .cta-buttons {
+            .org-level {
                 flex-direction: column;
-                gap: 10px;
+                align-items: center;
             }
 
-            .btn {
-                width: 100%;
-                justify-content: center;
-                padding: 12px 24px;
+            .header-actions {
+                gap: 8px;
             }
 
-            .stats {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 12px;
+            .header-btn {
+                padding: 8px 16px;
+                font-size: 12px;
             }
-
-            .stat {
-                padding: 15px;
-            }
-
-            .stat-number {
-                font-size: 24px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            body {
-                font-size: 14px;
-            }
-
-            header {
-                padding: 20px 0 15px 0;
-                margin-bottom: 20px;
-            }
-
-            .logo-img {
-                max-height: 50px;
-            }
-
-            .main-content {
-                padding: 20px 0;
-            }
-
-            .cards-grid {
-                gap: 15px;
-                margin: 25px 0;
-            }
-
-            .card {
-                padding: 18px;
-            }
-
-            .stat-number {
-                font-size: 20px;
-            }
-
-            .btn {
-                font-size: 14px;
-                padding: 10px 20px;
-            }
-        }
-
-        /* Animaciones */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        header, .card, .stat, .cta-buttons {
-            animation: fadeIn 0.6s ease-out forwards;
-        }
-
-        .card {
-            animation-delay: 0.1s;
-        }
-
-        .card:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-
-        .card:nth-child(3) {
-            animation-delay: 0.3s;
         }
     </style>
 </head>
 <body>
-    <!-- Decoración de fondo -->
-    <div class="bg-decoration">
-        <div class="dot dot1"></div>
-        <div class="dot dot2"></div>
-    </div>
-
-    <div class="container">
-        <!-- Header con logo -->
-        <header>
-            <div class="logo-container">
-                <img src="{{ url_for('static', filename='images/Logo Kallpa.png') }}" alt="Kallpa" class="logo-img">
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-content">
+            <div class="top-bar-left">
+                <span><i class="fas fa-phone"></i> +51 970 123 456</span>
+                <span><i class="fas fa-envelope"></i> contacto@kallpa.com</span>
+                <span><i class="fas fa-clock"></i> Lun - Sáb: 8:00 - 18:00</span>
             </div>
-            <div class="tagline">Sistema de Marcación y Asistencia</div>
-            <div class="description">Control eficiente de entrada y salida de personal</div>
-        </header>
-
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Features Cards -->
-            <div class="cards-grid">
-                <!-- Card 1 -->
-                <div class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="card-title">Marcación</div>
-                    <div class="card-description">Registra tu entrada y salida de forma instantánea y confiable</div>
-                </div>
-
-                <!-- Card 2 -->
-                <div class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-chart-bar"></i>
-                    </div>
-                    <div class="card-title">Dashboard</div>
-                    <div class="card-description">Visualiza tu historial, reportes y estadísticas en tiempo real</div>
-                </div>
-
-                <!-- Card 3 -->
-                <div class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <div class="card-title">Seguridad y Privacidad</div>
-                    <div class="card-description">Tus datos están protegidos con los más altos estándares de seguridad</div>
-                </div>
-            </div>
-
-            <!-- Statistics -->
-            <div class="stats">
-                <div class="stat">
-                    <div class="stat-number">100%</div>
-                    <div class="stat-label">Precisión</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-number">0ms</div>
-                    <div class="stat-label">Latencia</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-number">24/7</div>
-                    <div class="stat-label">Disponible</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-number">2026</div>
-                    <div class="stat-label">Lanzamiento</div>
-                </div>
-            </div>
-
-            <!-- CTA Buttons -->
-            <div class="cta-buttons">
-                <a href="{{ url_for('auth.login') }}?redirect=marcacion" class="btn btn-primary">
-                    <i class="fas fa-clock"></i>
-                    Marcación
-                </a>
-                <a href="{{ url_for('auth.login') }}?redirect=dashboard" class="btn btn-primary">
-                    <i class="fas fa-chart-bar"></i>
-                    Dashboard
-                </a>
+            <div class="top-bar-right">
+                <a href="#"><i class="fab fa-facebook"></i></a>
+                <a href="#"><i class="fab fa-instagram"></i></a>
+                <a href="#"><i class="fab fa-youtube"></i></a>
+                <a href="#"><i class="fab fa-linkedin"></i></a>
             </div>
         </div>
     </div>
 
+    <!-- Header -->
+    <header class="main-header">
+        <div class="header-content">
+            <div class="logo">
+                <img src="{{ url_for('static', filename='images/Logo Kallpa.png') }}" alt="Kallpa">
+            </div>
+            <div class="header-actions">
+                <a href="{{ url_for('auth.login') }}?redirect=marcacion" class="header-btn btn-marcacion">
+                    <i class="fas fa-clock"></i> Marcación
+                </a>
+                <a href="{{ url_for('auth.login') }}?redirect=dashboard" class="header-btn btn-dashboard">
+                    <i class="fas fa-chart-bar"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero-banner">
+        <div class="hero-content">
+            <div class="hero-left">
+                <h1>KALLPA<br>CORPORACIÓN</h1>
+                <p>Sistema de Gestión de Requerimientos</p>
+                <div class="hero-features">
+                    <div class="feature-box">
+                        <h3>+1900</h3>
+                        <p>CLIENTES SATISFECHOS</p>
+                    </div>
+                    <div class="feature-box">
+                        <h3>+6</h3>
+                        <p>AÑOS DE EXPERIENCIA</p>
+                    </div>
+                    <div class="feature-box">
+                        <h3>+18</h3>
+                        <p>PROYECTOS ACTIVOS</p>
+                    </div>
+                    <div class="feature-box">
+                        <h3>100%</h3>
+                        <p>CONFIABLE Y SEGURO</p>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-right">
+                <div class="hero-image">
+                    <i class="fas fa-building"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Misión y Visión -->
+    <section class="mision-vision">
+        <div class="section-container">
+            <h2 class="section-title">MISIÓN Y <span>VISIÓN</span></h2>
+            <div class="mv-grid">
+                <div class="mv-card">
+                    <h3><i class="fas fa-bullseye"></i> Misión</h3>
+                    <p>
+                        Proveer soluciones integrales de gestión empresarial que optimicen 
+                        los procesos operativos de nuestros clientes, mediante tecnología 
+                        innovadora y un equipo altamente capacitado, garantizando eficiencia, 
+                        transparencia y crecimiento sostenible.
+                    </p>
+                </div>
+                <div class="mv-card">
+                    <h3><i class="fas fa-eye"></i> Visión</h3>
+                    <p>
+                        Ser la empresa líder en soluciones de gestión empresarial en el Perú, 
+                        reconocida por nuestra excelencia en servicio, innovación tecnológica 
+                        y compromiso con el éxito de nuestros clientes, expandiendo nuestra 
+                        presencia a nivel nacional e internacional.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Proyectos -->
+    <section class="proyectos">
+        <div class="section-container">
+            <h2 class="section-title">NUESTROS <span>PROYECTOS</span></h2>
+            <div class="projects-grid">
+                <div class="project-card">
+                    <div class="project-image">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <div class="project-info">
+                        <h3>Sistema de Requerimientos</h3>
+                        <p>Gestión completa de solicitudes de materiales y servicios con flujo de aprobación automático</p>
+                    </div>
+                </div>
+                <div class="project-card">
+                    <div class="project-image">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="project-info">
+                        <h3>Control de Asistencia</h3>
+                        <p>Marcación digital con geolocalización y reconocimiento facial para control de personal</p>
+                    </div>
+                </div>
+                <div class="project-card">
+                    <div class="project-image">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="project-info">
+                        <h3>Reportes y Analytics</h3>
+                        <p>Dashboard interactivo con métricas en tiempo real y reportes personalizados</p>
+                    </div>
+                </div>
+                <div class="project-card">
+                    <div class="project-image">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
+                    <div class="project-info">
+                        <h3>Gestión de Presupuestos</h3>
+                        <p>Control total de presupuestos por proyecto con seguimiento de consumo y saldos</p>
+                    </div>
+                </div>
+                <div class="project-card">
+                    <div class="project-image">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <div class="project-info">
+                        <h3>Órdenes de Compra</h3>
+                        <p>Automatización del proceso de compras desde la solicitud hasta la entrega</p>
+                    </div>
+                </div>
+                <div class="project-card">
+                    <div class="project-image">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="project-info">
+                        <h3>Gestión de Personal</h3>
+                        <p>Administración integral de recursos humanos y control de accesos por roles</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Organigrama -->
+    <section class="organigrama">
+        <div class="section-container">
+            <h2 class="section-title">NUESTRO <span>ORGANIGRAMA</span></h2>
+            <div class="org-chart">
+                <div class="org-level">
+                    <div class="org-box">
+                        <h4>Gerencia General</h4>
+                        <p>Dirección Ejecutiva</p>
+                    </div>
+                </div>
+                <div class="org-level">
+                    <div class="org-box gerencia">
+                        <h4>Gerencia de Operaciones</h4>
+                        <p>Gestión de Proyectos</p>
+                    </div>
+                    <div class="org-box gerencia">
+                        <h4>Gerencia de Finanzas</h4>
+                        <p>Control Presupuestal</p>
+                    </div>
+                    <div class="org-box gerencia">
+                        <h4>Gerencia de TI</h4>
+                        <p>Tecnología e Innovación</p>
+                    </div>
+                </div>
+                <div class="org-level">
+                    <div class="org-box gerencia">
+                        <h4>Recursos Humanos</h4>
+                        <p>Gestión de Personal</p>
+                    </div>
+                    <div class="org-box gerencia">
+                        <h4>Logística</h4>
+                        <p>Compras y Almacén</p>
+                    </div>
+                    <div class="org-box gerencia">
+                        <h4>Calidad</h4>
+                        <p>Control y Mejora Continua</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Equipo -->
+    <section class="equipo">
+        <div class="section-container">
+            <h2 class="section-title">NUESTRO EQUIPO DE <span>PROFESIONALES</span></h2>
+            <div class="team-grid">
+                <div class="team-member">
+                    <div class="team-photo">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div class="team-info">
+                        <h3>Ing. Carlos Mendoza</h3>
+                        <p class="cargo">Gerente General</p>
+                        <p>20 años de experiencia en gestión empresarial y desarrollo de proyectos</p>
+                    </div>
+                </div>
+                <div class="team-member">
+                    <div class="team-photo">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div class="team-info">
+                        <h3>Lic. María Rodríguez</h3>
+                        <p class="cargo">Gerente de Operaciones</p>
+                        <p>Especialista en optimización de procesos y gestión de proyectos</p>
+                    </div>
+                </div>
+                <div class="team-member">
+                    <div class="team-photo">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div class="team-info">
+                        <h3>CPC. Juan Torres</h3>
+                        <p class="cargo">Gerente de Finanzas</p>
+                        <p>Experto en control presupuestal y planificación financiera</p>
+                    </div>
+                </div>
+                <div class="team-member">
+                    <div class="team-photo">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div class="team-info">
+                        <h3>Ing. Ana Flores</h3>
+                        <p class="cargo">Gerente de TI</p>
+                        <p>Líder en desarrollo de software y soluciones tecnológicas innovadoras</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer>
-        <p>© 2026 Kallpa - Todos los derechos reservados | 
-            <a href="#">Privacidad</a> | 
-            <a href="#">Términos</a>
-        </p>
+        <p>© 2026 Kallpa Corporación J & W S.A.C. - Todos los derechos reservados</p>
+        <p style="margin-top: 10px; font-size: 12px;">Calle Real N° 1817, Chilca - Huancayo</p>
     </footer>
 
-    <script>
-        // NO redirigir automáticamente - mostrar welcome siempre
-        // El usuario puede hacer click en los botones para ir a Marcación o Dashboard
-        
-        // Smooth scroll (si aplica)
-        const statsLink = document.querySelector('a[href="#stats"]');
-        if (statsLink) {
-            statsLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                const stats = document.querySelector('.stats');
-                if (stats) {
-                    stats.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center'
-                    });
-                }
-            });
-        }
-    </script>
-
+    <!-- WhatsApp -->
+    <div class="whatsapp-btn">
+        <i class="fab fa-whatsapp"></i>
+    </div>
 </body>
 </html>
