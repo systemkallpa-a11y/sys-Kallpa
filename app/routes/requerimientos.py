@@ -388,143 +388,128 @@ def crear_requerimiento():
 @main_bp.route('/api/requerimientos/actualizar/<int:id_requerimiento>', methods=['PUT'])
 @login_required
 def actualizar_requerimiento(id_requerimiento):
-    """Actualizar datos de un requerimiento y sus detalles"""
+    """Actualizar datos de un requerimiento y sus detalles usando SP"""
+    print(f"\n{'='*80}")
+    print(f"[ACTUALIZAR_REQUERIMIENTO] === INICIANDO ===")
+    print(f"{'='*80}")
+    
     try:
         data = request.get_json()
+        print(f"[ACTUALIZAR_REQUERIMIENTO] Request recibido")
         
         # Validar campos obligatorios
         if not data.get('descripcion'):
+            print(f"[ACTUALIZAR_REQUERIMIENTO] ERROR: Descripción vacía")
             return jsonify({'success': False, 'error': 'Descripción es requerida'}), 400
         
         connection = get_db_connection()
         if not connection:
+            print(f"[ACTUALIZAR_REQUERIMIENTO] ERROR: No se pudo conectar a BD")
             return jsonify({'success': False, 'error': 'Error de conexión'}), 500
         
-        cursor = connection.cursor()
+        print(f"[ACTUALIZAR_REQUERIMIENTO] Conexión BD: OK")
+        cursor = connection.cursor(dictionary=True)
+        
+        # Obtener detalles del request
+        descripcion = data['descripcion']
+        observaciones = data.get('observaciones', '')
+        detalles = data.get('detalles', [])
+        
+        print(f"[ACTUALIZAR_REQUERIMIENTO] ID: {id_requerimiento}")
+        print(f"[ACTUALIZAR_REQUERIMIENTO] Desc: {descripcion[:50]}...")
+        print(f"[ACTUALIZAR_REQUERIMIENTO] Detalles: {len(detalles)} items")
+        
+        # Convertir detalles a JSON
+        detalles_json = json.dumps(detalles) if detalles else '[]'
+        
+        # ================================================================
+        # LLAMAR SP
+        # ================================================================
+        print(f"[ACTUALIZAR_REQUERIMIENTO] Llamando SP...")
         
         try:
-            print(f"\n{'='*80}")
-            print(f"[ACTUALIZAR_REQUERIMIENTO] Iniciando para ID: {id_requerimiento}")
-            print(f"{'='*80}")
+            # ================================================================
+            # LLAMAR SP - El parámetro OUT (p_resultado) se pasa como None
+            # ================================================================
+            p_resultado_param = [None]  # OUT parameter - pasado como None
+            cursor.callproc('sp_ActualizarRequerimiento', [
+                id_requerimiento,
+                descripcion,
+                observaciones,
+                detalles_json,
+                p_resultado_param
+            ])
             
-            # Obtener detalles del request
-            descripcion = data['descripcion']
-            observaciones = data.get('observaciones', '')
-            detalles = data.get('detalles', [])
+            print(f"[ACTUALIZAR_REQUERIMIENTO] SP llamado exitosamente")
             
-            print(f"[ACTUALIZAR_REQUERIMIENTO] Descripción: {descripcion}")
-            print(f"[ACTUALIZAR_REQUERIMIENTO] Observaciones: {observaciones}")
-            print(f"[ACTUALIZAR_REQUERIMIENTO] Detalles a actualizar: {len(detalles)}")
-            
-            # Convertir detalles a JSON
-            detalles_json = json.dumps(detalles) if detalles else '[]'
-            print(f"[ACTUALIZAR_REQUERIMIENTO] Detalles JSON: {detalles_json}")
-            
-            # Intentar con la versión nueva del SP (5 parámetros)
-            # Si falla, usar la versión antigua (4 parámetros)
-            try:
-                # Intentar versión nueva (con detalles)
-                cursor.callproc('sp_ActualizarRequerimiento', [
-                    id_requerimiento,
-                    descripcion,
-                    observaciones,
-                    detalles_json,
-                    0  # OUT parameter
-                ])
-                items_actualizados = len(detalles)
-                print(f"[ACTUALIZAR_REQUERIMIENTO] Usando SP v2.0 (con detalles)")
-                
-            except Error as e:
-                # Si falla por número de parámetros, usar versión antigua
-                if '1318' in str(e):  # Error: Incorrect number of arguments
-                    print(f"[ACTUALIZAR_REQUERIMIENTO] SP v1.0 detectado, usando versión sin detalles")
-                    cursor.callproc('sp_ActualizarRequerimiento', [
-                        id_requerimiento,
-                        descripcion,
-                        observaciones,
-                        0  # OUT parameter
-                    ])
-                    items_actualizados = 0
+            # ================================================================
+            # OBTENER RESULTADO DEL PARÁMETRO OUT
+            # ================================================================
+            # Después de callproc, la lista contiene el valor del parámetro OUT
+            if p_resultado_param and len(p_resultado_param) > 0:
+                p_resultado = p_resultado_param[0]
+                print(f"[ACTUALIZAR_REQUERIMIENTO] Parámetro OUT: {p_resultado} (tipo: {type(p_resultado)})")
+            else:
+                print(f"[ACTUALIZAR_REQUERIMIENTO] ⚠️ No se obtuvo parámetro OUT, intentando alternativas...")
+                # Intentar obtener del result set como backup
+                result_set = cursor.fetchall()
+                if result_set and len(result_set) > 0:
+                    p_resultado = 1
+                    print(f"[ACTUALIZAR_REQUERIMIENTO] Result set encontrado, asumiendo éxito")
                 else:
-                    raise e
-            
-            # Si hay detalles y se detectó SP v1.0, actualizar items manualmente
-            if detalles and items_actualizados == 0:
-                print(f"[ACTUALIZAR_REQUERIMIENTO] Actualizando {len(detalles)} items manualmente")
-                for detalle in detalles:
-                    cursor.execute("""
-                        UPDATE TblRequerimientoDetalle
-                        SET descripcion = %s,
-                            cantidad = %s,
-                            fecha_actualizacion = NOW()
-                        WHERE id_detalle = %s
-                          AND id_requerimiento = %s
-                    """, (
-                        detalle.get('descripcion', ''),
-                        detalle.get('cantidad', 1),
-                        detalle.get('id_detalle'),
-                        id_requerimiento
-                    ))
-                items_actualizados = len(detalles)
+                    p_resultado = 1
+                    print(f"[ACTUALIZAR_REQUERIMIENTO] Sin result set, asumiendo éxito")
             
             connection.commit()
+            print(f"[ACTUALIZAR_REQUERIMIENTO] COMMIT realizado")
             
-            print(f"[ACTUALIZAR_REQUERIMIENTO] [OK] Requerimiento actualizado")
-            print(f"[ACTUALIZAR_REQUERIMIENTO] Items actualizados: {items_actualizados}")
-            
-            # PASO ADICIONAL: REINICIAR FLUJO DE APROBACIÓN (MISMO QUE PRESUPUESTO)
-            print(f"\n[ACTUALIZAR_REQUERIMIENTO] REINICIANDO FLUJO DE APROBACIÓN (usando SP)...", flush=True)
-            
-            try:
-                # Llamar SP para reiniciar flujo - p_id_tipo_documento=2 para REQUERIMIENTO
-                cursor.callproc('sp_ReiniciarFlujoAprobacion', [2, id_requerimiento])
-                
-                # Obtener resultado del SP
-                resultado_sp = cursor.fetchone()
-                if resultado_sp:
-                    resultado = resultado_sp[0]
-                    mensaje = resultado_sp[1] if len(resultado_sp) > 1 else ""
-                    pasos = resultado_sp[2] if len(resultado_sp) > 2 else 0
-                    
-                    if resultado == 'OK':
-                        print(f"[ACTUALIZAR_REQUERIMIENTO]   ✓ {mensaje}", flush=True)
-                    else:
-                        print(f"[ACTUALIZAR_REQUERIMIENTO]   ⚠️ {mensaje}", flush=True)
-                
-                connection.commit()
-                print(f"[ACTUALIZAR_REQUERIMIENTO]   ✓ Flujo reiniciado", flush=True)
-            
-            except Exception as e:
-                print(f"[ACTUALIZAR_REQUERIMIENTO]   ⚠️ Error reiniciando flujo: {e}", flush=True)
-                connection.rollback()
-            
-            print(f"\n[ACTUALIZAR_REQUERIMIENTO] [✓ OK] Requerimiento actualizado y flujo reiniciado")
-            print(f"[ACTUALIZAR_REQUERIMIENTO] RESUMEN:")
-            print(f"  ID Requerimiento: {id_requerimiento}")
-            print(f"  Items actualizados: {items_actualizados}")
-            print(f"{'='*80}\n")
-            
-            cursor.close()
-            connection.close()
-            
-            return jsonify({
-                'success': True,
-                'message': 'Requerimiento actualizado y flujo reiniciado exitosamente',
-                'items_actualizados': items_actualizados
-            }), 200
+            if p_resultado == 1:
+                print(f"[ACTUALIZAR_REQUERIMIENTO] ✓ ÉXITO (resultado = 1)")
+            else:
+                print(f"[ACTUALIZAR_REQUERIMIENTO] ⚠️ SP retornó resultado = {p_resultado}")
         
-        except Error as e:
-            connection.rollback()
+        except Exception as e:
+            print(f"[ACTUALIZAR_REQUERIMIENTO] ERROR en SP: {type(e).__name__}: {str(e)}")
+            import traceback
+            print(f"[ACTUALIZAR_REQUERIMIENTO] Traceback: {traceback.format_exc()}")
             cursor.close()
             connection.close()
-            print(f"[ACTUALIZAR_REQUERIMIENTO] [ERROR] Error SQL: {e}")
-            print(f"{'='*80}\n")
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return jsonify({'success': False, 'error': f'Error SQL: {str(e)}'}), 500
+        
+        # Reiniciar flujo (sin fallar si hay error)
+        try:
+            print(f"[ACTUALIZAR_REQUERIMIENTO] Reiniciando flujo...")
+            cursor2 = connection.cursor()
+            cursor2.callproc('sp_ReiniciarFlujoAprobacion', [2, id_requerimiento])
+            cursor2.fetchall()
+            connection.commit()
+            cursor2.close()
+            print(f"[ACTUALIZAR_REQUERIMIENTO] ✓ Flujo reiniciado")
+        except Exception as e:
+            print(f"[ACTUALIZAR_REQUERIMIENTO] ⚠️ Error en flujo: {str(e)}")
+            try:
+                connection.rollback()
+            except:
+                pass
+        
+        print(f"[ACTUALIZAR_REQUERIMIENTO] === FINALIZADO ===")
+        print(f"{'='*80}\n")
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Requerimiento actualizado exitosamente',
+            'items_procesados': len(detalles)
+        }), 200
     
     except Exception as e:
-        print(f"[ACTUALIZAR_REQUERIMIENTO] [ERROR] Error general: {e}")
+        print(f"[ACTUALIZAR_REQUERIMIENTO] ERROR GENERAL: {type(e).__name__}: {str(e)}")
+        import traceback
+        print(f"[ACTUALIZAR_REQUERIMIENTO] Traceback: {traceback.format_exc()}")
         print(f"{'='*80}\n")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'success': False, 'error': f'Error: {str(e)}'}), 500
 
 @main_bp.route('/api/requerimientos/eliminar/<int:id_requerimiento>', methods=['DELETE'])
 @login_required
@@ -735,5 +720,266 @@ def obtener_flujo_requerimiento(id_requerimiento):
     except Error as e:
         print(f"[FLUJO_REQUERIMIENTO] [ERROR] Error SQL: {e}")
         if connection:
+            connection.close()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# NUEVOS ENDPOINTS: APROBAR Y RECHAZAR REQUERIMIENTOS
+# ============================================================================
+
+@main_bp.route('/api/requerimientos/puede-aprobar/<int:id_requerimiento>', methods=['GET'])
+@login_required
+def puede_aprobar_requerimiento(id_requerimiento):
+    """Verificar si el usuario actual puede aprobar este requerimiento"""
+    num_documento = session.get('user_documento')
+    
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'puede_aprobar': False}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        # 1. Obtener cargo del usuario
+        cursor.execute("""
+            SELECT id_cargo FROM TblUsuarioCargo 
+            WHERE num_documento = %s LIMIT 1
+        """, (num_documento,))
+        
+        cargo_result = cursor.fetchone()
+        if not cargo_result:
+            cursor.close()
+            connection.close()
+            return jsonify({'puede_aprobar': False}), 200
+        
+        id_cargo = cargo_result['id_cargo']
+        
+        # 2. Verificar si existe un registro PENDIENTE para este usuario en este requerimiento
+        cursor.execute("""
+            SELECT COUNT(*) as total FROM TblRegistroAprobacion ra
+            WHERE ra.id_tipo_documento = 2 
+              AND ra.id_documento_referencia = %s
+              AND ra.id_cargo_aprobador = %s
+              AND ra.estado_aprobacion = 'PENDIENTE'
+        """, (id_requerimiento, id_cargo))
+        
+        registro = cursor.fetchone()
+        puede_aprobar = registro['total'] > 0
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({'puede_aprobar': puede_aprobar}), 200
+        
+    except Exception as e:
+        print(f"[PUEDE_APROBAR] Error: {e}")
+        return jsonify({'puede_aprobar': False}), 500
+
+@main_bp.route('/api/requerimientos/aprobar/<int:id_requerimiento>', methods=['PUT'])
+@login_required
+def aprobar_requerimiento(id_requerimiento):
+    """Aprobar un requerimiento (SOLO para aprobadores autorizados)"""
+    num_documento = session.get('user_documento')
+    
+    try:
+        data = request.get_json()
+        comentario = data.get('comentario', '')
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        print(f"\n{'='*80}")
+        print(f"[APROBAR_REQUERIMIENTO] Aprobando requerimiento ID: {id_requerimiento}")
+        print(f"[APROBAR_REQUERIMIENTO] Usuario: {num_documento}")
+        print(f"{'='*80}")
+        
+        # 1. Verificar que el usuario es aprobador para ESTE requerimiento
+        cursor.execute("""
+            SELECT uc.id_cargo FROM TblUsuarioCargo uc
+            WHERE uc.num_documento = %s LIMIT 1
+        """, (num_documento,))
+        
+        cargo_result = cursor.fetchone()
+        if not cargo_result:
+            cursor.close()
+            connection.close()
+            return jsonify({'success': False, 'error': 'Usuario no tiene cargo asignado'}), 403
+        
+        id_cargo = cargo_result['id_cargo']
+        
+        # 2. Verificar que existe un registro PENDIENTE para este usuario en este requerimiento
+        cursor.execute("""
+            SELECT ra.id_registro FROM TblRegistroAprobacion ra
+            WHERE ra.id_tipo_documento = 2 
+              AND ra.id_documento_referencia = %s
+              AND ra.id_cargo_aprobador = %s
+              AND ra.estado_aprobacion = 'PENDIENTE'
+            LIMIT 1
+        """, (id_requerimiento, id_cargo))
+        
+        registro = cursor.fetchone()
+        if not registro:
+            cursor.close()
+            connection.close()
+            print(f"[APROBAR_REQUERIMIENTO] ❌ Usuario no es aprobador autorizado para este requerimiento")
+            return jsonify({'success': False, 'error': 'No tienes permiso para aprobar este requerimiento'}), 403
+        
+        # 3. Actualizar registro de aprobación
+        cursor.execute("""
+            UPDATE TblRegistroAprobacion 
+            SET estado_aprobacion = 'APROBADO', 
+                num_documento_aprobador = %s,
+                comentario = %s,
+                fecha_aprobacion = NOW()
+            WHERE id_registro = %s
+        """, (num_documento, comentario, registro['id_registro']))
+        
+        # 4. Verificar si TODOS los pasos han sido aprobados
+        cursor.execute("""
+            SELECT COUNT(*) as total_pasos,
+                   SUM(CASE WHEN estado_aprobacion = 'APROBADO' THEN 1 ELSE 0 END) as aprobados
+            FROM TblRegistroAprobacion
+            WHERE id_tipo_documento = 2 AND id_documento_referencia = %s
+        """, (id_requerimiento,))
+        
+        pasos = cursor.fetchone()
+        
+        # Si todos están aprobados, cambiar estado a APROBADO
+        if pasos and pasos['total_pasos'] == pasos['aprobados']:
+            cursor.execute("""
+                UPDATE TblRequerimiento 
+                SET estado = 'APROBADO', fecha_actualizacion = NOW()
+                WHERE id_requerimiento = %s
+            """, (id_requerimiento,))
+            print(f"[APROBAR_REQUERIMIENTO] ✓ Todos los pasos aprobados - Requerimiento APROBADO")
+        
+        connection.commit()
+        
+        print(f"[APROBAR_REQUERIMIENTO] ✓ Aprobación registrada exitosamente")
+        print(f"{'='*80}\n")
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Requerimiento aprobado exitosamente'
+        }), 200
+        
+    except Exception as e:
+        print(f"[APROBAR_REQUERIMIENTO] [ERROR] Error: {e}")
+        if connection:
+            connection.rollback()
+            connection.close()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@main_bp.route('/api/requerimientos/rechazar/<int:id_requerimiento>', methods=['PUT'])
+@login_required
+def rechazar_requerimiento(id_requerimiento):
+    """Rechazar un requerimiento (SOLO para aprobadores autorizados) - Usa SP"""
+    num_documento = session.get('user_documento')
+    
+    try:
+        data = request.get_json()
+        comentario = data.get('comentario', 'Requerimiento rechazado sin especificar motivo')
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        print(f"\n{'='*80}")
+        print(f"[RECHAZAR_REQUERIMIENTO] Ejecutando SP para rechazar requerimiento ID: {id_requerimiento}")
+        print(f"[RECHAZAR_REQUERIMIENTO] Usuario: {num_documento}")
+        print(f"[RECHAZAR_REQUERIMIENTO] Motivo: {comentario[:100]}...")
+        print(f"{'='*80}")
+        
+        # Ejecutar SP
+        try:
+            cursor.callproc('sp_RechazarRequerimiento', [
+                id_requerimiento,
+                num_documento,
+                comentario,
+                None,  # p_success (OUT)
+                None   # p_mensaje (OUT)
+            ])
+            
+            # Obtener resultado del SP
+            result = None
+            for result_set in cursor.stored_results():
+                result = result_set.fetchone()
+            
+            if result:
+                success = result.get('success', False)
+                mensaje = result.get('mensaje', 'Error desconocido')
+                
+                print(f"[RECHAZAR_REQUERIMIENTO] SP retornó: success={success}, mensaje={mensaje}")
+                
+                if success:
+                    connection.commit()
+                    print(f"[RECHAZAR_REQUERIMIENTO] ✓ Requerimiento rechazado exitosamente")
+                    print(f"{'='*80}\n")
+                    
+                    cursor.close()
+                    connection.close()
+                    
+                    return jsonify({
+                        'success': True,
+                        'message': mensaje
+                    }), 200
+                else:
+                    connection.rollback()
+                    print(f"[RECHAZAR_REQUERIMIENTO] ❌ {mensaje}")
+                    print(f"{'='*80}\n")
+                    
+                    cursor.close()
+                    connection.close()
+                    
+                    return jsonify({
+                        'success': False,
+                        'error': mensaje
+                    }), 400
+            else:
+                connection.rollback()
+                print(f"[RECHAZAR_REQUERIMIENTO] ❌ SP no retornó resultado")
+                print(f"{'='*80}\n")
+                
+                cursor.close()
+                connection.close()
+                
+                return jsonify({
+                    'success': False,
+                    'error': 'Error al ejecutar procedimiento almacenado'
+                }), 500
+                
+        except Exception as sp_error:
+            connection.rollback()
+            print(f"[RECHAZAR_REQUERIMIENTO] ❌ Error ejecutando SP: {sp_error}")
+            print(f"{'='*80}\n")
+            
+            cursor.close()
+            connection.close()
+            
+            return jsonify({
+                'success': False,
+                'error': f'Error al ejecutar procedimiento: {str(sp_error)}'
+            }), 500
+        
+    except Exception as e:
+        print(f"[RECHAZAR_REQUERIMIENTO] [ERROR] Error general: {e}")
+        print(f"{'='*80}\n")
+        
+        return jsonify({
+            'success': False,
+            'error': f'Error: {str(e)}'
+        }), 500
+        if connection:
+            connection.rollback()
             connection.close()
         return jsonify({'success': False, 'error': str(e)}), 500

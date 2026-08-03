@@ -1030,6 +1030,7 @@ def obtener_notificaciones_pendientes():
         # NUEVA QUERY: Buscar registros PENDIENTE en TblRegistroAprobacion para ANY paso (no solo paso 1)
         # Esto permite que usuarios vean notificaciones para cualquier paso del flujo donde son aprobadores
         # IMPORTANTE: Solo incluir documentos donde TODOS los pasos anteriores estén APROBADOS
+        # ⭐ CORREGIDO: Excluir documentos con estado ELIMINADO
         cursor.execute("""
             SELECT 
                 tda.id_tipo_documento,
@@ -1051,12 +1052,23 @@ def obtener_notificaciones_pendientes():
                 TblRegistroAprobacion ra ON tda.id_tipo_documento = ra.id_tipo_documento 
                     AND ra.numero_paso = fac.numero_paso 
                     AND ra.estado_aprobacion = 'PENDIENTE'
+            -- ⭐ NUEVO: JOIN con tablas de documentos para verificar estado
+            LEFT JOIN 
+                TblPresupuesto p ON ra.id_tipo_documento = 1 AND ra.id_documento_referencia = p.id_presupuesto
+            LEFT JOIN 
+                TblRequerimiento r ON ra.id_tipo_documento = 2 AND ra.id_documento_referencia = r.id_requerimiento
             WHERE 
                 fac.id_cargo = %s
                 AND fac.activo = 1
                 AND fac.es_requerido = 1
                 AND tda.activo = 1
                 AND tda.requiere_aprobacion = 1
+                -- ⭐ NUEVO: Excluir documentos ELIMINADOS o que no existen
+                AND (
+                    (ra.id_tipo_documento = 1 AND p.id_presupuesto IS NOT NULL AND p.estado <> 'ELIMINADO')
+                    OR (ra.id_tipo_documento = 2 AND r.id_requerimiento IS NOT NULL AND r.estado <> 'ELIMINADO')
+                    OR (ra.id_tipo_documento NOT IN (1, 2))
+                )
                 -- CRÍTICO: Verificar que TODOS los pasos anteriores estén APROBADOS
                 AND NOT EXISTS (
                     SELECT 1 
@@ -1268,10 +1280,12 @@ def obtener_detalles_pendientes(id_tipo_documento):
                         continue
                     
                     # Obtener detalles del presupuesto
+                    # ⭐ IMPORTANTE: Excluir presupuestos ELIMINADOS
                     cursor.execute("""
                         SELECT 
                             p.numero_presupuesto,
                             p.monto,
+                            p.estado,
                             o.nombre as obra,
                             CONCAT(COALESCE(per.nombres, ''), ' ', COALESCE(per.apellido_paterno, '')) as responsable,
                             p.fecha_creacion
@@ -1280,6 +1294,7 @@ def obtener_detalles_pendientes(id_tipo_documento):
                         LEFT JOIN TblUsuario u ON p.num_documento = u.num_documento
                         LEFT JOIN TblPersona per ON u.num_documento = per.num_documento
                         WHERE p.id_presupuesto = %s
+                        AND p.estado <> 'ELIMINADO'
                     """, (id_doc,))
                     
                     pres_detail = cursor.fetchone()
@@ -1316,17 +1331,20 @@ def obtener_detalles_pendientes(id_tipo_documento):
                     id_doc = doc_base['id_documento']  # From SP result dict
                     
                     # Obtener detalles del requerimiento
+                    # ⭐ IMPORTANTE: Excluir requerimientos ELIMINADOS
                     cursor.execute("""
                         SELECT 
                             r.codigo,
                             r.cantidad as cantidad_items,
                             r.descripcion,
+                            r.estado,
                             COALESCE(CONCAT(per.nombres, ' ', per.apellido_paterno), 'Sin asignar') as responsable,
                             r.fecha_creacion
                         FROM TblRequerimiento r
                         LEFT JOIN TblUsuario u ON r.num_usuario = u.num_usuario
                         LEFT JOIN TblPersona per ON u.num_documento = per.num_documento
                         WHERE r.id_requerimiento = %s
+                        AND r.estado <> 'ELIMINADO'
                     """, (id_doc,))
                     
                     req_detail = cursor.fetchone()

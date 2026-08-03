@@ -36,7 +36,7 @@ def get_ssh_tunnel():
         ssh_port = int(os.getenv('SSH_PORT', 22))
         ssh_user = os.getenv('SSH_USER', '')
         ssh_password = os.getenv('SSH_PASSWORD', '')
-        db_host = os.getenv('DB_HOST', 'localhost')
+        db_host = os.getenv('DB_HOST', 'kallpasystem.mysql.pythonanywhere-services.com')
         db_port = int(os.getenv('DB_PORT', 3306))
         
         logging.info(f"[SSH TUNNEL] Iniciando túnel SSH a {ssh_host}:{ssh_port}")
@@ -45,7 +45,8 @@ def get_ssh_tunnel():
             (ssh_host, ssh_port),
             ssh_username=ssh_user,
             ssh_password=ssh_password,
-            remote_bind_address=(db_host, db_port)
+            remote_bind_address=(db_host, db_port),
+            set_keepalive=30  # Mantener conexión activa
         )
         ssh_tunnel.start()
         

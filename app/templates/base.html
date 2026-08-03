@@ -487,7 +487,7 @@
                                     <p class="text-gray-700 dark:text-gray-300">${responsable}</p>
                                 </td>
                                 <td class="px-4 py-3 text-center">
-                                    <button onclick="mostrarDetalleRequerimiento(${doc.id_documento})" 
+                                    <button onclick="mostrarDetalleRequerimiento(${doc.id_documento}, true)" 
                                             class="inline-flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded font-medium text-xs transition-colors">
                                         <i class="fas fa-eye"></i>
                                         Ver
@@ -1285,10 +1285,209 @@
     // FUNCIONES PARA DETALLES Y APROBACIÓN DE REQUERIMIENTOS
     // ============================================================================
     
-    // Función para mostrar detalles del requerimiento
-    async function mostrarDetalleRequerimiento(idRequerimiento) {
+    // ============================================================================
+    // FUNCIONES PARA APROBACIÓN DE REQUERIMIENTOS EN NOTIFICACIONES
+    // ============================================================================
+    
+    // Verificar si el usuario puede aprobar este requerimiento (EN MODAL NOTIFICACIONES)
+    async function verificarYMostrarBotonesAprobacionNotificacion(idRequerimiento, esDesdeNotificaciones = false) {
         try {
-            console.log(`[DETALLE_REQUERIMIENTO] Iniciando para ID: ${idRequerimiento}`);
+            console.log(`[APROBACION_NOTIFICACION] Verificando permisos para REQ ID: ${idRequerimiento}, desde notificaciones: ${esDesdeNotificaciones}`);
+            
+            // Obtener el contenedor de botones
+            const container = document.getElementById('botones-aprobacion-container');
+            if (!container) {
+                console.error('[APROBACION_NOTIFICACION] Contenedor de botones no encontrado');
+                return;
+            }
+            
+            // Limpiar botones previos
+            container.innerHTML = '';
+            
+            // Botón Descargar PDF (siempre disponible)
+            const btnPDF = document.createElement('button');
+            btnPDF.type = 'button';
+            btnPDF.className = 'px-4 md:px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium text-sm flex items-center gap-2 transition-colors';
+            btnPDF.innerHTML = '<i class="fas fa-file-pdf"></i><span>Descargar PDF</span>';
+            btnPDF.onclick = async () => {
+                try {
+                    const link = document.createElement('a');
+                    link.href = `/api/requerimientos/descargar-pdf/${idRequerimiento}`;
+                    link.download = `REQ-${idRequerimiento}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } catch (error) {
+                    console.error('Error descargando PDF:', error);
+                    alert('Error al descargar el PDF');
+                }
+            };
+            container.appendChild(btnPDF);
+            console.log(`[APROBACION_NOTIFICACION] Botón PDF agregado`);
+            
+            // Si viene desde notificaciones, SIEMPRE mostrar botones de aprobación
+            if (esDesdeNotificaciones) {
+                console.log('[APROBACION_NOTIFICACION] ✓ Origen: Notificaciones - Mostrando botones siempre');
+                
+                // Botón Aprobar
+                const btnAprobar = document.createElement('button');
+                btnAprobar.type = 'button';
+                btnAprobar.className = 'px-4 md:px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium text-sm flex items-center gap-2 transition-colors';
+                btnAprobar.innerHTML = '<i class="fas fa-check"></i><span>Aprobar</span>';
+                btnAprobar.onclick = async () => await aprobarRequerimientoNotificacion(idRequerimiento);
+                
+                // Botón Rechazar
+                const btnRechazar = document.createElement('button');
+                btnRechazar.type = 'button';
+                btnRechazar.className = 'px-4 md:px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm flex items-center gap-2 transition-colors';
+                btnRechazar.innerHTML = '<i class="fas fa-times"></i><span>Rechazar</span>';
+                btnRechazar.onclick = async () => await rechazarRequerimientoNotificacion(idRequerimiento);
+                
+                container.appendChild(btnAprobar);
+                container.appendChild(btnRechazar);
+                
+                console.log('[APROBACION_NOTIFICACION] ✓ Botones de aprobación creados');
+            } else {
+                // Si viene desde otro lado, verificar permisos
+                console.log('[APROBACION_NOTIFICACION] Origen: Otra página - Verificando permisos');
+                
+                const response = await fetch(`/api/requerimientos/puede-aprobar/${idRequerimiento}`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                console.log(`[APROBACION_NOTIFICACION] Respuesta API:`, result);
+                
+                if (result.puede_aprobar) {
+                    console.log('[APROBACION_NOTIFICACION] ✓ Usuario IS aprobador - Creando botones');
+                    
+                    // Botón Aprobar
+                    const btnAprobar = document.createElement('button');
+                    btnAprobar.type = 'button';
+                    btnAprobar.className = 'px-4 md:px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium text-sm flex items-center gap-2 transition-colors';
+                    btnAprobar.innerHTML = '<i class="fas fa-check"></i><span>Aprobar</span>';
+                    btnAprobar.onclick = async () => await aprobarRequerimientoNotificacion(idRequerimiento);
+                    
+                    // Botón Rechazar
+                    const btnRechazar = document.createElement('button');
+                    btnRechazar.type = 'button';
+                    btnRechazar.className = 'px-4 md:px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm flex items-center gap-2 transition-colors';
+                    btnRechazar.innerHTML = '<i class="fas fa-times"></i><span>Rechazar</span>';
+                    btnRechazar.onclick = async () => await rechazarRequerimientoNotificacion(idRequerimiento);
+                    
+                    container.appendChild(btnAprobar);
+                    container.appendChild(btnRechazar);
+                    
+                    console.log('[APROBACION_NOTIFICACION] ✓ Botones de aprobación creados');
+                } else {
+                    console.log('[APROBACION_NOTIFICACION] ✗ Usuario NO es aprobador - Sin botones de aprobación');
+                }
+            }
+        } catch (error) {
+            console.error('[APROBACION_NOTIFICACION] Error:', error);
+            const container = document.getElementById('botones-aprobacion-container');
+            if (container) {
+                container.innerHTML = '';
+            }
+        }
+    }
+    
+    // Aprobar requerimiento desde notificación
+    async function aprobarRequerimientoNotificacion(idRequerimiento) {
+        if (!confirm('¿Estás seguro de que deseas APROBAR este requerimiento?')) {
+            return;
+        }
+        
+        try {
+            console.log(`[APROBAR_NOTIFICACION] Aprobando REQ ID: ${idRequerimiento}`);
+            
+            const response = await fetch(`/api/requerimientos/aprobar/${idRequerimiento}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ comentario: '' })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                console.log('[APROBAR_NOTIFICACION] ✓ Aprobado exitosamente');
+                alert('✅ Requerimiento aprobado exitosamente');
+                
+                // Cerrar modal
+                const modal = document.getElementById('modal-detalles-requerimiento');
+                if (modal) {
+                    modal.remove();
+                }
+                
+                // Recargar la página después de 1 segundo para que se vea el cambio
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                alert('❌ Error: ' + (result.error || 'No se pudo aprobar el requerimiento'));
+            }
+        } catch (error) {
+            console.error('[APROBAR_NOTIFICACION] Error:', error);
+            alert('❌ Error al aprobar: ' + error.message);
+        }
+    }
+    
+    // Rechazar requerimiento desde notificación
+    async function rechazarRequerimientoNotificacion(idRequerimiento) {
+        const comentario = prompt('¿Por qué rechazas este requerimiento?', '');
+        
+        if (comentario === null) {
+            return; // Usuario canceló
+        }
+        
+        if (comentario.trim() === '') {
+            alert('⚠️ Por favor ingresa un motivo del rechazo');
+            return;
+        }
+        
+        if (!confirm('¿Estás seguro de que deseas RECHAZAR este requerimiento?')) {
+            return;
+        }
+        
+        try {
+            console.log(`[RECHAZAR_NOTIFICACION] Rechazando REQ ID: ${idRequerimiento}`);
+            
+            const response = await fetch(`/api/requerimientos/rechazar/${idRequerimiento}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ comentario: comentario })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                console.log('[RECHAZAR_NOTIFICACION] ✓ Rechazado exitosamente');
+                alert('✅ Requerimiento rechazado exitosamente');
+                
+                // Cerrar modal
+                const modal = document.getElementById('modal-detalles-requerimiento');
+                if (modal) {
+                    modal.remove();
+                }
+                
+                // Recargar la página después de 1 segundo para que se vea el cambio
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                alert('❌ Error: ' + (result.error || 'No se pudo rechazar el requerimiento'));
+            }
+        } catch (error) {
+            console.error('[RECHAZAR_NOTIFICACION] Error:', error);
+            alert('❌ Error al rechazar: ' + error.message);
+        }
+    }
+    
+    // Función para mostrar detalles del requerimiento
+    async function mostrarDetalleRequerimiento(idRequerimiento, esDesdeNotificaciones = false) {
+        try {
+            console.log(`[DETALLE_REQUERIMIENTO] Iniciando para ID: ${idRequerimiento}, desde notificaciones: ${esDesdeNotificaciones}`);
             
             // Cerrar el modal anterior
             const modalAnterior = document.getElementById('modal-detalles-pendientes');
@@ -1438,7 +1637,10 @@
                     </div>
                     
                     <!-- Footer -->
-                    <div class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 px-4 md:px-6 py-3 md:py-4 flex justify-end shadow-lg flex-shrink-0">
+                    <div class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 px-4 md:px-6 py-3 md:py-4 flex justify-between items-center shadow-lg flex-shrink-0">
+                        <div id="botones-aprobacion-container" class="flex gap-2">
+                            <!-- Botones de aprobación se insertarán aquí dinámicamente -->
+                        </div>
                         <button onclick="this.closest('.fixed').remove()" 
                                 class="px-6 py-2 bg-gray-300 hover:bg-gray-400 dark:bg-slate-600 dark:hover:bg-slate-500 text-gray-900 dark:text-white rounded-lg font-medium text-sm flex items-center gap-2 transition-colors">
                             <i class="fas fa-times"></i><span>Cerrar</span>
@@ -1451,6 +1653,10 @@
             document.body.appendChild(modal);
             
             console.log(`[DETALLE_REQUERIMIENTO] ✓ Modal creado exitosamente`);
+            
+            // Verificar si el usuario puede aprobar este requerimiento
+            // Si viene desde notificaciones, siempre mostrar botones
+            verificarYMostrarBotonesAprobacionNotificacion(idRequerimiento, esDesdeNotificaciones);
             
             // Cerrar al hacer click afuera
             modal.addEventListener('click', function(e) {

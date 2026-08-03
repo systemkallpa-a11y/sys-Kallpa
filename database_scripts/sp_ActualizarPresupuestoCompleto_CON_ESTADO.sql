@@ -20,7 +20,11 @@ CREATE PROCEDURE sp_ActualizarPresupuestoCompleto(
     IN p_id_presupuesto INT,
     IN p_id_empresa INT,
     IN p_id_obra INT,
+    IN p_num_documento INT,
     IN p_comentarios LONGTEXT,
+    IN p_gastos_generales DECIMAL(12,2),
+    IN p_utilidad DECIMAL(12,2),
+    IN p_supervision_obra DECIMAL(12,2),
     IN p_materiales_json JSON,
     IN p_servicios_json JSON
 )
@@ -52,8 +56,12 @@ BEGIN
     SET
         id_empresa = p_id_empresa,
         id_obra = p_id_obra,
+        num_documento = p_num_documento,
         monto = v_total_monto,
         observaciones = p_comentarios,
+        gastos_generales = p_gastos_generales,
+        utilidad = p_utilidad,
+        supervision_obra = p_supervision_obra,
         estado = 'PENDIENTE',  -- ⭐ CAMBIAR A PENDIENTE
         fecha_actualizacion = NOW()
     WHERE id_presupuesto = p_id_presupuesto;
@@ -84,7 +92,6 @@ BEGIN
         cantidad_original,
         cantidad_consumida,
         precio_unitario,
-        subtotal,
         fecha_creacion
     )
     SELECT
@@ -95,8 +102,6 @@ BEGIN
         CAST(JSON_UNQUOTE(JSON_EXTRACT(item, '$.cantidad')) AS DECIMAL(12,2)),
         CAST(JSON_UNQUOTE(JSON_EXTRACT(item, '$.cantidad')) AS DECIMAL(12,2)),
         0,  -- ⭐ REINICIAR cantidad_consumida
-        CAST(JSON_UNQUOTE(JSON_EXTRACT(item, '$.precio_unitario')) AS DECIMAL(12,2)),
-        CAST(JSON_UNQUOTE(JSON_EXTRACT(item, '$.cantidad')) AS DECIMAL(12,2)) * 
         CAST(JSON_UNQUOTE(JSON_EXTRACT(item, '$.precio_unitario')) AS DECIMAL(12,2)),
         NOW()
     FROM JSON_TABLE(p_materiales_json, '$[*]' COLUMNS (item JSON PATH '$')) jt
@@ -112,7 +117,6 @@ BEGIN
         cantidad_original,
         cantidad_consumida,
         precio_unitario,
-        subtotal,
         fecha_creacion
     )
     SELECT
@@ -123,8 +127,6 @@ BEGIN
         CAST(JSON_UNQUOTE(JSON_EXTRACT(item, '$.cantidad')) AS DECIMAL(12,2)),
         CAST(JSON_UNQUOTE(JSON_EXTRACT(item, '$.cantidad')) AS DECIMAL(12,2)),
         0,  -- ⭐ REINICIAR cantidad_consumida
-        CAST(JSON_UNQUOTE(JSON_EXTRACT(item, '$.precio_unitario')) AS DECIMAL(12,2)),
-        CAST(JSON_UNQUOTE(JSON_EXTRACT(item, '$.cantidad')) AS DECIMAL(12,2)) * 
         CAST(JSON_UNQUOTE(JSON_EXTRACT(item, '$.precio_unitario')) AS DECIMAL(12,2)),
         NOW()
     FROM JSON_TABLE(p_servicios_json, '$[*]' COLUMNS (item JSON PATH '$')) jt

@@ -1,0 +1,640 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
+    <!-- Topbar -->
+    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
+        <div class="px-6 py-4 flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Gestión de Órdenes de Compra</h1>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Administra las órdenes de compra y su seguimiento</p>
+            </div>
+            <button id="btn-crear-orden" class="flex items-center gap-2 px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg">
+                <i class="fas fa-plus"></i>
+                <span>Crear Orden de Compra</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="p-6">
+        <!-- Tabla de Órdenes de Compra -->
+        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table id="tabla-ordenes-compra" class="w-full">
+                    <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Número OC</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Requerimiento</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Monto Total</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Estado</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Creado Por</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Fecha</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordenes-lista" class="divide-y divide-gray-200 dark:divide-slate-700">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                            <td colspan="7" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Cargando órdenes de compra...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Ver Detalle de Orden de Compra -->
+<div id="modal-visualizar-orden" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-6 py-5 flex items-center justify-between border-b border-slate-700 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="bg-slate-700 p-2 rounded-lg">
+                    <i class="fas fa-shopping-cart text-lg"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-semibold">Orden de Compra</h2>
+                    <p class="text-slate-400 text-xs mt-0.5" id="vis-numero">OC-000000</p>
+                </div>
+            </div>
+            <button onclick="cerrarModalVisualizacion()" class="text-slate-400 hover:text-white p-2 hover:bg-slate-700/50 rounded-lg transition-colors">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Contenido -->
+        <div class="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-800/50 space-y-4">
+            <!-- Información General -->
+            <div class="bg-white dark:bg-slate-900 rounded-lg p-4 border border-gray-200 dark:border-slate-700">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Información General</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">Estado</p>
+                        <p id="vis-estado" class="text-sm font-semibold text-gray-900 dark:text-white">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">Monto Total</p>
+                        <p id="vis-monto" class="text-sm font-semibold text-gray-900 dark:text-white">S/. 0.00</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">Requerimiento</p>
+                        <p id="vis-requerimiento" class="text-sm font-semibold text-gray-900 dark:text-white">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">Fecha Creación</p>
+                        <p id="vis-fecha" class="text-sm font-semibold text-gray-900 dark:text-white">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Observaciones -->
+            <div class="bg-white dark:bg-slate-900 rounded-lg p-4 border border-gray-200 dark:border-slate-700">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Observaciones</h3>
+                <p id="vis-observaciones" class="text-sm text-gray-700 dark:text-gray-400 whitespace-pre-wrap">-</p>
+            </div>
+
+            <!-- Tabla de Items -->
+            <div class="bg-white dark:bg-slate-900 rounded-lg p-4 border border-gray-200 dark:border-slate-700">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Items de la Orden</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs">
+                        <thead class="bg-gray-100 dark:bg-slate-800">
+                            <tr>
+                                <th class="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Material</th>
+                                <th class="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300">Cantidad</th>
+                                <th class="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">Precio Unit.</th>
+                                <th class="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vis-tabla-items" class="divide-y divide-gray-200 dark:divide-slate-700">
+                            <tr>
+                                <td colspan="4" class="px-3 py-4 text-center text-gray-500 dark:text-gray-400">Cargando items...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 px-6 py-3 flex gap-2 justify-end flex-shrink-0">
+            <button type="button" id="btn-editar-orden" class="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium text-sm transition-colors">
+                <i class="fas fa-edit mr-2"></i>Editar
+            </button>
+            <button type="button" onclick="cerrarModalVisualizacion()" class="px-6 py-2 bg-gray-300 hover:bg-gray-400 dark:bg-slate-600 dark:hover:bg-slate-500 text-gray-900 dark:text-white rounded-lg font-medium text-sm transition-colors">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="/static/js/ordenes_compra.js"></script>
+
+<!-- Modal: Crear Orden de Compra -->
+<div id="modal-crear-orden" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-6 py-5 flex items-center justify-between border-b border-slate-700 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="bg-slate-700 p-2 rounded-lg">
+                    <i class="fas fa-shopping-cart text-lg"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-semibold">Crear Orden de Compra</h2>
+                    <p class="text-slate-400 text-xs mt-0.5">Selecciona un requerimiento para crear una nueva OC</p>
+                </div>
+            </div>
+            <button onclick="cerrarModalCrearOrden()" class="text-slate-400 hover:text-white p-2 hover:bg-slate-700/50 rounded-lg transition-colors">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Contenido -->
+        <div class="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-800/50 space-y-4">
+            <!-- PASO 1: Búsqueda de Requerimiento -->
+            <div class="bg-white dark:bg-slate-900 rounded-lg p-5 border border-gray-200 dark:border-slate-700">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                    <span class="bg-slate-600 text-white px-2 py-1 rounded text-xs font-bold">1</span>
+                    Selecciona un Requerimiento
+                </h3>
+                
+                <div class="flex gap-2 mb-3">
+                    <input type="text" id="buscar-requerimiento" placeholder="Busca por código o descripción del requerimiento..." 
+                           class="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                </div>
+
+                <!-- Resultados de búsqueda -->
+                <div id="resultados-requerimientos" class="hidden max-h-40 overflow-y-auto border border-gray-300 dark:border-slate-600 rounded bg-gray-50 dark:bg-slate-800/50">
+                    <div id="lista-requerimientos" class="divide-y divide-gray-200 dark:divide-slate-700"></div>
+                </div>
+
+                <!-- Requerimiento seleccionado -->
+                <div id="requerimiento-seleccionado" class="hidden mt-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded border border-blue-200 dark:border-blue-700">
+                    <p class="text-xs text-blue-700 dark:text-blue-300 mb-1">Requerimiento seleccionado:</p>
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white" id="req-codigo">-</p>
+                            <p class="text-xs text-gray-600 dark:text-gray-400" id="req-descripcion">-</p>
+                        </div>
+                        <button onclick="limpiarRequerimientoSeleccionado()" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PASO 2: Agregar Materiales -->
+            <div id="paso-materiales" class="hidden bg-white dark:bg-slate-900 rounded-lg p-5 border border-gray-200 dark:border-slate-700">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                    <span class="bg-slate-600 text-white px-2 py-1 rounded text-xs font-bold">2</span>
+                    Agregar Materiales a la Orden
+                </h3>
+
+                <!-- Búsqueda de materiales -->
+                <div class="mb-3 flex gap-2">
+                    <input type="text" id="buscar-material-oc" placeholder="Busca materiales..." 
+                           class="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                    <input type="number" id="cantidad-material-oc" placeholder="Cantidad" value="1" min="0.01" step="0.01"
+                           class="w-20 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                    <input type="number" id="precio-material-oc" placeholder="Precio" value="0" min="0" step="0.01"
+                           class="w-24 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                    <button onclick="agregarMaterialAOrden()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-medium text-xs transition-colors">
+                        <i class="fas fa-plus mr-1"></i>Agregar
+                    </button>
+                </div>
+
+                <!-- Resultados de búsqueda de materiales -->
+                <div id="resultados-materiales-oc" class="hidden max-h-32 overflow-y-auto border border-gray-300 dark:border-slate-600 rounded bg-gray-50 dark:bg-slate-800/50 mb-3">
+                    <div id="lista-materiales-oc" class="divide-y divide-gray-200 dark:divide-slate-700"></div>
+                </div>
+
+                <!-- Tabla de materiales agregados -->
+                <div class="overflow-x-auto border border-gray-200 dark:border-slate-700 rounded">
+                    <table class="w-full text-xs">
+                        <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+                            <tr>
+                                <th class="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Material</th>
+                                <th class="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300">Cantidad</th>
+                                <th class="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">Precio Unit.</th>
+                                <th class="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">Subtotal</th>
+                                <th class="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-materiales-oc" class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700"></tbody>
+                    </table>
+                    <div id="sin-materiales-oc" class="text-center py-4 text-gray-500 dark:text-gray-400 text-xs bg-white dark:bg-slate-900">
+                        <i class="fas fa-inbox mr-1"></i>Sin materiales agregados
+                    </div>
+                </div>
+
+                <!-- Resumen -->
+                <div class="mt-3 p-3 bg-slate-100 dark:bg-slate-800 rounded flex justify-between items-center">
+                    <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Total de la Orden:</span>
+                    <span class="text-lg font-bold text-slate-700 dark:text-slate-300" id="total-orden-oc">S/. 0.00</span>
+                </div>
+            </div>
+
+            <!-- PASO 3: Observaciones -->
+            <div id="paso-observaciones" class="hidden bg-white dark:bg-slate-900 rounded-lg p-5 border border-gray-200 dark:border-slate-700">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                    <span class="bg-slate-600 text-white px-2 py-1 rounded text-xs font-bold">3</span>
+                    Observaciones (Opcional)
+                </h3>
+                <textarea id="observaciones-oc" rows="3" placeholder="Agrega observaciones o notas adicionales..." 
+                          class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 resize-none"></textarea>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 px-6 py-3 flex gap-2 justify-end flex-shrink-0">
+            <button type="button" onclick="cerrarModalCrearOrden()" class="px-6 py-2 bg-gray-300 hover:bg-gray-400 dark:bg-slate-600 dark:hover:bg-slate-500 text-gray-900 dark:text-white rounded-lg font-medium text-sm transition-colors">
+                Cancelar
+            </button>
+            <button type="button" onclick="guardarOrdenCompra()" class="px-6 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-medium text-sm transition-colors">
+                <i class="fas fa-save mr-2"></i>Guardar Orden de Compra
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    cargarOrdenes();
+    
+    document.getElementById('btn-crear-orden').addEventListener('click', function() {
+        mostrarModalCrearOrden();
+    });
+});
+
+async function cargarOrdenes() {
+    try {
+        const response = await fetch('/api/ordenes-compra/obtener');
+        const result = await response.json();
+        
+        if (result.success) {
+            const ordenes = result.data;
+            const tbody = document.getElementById('ordenes-lista');
+            
+            if (ordenes.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-inbox mr-2"></i>No hay órdenes de compra
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = ordenes.map(oc => `
+                <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">${oc.numero_oc}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">${oc.requerimiento_codigo || '-'}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-white font-semibold">S/. ${parseFloat(oc.monto_total || 0).toFixed(2)}</td>
+                    <td class="px-6 py-4 text-sm">
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold ${getEstadoBadgeClass(oc.estado)}">
+                            ${oc.estado}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">${oc.creado_por || '-'}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${oc.fecha_creacion_formatted || '-'}</td>
+                    <td class="px-6 py-4 text-sm flex gap-2">
+                        <button onclick="verDetalleOrden(${oc.id_orden_compra})" class="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-medium"><i class="fas fa-eye"></i></button>
+                        <button onclick="editarOrden(${oc.id_orden_compra})" class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium"><i class="fas fa-edit"></i></button>
+                        <button onclick="eliminarOrden(${oc.id_orden_compra})" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al cargar órdenes de compra');
+    }
+}
+
+function getEstadoBadgeClass(estado) {
+    const classes = {
+        'PENDIENTE': 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
+        'ENVIADA': 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200',
+        'RECIBIDA': 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
+        'CANCELADA': 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200',
+    };
+    return classes[estado] || 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
+}
+
+async function verDetalleOrden(id) {
+    try {
+        const response = await fetch(`/api/ordenes-compra/obtener/${id}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const { orden_compra, detalles } = result.data;
+            
+            document.getElementById('vis-numero').textContent = orden_compra.numero_oc;
+            document.getElementById('vis-estado').innerHTML = `<span class="px-3 py-1 rounded-full text-xs font-semibold ${getEstadoBadgeClass(orden_compra.estado)}">${orden_compra.estado}</span>`;
+            document.getElementById('vis-monto').textContent = `S/. ${parseFloat(orden_compra.monto_total).toFixed(2)}`;
+            document.getElementById('vis-requerimiento').textContent = orden_compra.requerimiento_codigo || '-';
+            document.getElementById('vis-fecha').textContent = orden_compra.fecha_creacion ? new Date(orden_compra.fecha_creacion).toLocaleDateString('es-PE') : '-';
+            document.getElementById('vis-observaciones').textContent = orden_compra.observaciones || '-';
+            
+            const tbody = document.getElementById('vis-tabla-items');
+            if (detalles && detalles.length > 0) {
+                tbody.innerHTML = detalles.map(det => `
+                    <tr>
+                        <td class="px-3 py-2 text-gray-900 dark:text-white">${det.descripcion || det.material_nombre || '-'}</td>
+                        <td class="px-3 py-2 text-center text-gray-900 dark:text-white">${parseFloat(det.cantidad).toFixed(2)}</td>
+                        <td class="px-3 py-2 text-right text-gray-900 dark:text-white">S/. ${parseFloat(det.precio_unitario || 0).toFixed(2)}</td>
+                        <td class="px-3 py-2 text-right font-semibold text-gray-900 dark:text-white">S/. ${parseFloat(det.subtotal || 0).toFixed(2)}</td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = `<tr><td colspan="4" class="px-3 py-4 text-center text-gray-500">Sin items</td></tr>`;
+            }
+            
+            document.getElementById('modal-visualizar-orden').classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al cargar detalle de orden');
+    }
+}
+
+function cerrarModalVisualizacion() {
+    document.getElementById('modal-visualizar-orden').classList.add('hidden');
+}
+
+function mostrarModalCrearOrden() {
+    document.getElementById('modal-crear-orden').classList.remove('hidden');
+    limpiarFormularioCrearOrden();
+    
+    // Configurar event listeners para búsqueda
+    const buscarReq = document.getElementById('buscar-requerimiento');
+    const buscarMat = document.getElementById('buscar-material-oc');
+    
+    if (buscarReq) {
+        buscarReq.addEventListener('input', buscarRequerimientos);
+    }
+    if (buscarMat) {
+        buscarMat.addEventListener('input', buscarMaterialesOC);
+    }
+}
+
+function cerrarModalCrearOrden() {
+    document.getElementById('modal-crear-orden').classList.add('hidden');
+    limpiarFormularioCrearOrden();
+}
+
+function limpiarFormularioCrearOrden() {
+    document.getElementById('buscar-requerimiento').value = '';
+    document.getElementById('buscar-material-oc').value = '';
+    document.getElementById('cantidad-material-oc').value = '1';
+    document.getElementById('precio-material-oc').value = '0';
+    document.getElementById('observaciones-oc').value = '';
+    document.getElementById('resultados-requerimientos').classList.add('hidden');
+    document.getElementById('resultados-materiales-oc').classList.add('hidden');
+    document.getElementById('requerimiento-seleccionado').classList.add('hidden');
+    document.getElementById('paso-materiales').classList.add('hidden');
+    document.getElementById('paso-observaciones').classList.add('hidden');
+    document.getElementById('tabla-materiales-oc').innerHTML = '';
+    window.requerimiento_actual = null;
+    window.materiales_oc = [];
+}
+
+async function buscarRequerimientos() {
+    const termino = document.getElementById('buscar-requerimiento').value;
+    
+    if (termino.length < 1) {
+        document.getElementById('resultados-requerimientos').classList.add('hidden');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/ordenes-compra/requerimientos-aprobados`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const reqs = (result.data || []).filter(r => 
+                r.codigo.toLowerCase().includes(termino.toLowerCase()) || 
+                (r.descripcion && r.descripcion.toLowerCase().includes(termino.toLowerCase()))
+            );
+            const lista = document.getElementById('lista-requerimientos');
+            
+            if (reqs.length === 0) {
+                lista.innerHTML = `<div class="px-4 py-2 text-gray-500 text-xs">No se encontraron requerimientos aprobados</div>`;
+            } else {
+                lista.innerHTML = reqs.map(req => `
+                    <div onclick="seleccionarRequerimiento(${req.id_requerimiento}, '${req.codigo}', '${req.descripcion}')" 
+                         class="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700">
+                        <p class="font-semibold text-sm text-gray-900 dark:text-white">${req.codigo}</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">${req.descripcion?.substring(0, 60)}</p>
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('resultados-requerimientos').classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Error buscando requerimientos:', error);
+    }
+}
+
+function seleccionarRequerimiento(id, codigo, descripcion) {
+    window.requerimiento_actual = { id, codigo, descripcion };
+    
+    document.getElementById('buscar-requerimiento').value = codigo;
+    document.getElementById('resultados-requerimientos').classList.add('hidden');
+    document.getElementById('requerimiento-seleccionado').classList.remove('hidden');
+    document.getElementById('req-codigo').textContent = codigo;
+    document.getElementById('req-descripcion').textContent = descripcion;
+    
+    // Mostrar pasos 2 y 3
+    document.getElementById('paso-materiales').classList.remove('hidden');
+    document.getElementById('paso-observaciones').classList.remove('hidden');
+    
+    // Limpiar materiales previos
+    window.materiales_oc = [];
+    actualizarTablaMaterialesOC();
+}
+
+function limpiarRequerimientoSeleccionado() {
+    window.requerimiento_actual = null;
+    document.getElementById('requerimiento-seleccionado').classList.add('hidden');
+    document.getElementById('paso-materiales').classList.add('hidden');
+    document.getElementById('paso-observaciones').classList.add('hidden');
+    document.getElementById('buscar-requerimiento').value = '';
+    document.getElementById('tabla-materiales-oc').innerHTML = '';
+    window.materiales_oc = [];
+}
+
+async function buscarMaterialesOC() {
+    const termino = document.getElementById('buscar-material-oc').value;
+    
+    if (termino.length < 1) {
+        document.getElementById('resultados-materiales-oc').classList.add('hidden');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/presupuestos/materiales/listar`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const materiales = (result.data || []).filter(m => 
+                m.nombre.toLowerCase().includes(termino.toLowerCase()) || 
+                m.codigo_material.toLowerCase().includes(termino.toLowerCase())
+            );
+            const lista = document.getElementById('lista-materiales-oc');
+            
+            if (materiales.length === 0) {
+                lista.innerHTML = `<div class="px-4 py-2 text-gray-500 text-xs">No se encontraron materiales</div>`;
+            } else {
+                lista.innerHTML = materiales.map(mat => `
+                    <div onclick="seleccionarMaterialOC(${mat.id_material}, '${mat.nombre}', ${mat.precio_base || 0})" 
+                         class="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700">
+                        <p class="font-semibold text-sm text-gray-900 dark:text-white">${mat.nombre}</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">Código: ${mat.codigo_material} | Precio: S/. ${parseFloat(mat.precio_base || 0).toFixed(2)}</p>
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('resultados-materiales-oc').classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Error buscando materiales:', error);
+    }
+}
+
+function seleccionarMaterialOC(id, nombre, precio) {
+    document.getElementById('buscar-material-oc').value = nombre;
+    document.getElementById('precio-material-oc').value = precio.toFixed(2);
+    document.getElementById('resultados-materiales-oc').classList.add('hidden');
+    document.getElementById('cantidad-material-oc').focus();
+}
+
+function agregarMaterialAOrden() {
+    const nombre = document.getElementById('buscar-material-oc').value;
+    const cantidad = parseFloat(document.getElementById('cantidad-material-oc').value) || 0;
+    const precio = parseFloat(document.getElementById('precio-material-oc').value) || 0;
+    
+    if (!nombre || cantidad <= 0 || precio < 0) {
+        alert('Por favor completa todos los campos correctamente');
+        return;
+    }
+    
+    const subtotal = cantidad * precio;
+    const material = {
+        id_temporal: window.materiales_oc.length + 1,
+        descripcion: nombre,
+        cantidad: cantidad,
+        precio_unitario: precio,
+        subtotal: subtotal
+    };
+    
+    window.materiales_oc.push(material);
+    
+    // Limpiar campos
+    document.getElementById('buscar-material-oc').value = '';
+    document.getElementById('cantidad-material-oc').value = '1';
+    document.getElementById('precio-material-oc').value = '0';
+    
+    actualizarTablaMaterialesOC();
+}
+
+function removerMaterialOC(id) {
+    window.materiales_oc = window.materiales_oc.filter(m => m.id_temporal !== id);
+    actualizarTablaMaterialesOC();
+}
+
+function actualizarTablaMaterialesOC() {
+    const tbody = document.getElementById('tabla-materiales-oc');
+    const sinMat = document.getElementById('sin-materiales-oc');
+    
+    if (!window.materiales_oc || window.materiales_oc.length === 0) {
+        tbody.innerHTML = '';
+        sinMat.style.display = 'block';
+    } else {
+        sinMat.style.display = 'none';
+        tbody.innerHTML = window.materiales_oc.map(mat => `
+            <tr>
+                <td class="px-3 py-2 text-gray-900 dark:text-white">${mat.descripcion}</td>
+                <td class="px-3 py-2 text-center text-gray-900 dark:text-white">${mat.cantidad.toFixed(2)}</td>
+                <td class="px-3 py-2 text-right text-gray-900 dark:text-white">S/. ${mat.precio_unitario.toFixed(2)}</td>
+                <td class="px-3 py-2 text-right font-semibold text-gray-900 dark:text-white">S/. ${mat.subtotal.toFixed(2)}</td>
+                <td class="px-3 py-2 text-center">
+                    <button onclick="removerMaterialOC(${mat.id_temporal})" class="text-red-500 hover:text-red-700">
+                        <i class="fas fa-trash text-xs"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    
+    // Actualizar total
+    const total = window.materiales_oc.reduce((sum, m) => sum + (m.subtotal || 0), 0);
+    document.getElementById('total-orden-oc').textContent = `S/. ${total.toFixed(2)}`;
+}
+
+async function guardarOrdenCompra() {
+    if (!window.requerimiento_actual) {
+        alert('Debes seleccionar un requerimiento');
+        return;
+    }
+    
+    if (!window.materiales_oc || window.materiales_oc.length === 0) {
+        alert('Debes agregar al menos un material');
+        return;
+    }
+    
+    const observaciones = document.getElementById('observaciones-oc').value;
+    
+    try {
+        const response = await fetch('/api/ordenes-compra/crear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id_requerimiento: window.requerimiento_actual.id,
+                detalles: window.materiales_oc,
+                observaciones: observaciones
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Orden de compra creada exitosamente: ' + result.numero_oc);
+            cerrarModalCrearOrden();
+            cargarOrdenes();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al guardar la orden');
+    }
+}
+
+function editarOrden(id) {
+    alert('Funcionalidad en desarrollo...');
+}
+
+function eliminarOrden(id) {
+    if (confirm('¿Estás seguro de que deseas eliminar esta orden de compra?')) {
+        fetch(`/api/ordenes-compra/eliminar/${id}`, { method: 'DELETE' })
+            .then(r => r.json())
+            .then(result => {
+                if (result.success) {
+                    alert('Orden eliminada');
+                    cargarOrdenes();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            })
+            .catch(e => console.error('Error:', e));
+    }
+}
+</script>
+
+{% endblock %}

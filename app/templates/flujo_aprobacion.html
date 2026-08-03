@@ -260,8 +260,8 @@
                     </div>
 
                     <div class="space-y-4">
-                        <!-- Selección: Área + Cargo -->
-                        <div class="grid grid-cols-2 gap-4">
+                        <!-- Selección: Área + Cargo + Orden -->
+                        <div class="grid grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wider">
                                     <i class="fas fa-building text-green-600 mr-1"></i>Área
@@ -278,6 +278,13 @@
                                 <select id="flujo_cargo_modal" class="w-full px-3 py-2.5 border-2 border-green-300 dark:border-green-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-400/50 transition-all">
                                     <option value="">Seleccionar cargo...</option>
                                 </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wider">
+                                    <i class="fas fa-sort text-green-600 mr-1"></i>Orden
+                                </label>
+                                <input type="number" id="flujo_orden_modal" value="0" min="0" class="w-full px-3 py-2.5 border-2 border-green-300 dark:border-green-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-400/50 transition-all">
                             </div>
                         </div>
 

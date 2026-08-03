@@ -84,6 +84,7 @@
                             <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Solicitante</th>
                             <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Estado</th>
                             <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Aprobado/Rechazado por</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Comentario Rechazo</th>
                             <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Fecha</th>
                             <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Acciones</th>
                         </tr>
@@ -273,6 +274,22 @@
                         <p class="text-gray-500 dark:text-gray-400 text-sm text-center py-4">Cargando items...</p>
                     </div>
 
+                    <!-- Agregar Materiales desde Presupuesto -->
+                    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
+                        <h4 class="font-bold text-gray-900 dark:text-white text-sm mb-3">Agregar Materiales desde Presupuesto</h4>
+                        <div class="space-y-3">
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <input type="text" id="edit-buscar-presupuesto" class="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm" placeholder="Ingresa número (ej: PRES-001)" onkeypress="if(event.key === 'Enter') { event.preventDefault(); buscarPresupuestoEdicion(); }">
+                                <button type="button" onclick="buscarPresupuestoEdicion()" class="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-medium text-sm flex items-center justify-center gap-1.5 flex-shrink-0 transition-colors">
+                                    <i class="fas fa-search text-xs"></i><span>Buscar</span>
+                                </button>
+                            </div>
+                            <div id="edit-resultados-presupuesto" class="space-y-2 bg-gray-50 dark:bg-slate-700/30 p-3 rounded-lg border border-gray-200 dark:border-slate-600 max-h-48 overflow-y-auto hidden">
+                                <p class="text-gray-500 dark:text-gray-400 text-sm text-center py-3">Resultados aquí</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Resumen -->
                     <div class="grid grid-cols-3 gap-3 mt-4">
                         <div class="bg-gray-50 dark:bg-slate-700/50 p-3 rounded-lg text-xs border border-gray-200 dark:border-slate-600">
@@ -442,6 +459,18 @@
 
         <!-- Footer -->
         <div class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 px-4 md:px-6 py-3 md:py-4 flex gap-2 justify-end shadow-lg flex-shrink-0">
+            <button type="button" id="btn-descargar-pdf" class="px-6 py-2 bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white rounded-lg font-medium text-sm flex items-center gap-2 transition-colors">
+                <i class="fas fa-file-pdf"></i><span>Descargar PDF</span>
+            </button>
+            
+            <!-- Botones de Aprobación -->
+            <button type="button" id="btn-aprobar-req" style="display: none;" class="px-6 py-2 bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white rounded-lg font-medium text-sm flex items-center gap-2 transition-colors">
+                <i class="fas fa-check-circle"></i><span>Aprobar</span>
+            </button>
+            <button type="button" id="btn-rechazar-req" style="display: none;" class="px-6 py-2 bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white rounded-lg font-medium text-sm flex items-center gap-2 transition-colors">
+                <i class="fas fa-times-circle"></i><span>Rechazar</span>
+            </button>
+            
             <button type="button" onclick="cerrarModalVerRequerimiento()" class="px-6 py-2 bg-gray-300 hover:bg-gray-400 dark:bg-slate-600 dark:hover:bg-slate-500 text-gray-900 dark:text-white rounded-lg font-medium text-sm flex items-center gap-2 transition-colors">
                 <i class="fas fa-times"></i><span>Cerrar</span>
             </button>
@@ -540,6 +569,12 @@ document.addEventListener('DOMContentLoaded', function() {
     cargarRequerimientos();
     document.getElementById('btn-crear-requerimiento').addEventListener('click', abrirModalRequerimiento);
     document.getElementById('form-requerimiento').addEventListener('submit', guardarRequerimiento);
+    
+    // Event listener para descargar PDF
+    const btnDescargarPDF = document.getElementById('btn-descargar-pdf');
+    if (btnDescargarPDF) {
+        btnDescargarPDF.addEventListener('click', descargarRequerimientoPDF);
+    }
     
     // Evento para formulario de edición
     const formEditar = document.getElementById('form-editar-requerimiento');
@@ -893,7 +928,7 @@ async function cargarRequerimientos() {
 function renderizarTabla() {
     const tbody = document.getElementById('requerimientos-lista');
     if (requerimientos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400"><i class="fas fa-inbox mr-2"></i>Sin requerimientos</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400"><i class="fas fa-inbox mr-2"></i>Sin requerimientos</td></tr>';
         return;
     }
     tbody.innerHTML = requerimientos.map(req => `
@@ -909,8 +944,12 @@ function renderizarTabla() {
                     <i class="fas fa-spinner fa-spin text-xs"></i>
                 </div>
             </td>
+            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                ${req.comentario_rechazo ? `<span class="text-red-600 dark:text-red-400 font-medium" title="${req.comentario_rechazo}"><i class="fas fa-exclamation-circle mr-1"></i>${req.comentario_rechazo.substring(0, 30)}${req.comentario_rechazo.length > 30 ? '...' : ''}</span>` : '<span class="text-gray-400">-</span>'}
+            </td>
             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">${new Date(req.fecha_creacion).toLocaleDateString('es-PE')}</td>
             <td class="px-6 py-4 text-sm flex gap-2">
+                <button onclick="descargarRequerimientoPDFTabla(${req.id_requerimiento}, this)" class="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-medium" title="Descargar PDF"><i class="fas fa-file-pdf"></i></button>
                 <button onclick="verDetalleRequerimiento(${req.id_requerimiento})" class="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-medium" title="Ver detalle"><i class="fas fa-eye"></i></button>
                 <button onclick="editarRequerimiento(${req.id_requerimiento})" class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium"><i class="fas fa-edit"></i></button>
                 <button onclick="eliminarRequerimiento(${req.id_requerimiento})" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium"><i class="fas fa-trash"></i></button>
@@ -1043,6 +1082,19 @@ async function verDetalleRequerimiento(id) {
         // Abrir modal
         document.getElementById('modal-ver-requerimiento').classList.remove('hidden');
         
+        // Agregar event listeners para botones de aprobación
+        const btnAprobar = document.getElementById('btn-aprobar-req');
+        const btnRechazar = document.getElementById('btn-rechazar-req');
+        const btnPDF = document.getElementById('btn-descargar-pdf');
+        
+        // Asignar handler al botón PDF
+        if (btnPDF) {
+            btnPDF.onclick = () => descargarRequerimientoPDFTabla(id, btnPDF);
+        }
+        
+        // Verificar si el usuario es aprobador para este requerimiento
+        verificarYMostrarBotonesAprobacion(id, btnAprobar, btnRechazar);
+        
         console.log('[VER_DETALLE] ✓ Modal abierto exitosamente');
         console.log('╔════════════════════════════════════════════════════════════════╗');
         console.log('║                        ✅ CARGA COMPLETADA                      ║');
@@ -1057,6 +1109,242 @@ async function verDetalleRequerimiento(id) {
 // Cerrar modal de visualización
 function cerrarModalVerRequerimiento() {
     document.getElementById('modal-ver-requerimiento').classList.add('hidden');
+}
+
+// Verificar si el usuario es aprobador y mostrar botones
+async function verificarYMostrarBotonesAprobacion(id_requerimiento, btnAprobar, btnRechazar) {
+    try {
+        // Llamar API para verificar si el usuario puede aprobar
+        const response = await fetch(`/api/requerimientos/puede-aprobar/${id_requerimiento}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const result = await response.json();
+        
+        if (result.puede_aprobar) {
+            // El usuario es aprobador - mostrar botones
+            if (btnAprobar) {
+                btnAprobar.style.display = 'flex';
+                btnAprobar.onclick = aprobarRequerimiento;
+            }
+            if (btnRechazar) {
+                btnRechazar.style.display = 'flex';
+                btnRechazar.onclick = rechazarRequerimiento;
+            }
+            console.log('[APROBACION] Usuario es aprobador - Botones mostrados');
+        } else {
+            // El usuario NO es aprobador - ocultar botones
+            if (btnAprobar) btnAprobar.style.display = 'none';
+            if (btnRechazar) btnRechazar.style.display = 'none';
+            console.log('[APROBACION] Usuario NO es aprobador - Botones ocultos');
+        }
+    } catch (error) {
+        console.error('[APROBACION] Error:', error);
+        // Ocultar botones si hay error
+        if (btnAprobar) btnAprobar.style.display = 'none';
+        if (btnRechazar) btnRechazar.style.display = 'none';
+    }
+}
+
+// Aprobar Requerimiento
+async function aprobarRequerimiento() {
+    const id_requerimiento = document.getElementById('ver-id').textContent;
+    
+    if (!id_requerimiento || id_requerimiento === '-') {
+        alert('❌ Error: No se pudo obtener el ID del requerimiento');
+        return;
+    }
+    
+    if (!confirm('¿Estás seguro de que deseas APROBAR este requerimiento?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/requerimientos/aprobar/${id_requerimiento}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ comentario: '' })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Requerimiento aprobado exitosamente');
+            cerrarModalVerRequerimiento();
+            cargarRequerimientos();
+        } else {
+            alert('❌ Error: ' + (result.error || 'No se pudo aprobar el requerimiento'));
+        }
+    } catch (error) {
+        console.error('[APROBAR] Error:', error);
+        alert('❌ Error al aprobar: ' + error.message);
+    }
+}
+
+// Rechazar Requerimiento
+async function rechazarRequerimiento() {
+    const id_requerimiento = document.getElementById('ver-id').textContent;
+    
+    if (!id_requerimiento || id_requerimiento === '-') {
+        alert('❌ Error: No se pudo obtener el ID del requerimiento');
+        return;
+    }
+    
+    const comentario = prompt('¿Por qué rechazas este requerimiento?', '');
+    
+    if (comentario === null) {
+        return; // Usuario canceló
+    }
+    
+    if (comentario.trim() === '') {
+        alert('⚠️ Por favor ingresa un motivo del rechazo');
+        return;
+    }
+    
+    if (!confirm('¿Estás seguro de que deseas RECHAZAR este requerimiento?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/requerimientos/rechazar/${id_requerimiento}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ comentario: comentario })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Requerimiento rechazado exitosamente');
+            cerrarModalVerRequerimiento();
+            cargarRequerimientos();
+        } else {
+            alert('❌ Error: ' + (result.error || 'No se pudo rechazar el requerimiento'));
+        }
+    } catch (error) {
+        console.error('[RECHAZAR] Error:', error);
+        alert('❌ Error al rechazar: ' + error.message);
+    }
+}
+
+
+// Descargar requerimiento como PDF
+async function descargarRequerimientoPDF() {
+    const id_requerimiento = document.getElementById('ver-id').textContent;
+    const codigo = document.getElementById('ver-codigo').textContent;
+    
+    if (!id_requerimiento || id_requerimiento === '-') {
+        alert('Error: No se encontró el ID del requerimiento');
+        return;
+    }
+    
+    try {
+        const btn = document.getElementById('btn-descargar-pdf');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Generando...</span>';
+        
+        const response = await fetch(`/api/requerimientos/descargar/${id_requerimiento}`);
+        
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+        }
+        
+        // Crear blob y descargar
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Requerimiento_${codigo.replace(/[\/\\:]/g, '_')}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        alert('✅ PDF descargado exitosamente');
+        
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-file-pdf"></i><span>Descargar PDF</span>';
+    } catch (error) {
+        console.error('[DESCARGAR_PDF] Error:', error);
+        alert('Error al descargar el PDF: ' + error.message);
+        
+        const btn = document.getElementById('btn-descargar-pdf');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-file-pdf"></i><span>Descargar PDF</span>';
+    }
+}
+
+// Descargar requerimiento como PDF desde la tabla de listado
+async function descargarRequerimientoPDFTabla(idRequerimiento, btnElement) {
+    if (!idRequerimiento) {
+        alert('Error: No se encontró el ID del requerimiento');
+        return;
+    }
+    
+    try {
+        // Si no se proporciona el elemento del botón, intenta obtenerlo del DOM
+        let btn = btnElement;
+        if (!btn) {
+            btn = document.querySelector(`button[onclick*="descargarRequerimientoPDFTabla(${idRequerimiento}"]`);
+        }
+        
+        if (!btn) {
+            // Fallback: crear un elemento temporal para usar en el descargar
+            btn = { disabled: false, innerHTML: '' };
+        }
+        
+        btn.disabled = true;
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        const response = await fetch(`/api/requerimientos/descargar/${idRequerimiento}`);
+        
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+        }
+        
+        // Crear blob y descargar
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        // Obtener el código del requerimiento de la tabla para el nombre del archivo
+        // Buscar la fila que contiene el botón
+        const rows = document.querySelectorAll('#requerimientos-lista tr');
+        let codigo = 'REQUERIMIENTO';
+        
+        for (let row of rows) {
+            const buttons = row.querySelectorAll('button');
+            for (let button of buttons) {
+                if (button.onclick && button.onclick.toString().includes(`descargarRequerimientoPDFTabla(${idRequerimiento}`)) {
+                    codigo = row.cells[1].textContent.trim();
+                    break;
+                }
+            }
+        }
+        
+        a.download = `Requerimiento_${codigo.replace(/[\/\\:]/g, '_')}.pdf`;
+        
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        alert('✅ PDF descargado exitosamente');
+        
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+    } catch (error) {
+        console.error('[DESCARGAR_PDF_TABLA] Error:', error);
+        alert('Error al descargar el PDF: ' + error.message);
+        
+        if (btnElement) {
+            btnElement.disabled = false;
+            btnElement.innerHTML = '<i class="fas fa-file-pdf"></i>';
+        }
+    }
 }
 
 // ============================================================================
@@ -1221,8 +1509,42 @@ function limpiarFormEditar() {
 
 // Guardar cambios del requerimiento (INCLUYENDO ITEMS)
 document.addEventListener('DOMContentLoaded', function() {
-    // Evento para formulario de edición
+    // ================================================================
+    // PREVENIR SUBMIT DEL FORMULARIO AL PRESIONAR ENTER EN CAMPOS
+    // ================================================================
     const formEditar = document.getElementById('form-editar-requerimiento');
+    const inputBuscarPresupuesto = document.getElementById('edit-buscar-presupuesto');
+    
+    if (formEditar) {
+        // Agregar keydown listener al formulario completo para interceptar ENTER
+        formEditar.addEventListener('keydown', function(e) {
+            // Si presionan ENTER en cualquier input/textarea (excepto el botón submit)
+            if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                // Si es el campo de búsqueda de presupuesto → hacer la búsqueda
+                if (e.target.id === 'edit-buscar-presupuesto') {
+                    e.preventDefault();
+                    buscarPresupuestoEdicion();
+                } else {
+                    // Para otros campos (descripción, observaciones, etc.) → prevenir submit
+                    e.preventDefault();
+                }
+            }
+        });
+    }
+    
+    // Prevenir ENTER específicamente en campo de búsqueda de presupuesto (double-safety)
+    if (inputBuscarPresupuesto) {
+        inputBuscarPresupuesto.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();  // Prevenir comportamiento por defecto
+                buscarPresupuestoEdicion();  // Ejecutar búsqueda en lugar de submit
+            }
+        });
+    }
+    
+    // ================================================================
+    // EVENTO PARA SUBMIT DEL FORMULARIO (SOLO BOTÓN GUARDAR)
+    // ================================================================
     if (formEditar) {
         formEditar.addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -1239,7 +1561,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Agrupar por id_detalle
                     let detalle = detalles_editados.find(d => d.id_detalle == id_detalle);
                     if (!detalle) {
-                        detalle = { id_detalle: parseInt(id_detalle), descripcion: '', cantidad: 1 };
+                        // Obtener el elemento de cantidad para acceder a atributos de datos
+                        const cantidadField = document.querySelector(`[data-id-detalle="${id_detalle}"][data-field="cantidad"]`);
+                        
+                        detalle = { 
+                            id_detalle: parseInt(id_detalle), 
+                            descripcion: '', 
+                            cantidad: 1,
+                            tipo_item: cantidadField ? cantidadField.getAttribute('data-tipo-item') || 'MATERIAL' : 'MATERIAL',
+                            id_material: cantidadField ? (cantidadField.getAttribute('data-id-material') || null) : null
+                        };
                         detalles_editados.push(detalle);
                     }
                     
@@ -1285,6 +1616,200 @@ function marcarItemsCambiados() {
     items.forEach(item => {
         item.classList.add('border-yellow-400', 'dark:border-yellow-600');
     });
+}
+
+// Agregar material en edición
+async function buscarPresupuestoEdicion() {
+    const numero = document.getElementById('edit-buscar-presupuesto').value.trim();
+    if (!numero) {
+        alert('Ingresa número de presupuesto');
+        return;
+    }
+    try {
+        const response = await fetch(`/api/presupuestos/buscar-por-numero?numero=${numero}`);
+        const data = await response.json();
+        if (data.success && data.data) {
+            await cargarItemsPresupuestoEdicion(data.data.id_presupuesto);
+        } else {
+            // Mostrar mensaje de error mejorado
+            const errorMsg = data.error || 'Presupuesto no encontrado';
+            const resultadosDiv = document.getElementById('edit-resultados-presupuesto');
+            resultadosDiv.innerHTML = `
+                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 p-4 rounded-lg">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-exclamation-circle text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"></i>
+                        <div>
+                            <p class="font-semibold text-red-800 dark:text-red-300 text-sm">No se encontró presupuesto</p>
+                            <p class="text-red-700 dark:text-red-400 text-xs mt-1">Solo se pueden buscar presupuestos en estado <strong>APROBADO</strong></p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            resultadosDiv.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        const resultadosDiv = document.getElementById('edit-resultados-presupuesto');
+        resultadosDiv.innerHTML = `
+            <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 p-4 rounded-lg">
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-times-circle text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"></i>
+                    <div>
+                        <p class="font-semibold text-red-800 dark:text-red-300 text-sm">Error en la búsqueda</p>
+                        <p class="text-red-700 dark:text-red-400 text-xs mt-1">${error.message || 'Verifica tu conexión e intenta de nuevo'}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        resultadosDiv.classList.remove('hidden');
+    }
+}
+
+async function cargarItemsPresupuestoEdicion(idPresupuesto) {
+    try {
+        const response = await fetch(`/api/presupuestos/obtener-detalles/${idPresupuesto}`);
+        const data = await response.json();
+        if (data.success && data.data && data.data.detalles) {
+            const detalles = data.data.detalles;
+            const resultadosDiv = document.getElementById('edit-resultados-presupuesto');
+            
+            const html = detalles.map((item, idx) => `
+                <div class="bg-white dark:bg-slate-700 p-3 rounded-lg border border-gray-200 dark:border-slate-600 flex items-center justify-between">
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-900 dark:text-white text-sm">${item.material_nombre || item.descripcion}</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                            Disp: ${parseFloat(item.cantidad_saldo || item.cantidad || 0).toFixed(2)} ${item.unidad_nombre || item.unidad_abreviatura || 'und'}
+                            ${item.cantidad_consumida && parseFloat(item.cantidad_consumida) > 0 ? `(Cons: ${parseFloat(item.cantidad_consumida).toFixed(2)})` : ''}
+                        </p>
+                    </div>
+                    <button type="button" class="btn-agregar-item-edicion ml-2 px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded text-xs font-medium transition-colors" data-id-detalle="${item.id_detalle}" data-id-material="${item.id_material || ''}" data-nombre="${(item.material_nombre || item.descripcion).replace(/"/g, '&quot;')}" data-cantidad="${item.cantidad_saldo || item.cantidad}" data-tipo="${item.tipo_item}" data-unidad="${item.unidad_nombre || item.unidad_abreviatura || 'und'}">Agregar</button>
+                </div>
+            `).join('');
+            resultadosDiv.innerHTML = html;
+            resultadosDiv.classList.remove('hidden');
+            
+            // Agregar event listeners a los botones
+            document.querySelectorAll('.btn-agregar-item-edicion').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    agregarItemAEdicion(
+                        parseInt(this.dataset.idDetalle),
+                        this.dataset.nombre,
+                        this.dataset.cantidad,
+                        this.dataset.tipo,
+                        this.dataset.unidad,
+                        this.dataset.idMaterial ? parseInt(this.dataset.idMaterial) : null
+                    );
+                });
+            });
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        const resultadosDiv = document.getElementById('edit-resultados-presupuesto');
+        resultadosDiv.innerHTML = `
+            <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 p-4 rounded-lg">
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-times-circle text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"></i>
+                    <div>
+                        <p class="font-semibold text-red-800 dark:text-red-300 text-sm">Error al cargar detalles</p>
+                        <p class="text-red-700 dark:text-red-400 text-xs mt-1">${error.message || 'Verifica tu conexión e intenta de nuevo'}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        resultadosDiv.classList.remove('hidden');
+    }
+}
+
+// Agregar item desde presupuesto a edición
+function agregarItemAEdicion(idDetalle, nombre, cantidad, tipo, unidad, idMaterial = null) {
+    try {
+        // Obtener contenedor de items
+        const container = document.getElementById('edit-items-lista');
+        
+        // Si el contenedor está vacío, limpiar el mensaje inicial
+        if (container.innerHTML.includes('Sin items')) {
+            container.innerHTML = '';
+        }
+        
+        // Crear nuevo item con ID temporal (negativo)
+        const nuevoId = -(Date.now());
+        const nuevoItemHTML = `
+            <div class="bg-white dark:bg-slate-700 p-4 rounded-lg border-2 border-green-300 dark:border-green-600 space-y-3 shadow-md">
+                <!-- Indicador de Item Nuevo -->
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold px-2 py-1 rounded bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                        ${tipo}
+                    </span>
+                    <span class="text-xs px-2 py-1 rounded bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 font-semibold">
+                        🆕 NUEVO
+                    </span>
+                </div>
+                
+                <!-- Descripción (EDITABLE) -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Descripción</label>
+                    <textarea 
+                        data-id-detalle="${nuevoId}"
+                        data-field="descripcion"
+                        data-is-new="true"
+                        rows="2"
+                        class="edit-item-field w-full px-3 py-2 border border-gray-300 dark:border-slate-500 rounded-lg bg-white dark:bg-slate-600 text-gray-900 dark:text-white text-sm resize-none"
+                    >${nombre}</textarea>
+                </div>
+                
+                <!-- Cantidad (EDITABLE) -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Cantidad <span class="text-red-500">*</span></label>
+                        <input 
+                            type="number"
+                            data-id-detalle="${nuevoId}"
+                            data-field="cantidad"
+                            data-id-material="${idMaterial || ''}"
+                            data-tipo-item="${tipo}"
+                            value="${cantidad}"
+                            min="1"
+                            class="edit-item-field w-full px-3 py-2 border border-gray-300 dark:border-slate-500 rounded-lg bg-white dark:bg-slate-600 text-gray-900 dark:text-white text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Unidad</label>
+                        <input 
+                            type="text"
+                            value="${unidad}"
+                            disabled
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-500 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white text-sm"
+                        />
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Agregar al contenedor
+        container.innerHTML += nuevoItemHTML;
+        
+        // Agregar event listeners a los campos nuevos
+        document.querySelectorAll(`[data-id-detalle="${nuevoId}"]`).forEach(field => {
+            field.addEventListener('change', marcarItemsCambiados);
+        });
+        
+        // Actualizar el resumen
+        const allItems = container.querySelectorAll('[class*="bg-white dark:bg-slate-700"]');
+        const itemsData = Array.from(allItems).map(el => ({
+            tipo_item: el.textContent.includes('MATERIAL') ? 'MATERIAL' : 'SERVICIO'
+        }));
+        actualizarResumenEdicion(itemsData);
+        
+        // Ocultar el contenedor de resultados
+        document.getElementById('edit-resultados-presupuesto').classList.add('hidden');
+        
+        // Feedback visual
+        alert('✅ Material agregado. Puedes editar cantidad y descripción. Guarda los cambios cuando termines.');
+        
+    } catch (error) {
+        console.error('Error agregando item:', error);
+        alert('❌ Error al agregar material');
+    }
 }
 
 // ============================================================================
