@@ -110,7 +110,19 @@ def obtener_requerimiento(id_requerimiento):
         print(f"{'='*80}")
         
         # 1. Obtener información del requerimiento usando SP
-        cursor.callproc('sp_ObtenerRequerimiento', [id_requerimiento])
+        try:
+            cursor.callproc('sp_ObtenerRequerimiento', [id_requerimiento])
+        except Error as sp_error:
+            if sp_error.errno == 1305:  # PROCEDURE does not exist
+                print(f"[OBTENER_REQUERIMIENTO] [ERROR] SP no existe. Ejecuta: sp_ObtenerRequerimiento.sql")
+                cursor.close()
+                connection.close()
+                return jsonify({
+                    'success': False, 
+                    'error': 'El Stored Procedure sp_ObtenerRequerimiento no existe. Por favor ejecuta el script SQL correspondiente.'
+                }), 500
+            else:
+                raise sp_error
         
         # Obtener resultado del SP
         requerimiento = None
@@ -126,7 +138,19 @@ def obtener_requerimiento(id_requerimiento):
             return jsonify({'success': False, 'error': 'Requerimiento no encontrado'}), 404
         
         # 2. Obtener detalles usando SP
-        cursor.callproc('sp_ObtenerRequerimientoDetalles', [id_requerimiento])
+        try:
+            cursor.callproc('sp_ObtenerRequerimientoDetalles', [id_requerimiento])
+        except Error as sp_error:
+            if sp_error.errno == 1305:  # PROCEDURE does not exist
+                print(f"[OBTENER_REQUERIMIENTO] [ERROR] SP no existe. Ejecuta: sp_ObtenerRequerimientoDetalles en sp_ObtenerRequerimiento.sql")
+                cursor.close()
+                connection.close()
+                return jsonify({
+                    'success': False, 
+                    'error': 'El Stored Procedure sp_ObtenerRequerimientoDetalles no existe. Por favor ejecuta el script SQL correspondiente.'
+                }), 500
+            else:
+                raise sp_error
         
         # Obtener resultados del SP
         detalles = []
@@ -164,8 +188,16 @@ def obtener_requerimiento(id_requerimiento):
             }
         }), 200
     
+    except Error as e:
+        print(f"[OBTENER_REQUERIMIENTO] [ERROR] Error SQL ({e.errno}): {e.msg}")
+        print(f"{'='*80}\n")
+        if connection:
+            connection.close()
+        return jsonify({'success': False, 'error': f'Error SQL: {e.msg}'}), 500
     except Exception as e:
+        import traceback
         print(f"[OBTENER_REQUERIMIENTO] [ERROR] {str(e)}")
+        print(f"[OBTENER_REQUERIMIENTO] Traceback:\n{traceback.format_exc()}")
         print(f"{'='*80}\n")
         if connection:
             connection.close()
@@ -476,35 +508,72 @@ def actualizar_requerimiento(id_requerimiento):
 @login_required
 def eliminar_requerimiento(id_requerimiento):
     """Eliminar un requerimiento completamente usando SP (Hard Delete)"""
+    print(f"\n{'='*80}")
+    print(f"[ELIMINAR_REQUERIMIENTO] ⚠️ FUNCIÓN LLAMADA - ID: {id_requerimiento}")
+    print(f"{'='*80}")
+    
     connection = get_db_connection()
     if not connection:
+        print(f"[ELIMINAR_REQUERIMIENTO] [ERROR] No hay conexión a BD")
         return jsonify({'success': False, 'error': 'Error de conexión'}), 500
     
     try:
-        cursor = connection.cursor(dictionary=True)
+        cursor = connection.cursor()
         
         print(f"\n{'='*80}")
         print(f"[ELIMINAR_REQUERIMIENTO] HARD DELETE - Iniciando para ID: {id_requerimiento}")
         print(f"{'='*80}")
         
-        # Llamar al SP para eliminar el requerimiento
-        args = [
-            id_requerimiento,  # IN: p_id_requerimiento
-            0,                  # OUT: p_codigo (placeholder)
-            0,                  # OUT: p_detalles_eliminados (placeholder)
-            0,                  # OUT: p_aprobaciones_eliminadas (placeholder)
-            False,              # OUT: p_presupuesto_reversado (placeholder)
-            ''                  # OUT: p_mensaje (placeholder)
-        ]
-        
-        result = cursor.callproc('sp_EliminarRequerimiento', args)
-        
-        # Extraer valores de salida (índices 1-5 son los OUT)
-        codigo = result[1]
-        detalles_eliminados = result[2]
-        aprobaciones_eliminadas = result[3]
-        presupuesto_reversado = result[4]
-        mensaje = result[5]
+        try:
+            # Llamar al SP con parámetros OUT usando variables de sesión
+            cursor.execute("""
+                CALL sp_EliminarRequerimiento(
+                    %s,
+                    @p_codigo,
+                    @p_detalles_eliminados,
+                    @p_aprobaciones_eliminadas,
+                    @p_presupuesto_reversado,
+                    @p_mensaje
+                )
+            """, (id_requerimiento,))
+            
+            # IMPORTANTE: Consumir todos los resultados del SP
+            cursor.fetchall()
+            
+            # Obtener los valores de las variables OUT en una nueva consulta
+            cursor.execute("""
+                SELECT 
+                    @p_codigo as codigo,
+                    @p_detalles_eliminados as detalles_eliminados,
+                    @p_aprobaciones_eliminadas as aprobaciones_eliminadas,
+                    @p_presupuesto_reversado as presupuesto_reversado,
+                    @p_mensaje as mensaje
+            """)
+            
+            result = cursor.fetchone()
+            
+            if not result:
+                raise Exception("No se obtuvieron resultados del SP")
+            
+            codigo = result[0]
+            detalles_eliminados = result[1] or 0
+            aprobaciones_eliminadas = result[2] or 0
+            presupuesto_reversado = bool(result[3])
+            mensaje = result[4] or 'Operación completada'
+            
+        except Error as sp_error:
+            # Error específico del SP
+            if sp_error.errno == 1305:  # PROCEDURE does not exist
+                print(f"[ELIMINAR_REQUERIMIENTO] [ERROR] SP no existe")
+                cursor.close()
+                connection.close()
+                return jsonify({
+                    'success': False, 
+                    'error': 'El Stored Procedure sp_EliminarRequerimiento no existe. Por favor ejecuta el script SQL correspondiente.'
+                }), 500
+            else:
+                print(f"[ELIMINAR_REQUERIMIENTO] [ERROR] Error SQL: {sp_error}")
+                raise sp_error
         
         print(f"\n[ELIMINAR_REQUERIMIENTO] [✅ OK] {mensaje}")
         print(f"[ELIMINAR_REQUERIMIENTO] RESUMEN:")
@@ -529,17 +598,20 @@ def eliminar_requerimiento(id_requerimiento):
         }), 200
     
     except Error as e:
-        print(f"[ELIMINAR_REQUERIMIENTO] [ERROR] Error SQL: {e}")
+        print(f"[ELIMINAR_REQUERIMIENTO] [ERROR] Error SQL ({e.errno}): {e.msg}")
         print(f"{'='*80}\n")
         if connection:
             connection.close()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'success': False, 'error': f'Error SQL: {e.msg}'}), 500
     except Exception as e:
+        import traceback
         print(f"[ELIMINAR_REQUERIMIENTO] [ERROR] Error general: {e}")
+        print(f"[ELIMINAR_REQUERIMIENTO] Traceback:\n{traceback.format_exc()}")
         print(f"{'='*80}\n")
         if connection:
             connection.close()
         return jsonify({'success': False, 'error': str(e)}), 500
+
 @main_bp.route('/api/requerimientos/flujo/<int:id_requerimiento>', methods=['GET'])
 @login_required
 def obtener_flujo_requerimiento(id_requerimiento):
@@ -649,27 +721,52 @@ def aprobar_requerimiento(id_requerimiento):
         if not connection:
             return jsonify({'success': False, 'error': 'Error de conexión'}), 500
         
-        cursor = connection.cursor(dictionary=True)
+        cursor = connection.cursor()
         
         print(f"\n{'='*80}")
         print(f"[APROBAR_REQUERIMIENTO] Aprobando requerimiento ID: {id_requerimiento}")
         print(f"[APROBAR_REQUERIMIENTO] Usuario: {num_documento}")
         print(f"{'='*80}")
         
-        # Llamar al SP para aprobar
-        args = [
-            id_requerimiento,     # IN: p_id_requerimiento
-            num_documento,        # IN: p_num_documento_aprobador
-            comentario,           # IN: p_comentario
-            False,                # OUT: p_aprobacion_completa (placeholder)
-            ''                    # OUT: p_mensaje (placeholder)
-        ]
-        
-        result = cursor.callproc('sp_AprobarRequerimiento', args)
-        
-        # Extraer valores de salida
-        aprobacion_completa = result[3]
-        mensaje = result[4]
+        try:
+            # Llamar al SP usando variables de sesión para OUT
+            cursor.execute("""
+                CALL sp_AprobarRequerimiento(
+                    %s,
+                    %s,
+                    %s,
+                    @p_aprobacion_completa,
+                    @p_mensaje
+                )
+            """, (id_requerimiento, num_documento, comentario))
+            
+            # Obtener valores OUT
+            cursor.execute("""
+                SELECT 
+                    @p_aprobacion_completa as aprobacion_completa,
+                    @p_mensaje as mensaje
+            """)
+            
+            result = cursor.fetchone()
+            
+            if not result:
+                raise Exception("No se obtuvieron resultados del SP")
+            
+            aprobacion_completa = bool(result[0])
+            mensaje = result[1]
+            
+        except Error as sp_error:
+            if sp_error.errno == 1305:  # PROCEDURE does not exist
+                print(f"[APROBAR_REQUERIMIENTO] [ERROR] SP no existe")
+                cursor.close()
+                connection.close()
+                return jsonify({
+                    'success': False, 
+                    'error': 'El Stored Procedure sp_AprobarRequerimiento no existe. Por favor ejecuta el script SQL correspondiente.'
+                }), 500
+            else:
+                print(f"[APROBAR_REQUERIMIENTO] [ERROR] Error SQL: {sp_error}")
+                raise sp_error
         
         print(f"[APROBAR_REQUERIMIENTO] {mensaje}")
         print(f"{'='*80}\n")
@@ -685,12 +782,14 @@ def aprobar_requerimiento(id_requerimiento):
         }), 200
         
     except Error as e:
-        print(f"[APROBAR_REQUERIMIENTO] [ERROR] Error SQL: {e}")
+        print(f"[APROBAR_REQUERIMIENTO] [ERROR] Error SQL ({e.errno}): {e.msg}")
         if connection:
             connection.close()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'success': False, 'error': f'Error SQL: {e.msg}'}), 500
     except Exception as e:
+        import traceback
         print(f"[APROBAR_REQUERIMIENTO] [ERROR] Error: {e}")
+        print(f"[APROBAR_REQUERIMIENTO] Traceback:\n{traceback.format_exc()}")
         if connection:
             connection.close()
         return jsonify({'success': False, 'error': str(e)}), 500
