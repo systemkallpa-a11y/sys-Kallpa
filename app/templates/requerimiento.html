@@ -1009,7 +1009,7 @@ async function verDetalleRequerimiento(id) {
         document.getElementById('ver-codigo').textContent = req.codigo || 'N/A';
         document.getElementById('ver-codigo-titulo').textContent = req.codigo || 'REQ-00001';
         document.getElementById('ver-id').textContent = req.id_requerimiento || '-';
-        document.getElementById('ver-solicitante').textContent = req.solicitante || '-';
+        document.getElementById('ver-solicitante').textContent = req.usuario_completo || '-';
         document.getElementById('ver-descripcion').textContent = req.descripcion || '-';
         document.getElementById('ver-observaciones').textContent = req.observaciones || '-';
         
