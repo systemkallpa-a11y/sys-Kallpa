@@ -72,13 +72,26 @@ def descargar_requerimiento_pdf(id_requerimiento):
         print(f"\n[PDF-REQ] Iniciando generación de PDF para requerimiento: {id_requerimiento}")
         
         # Obtener datos del requerimiento usando SP (incluye solicitante)
+        print(f"[PDF-REQ] Llamando a sp_ObtenerRequerimiento({id_requerimiento})")
         cursor.callproc('sp_ObtenerRequerimiento', [id_requerimiento])
         
         # Obtener resultado del SP
         requerimiento = None
+        result_count = 0
         for result in cursor.stored_results():
+            result_count += 1
+            print(f"[PDF-REQ] Procesando resultado #{result_count} del SP")
             requerimiento = result.fetchone()
+            print(f"[PDF-REQ] DEBUG Requerimiento completo: {requerimiento}")
+            if requerimiento:
+                print(f"[PDF-REQ] DEBUG Keys disponibles: {list(requerimiento.keys())}")
+                print(f"[PDF-REQ] DEBUG usuario_completo en dict: {'usuario_completo' in requerimiento}")
+                if 'usuario_completo' in requerimiento:
+                    print(f"[PDF-REQ] DEBUG Valor de usuario_completo: '{requerimiento['usuario_completo']}'")
+                    print(f"[PDF-REQ] DEBUG Tipo de usuario_completo: {type(requerimiento['usuario_completo'])}")
             break
+        
+        print(f"[PDF-REQ] Total de resultados procesados: {result_count}")
         
         if not requerimiento:
             cursor.close()
@@ -286,29 +299,27 @@ def descargar_requerimiento_pdf(id_requerimiento):
         ]))
         
         story.append(info_table_1)
+        story.append(Spacer(1, 0.05*inch))
         
-        # Tabla 2: SOLICITANTE, PRESUPUESTO, DESCRIPCIÓN
-        solicitante = (requerimiento.get('usuario_completo') or 'N/A').strip()
+        # Tabla 2: SOLICITANTE y PRESUPUESTO (primera fila)
+        usuario_completo_raw = requerimiento.get('usuario_completo')
+        solicitante = (usuario_completo_raw or 'N/A').strip() if usuario_completo_raw else 'N/A'
         numero_pres = requerimiento.get('numero_presupuesto') or 'N/A'
-        descripcion = requerimiento.get('descripcion') or 'N/A'
         
         info_data_2 = [
-            ['SOLICITANTE:', solicitante, 'PRESUPUESTO:', numero_pres, 'DESCRIPCIÓN:', descripcion],
+            ['SOLICITANTE:', solicitante, 'PRESUPUESTO:', numero_pres],
         ]
         
-        info_table_2 = Table(info_data_2, colWidths=[1.0*inch, 1.80*inch, 1.0*inch, 1.80*inch, 1.0*inch, 1.75*inch])
+        info_table_2 = Table(info_data_2, colWidths=[1.2*inch, 3.0*inch, 1.3*inch, 1.85*inch])
         info_table_2.setStyle(TableStyle([
             # Etiquetas
             ('TEXTCOLOR', (0, 0), (0, 0), QUSKA_DARK_GREEN),
             ('TEXTCOLOR', (2, 0), (2, 0), QUSKA_DARK_GREEN),
-            ('TEXTCOLOR', (4, 0), (4, 0), QUSKA_DARK_GREEN),
             ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
             ('FONTNAME', (2, 0), (2, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (4, 0), (4, 0), 'Helvetica-Bold'),
             # Valores
             ('TEXTCOLOR', (1, 0), (1, 0), colors.HexColor('#333333')),
             ('TEXTCOLOR', (3, 0), (3, 0), colors.HexColor('#333333')),
-            ('TEXTCOLOR', (5, 0), (5, 0), colors.HexColor('#333333')),
             # Estilos generales
             ('FONTSIZE', (0, 0), (-1, -1), 9),
             ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f5f5f5')),
@@ -322,67 +333,156 @@ def descargar_requerimiento_pdf(id_requerimiento):
         ]))
         
         story.append(info_table_2)
-        story.append(Spacer(1, 0.1*inch))
+        story.append(Spacer(1, 0.05*inch))
         
-        # 4. TABLA DE DETALLES (ITEMS)
+        # Tabla 3: DESCRIPCIÓN (segunda fila, más ancha)
+        descripcion = requerimiento.get('descripcion') or 'N/A'
+        
+        info_data_3 = [
+            ['DESCRIPCIÓN:', descripcion],
+        ]
+        
+        info_table_3 = Table(info_data_3, colWidths=[1.2*inch, 6.15*inch])
+        info_table_3.setStyle(TableStyle([
+            # Etiqueta
+            ('TEXTCOLOR', (0, 0), (0, 0), QUSKA_DARK_GREEN),
+            ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
+            # Valor
+            ('TEXTCOLOR', (1, 0), (1, 0), colors.HexColor('#333333')),
+            # Estilos generales
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f5f5f5')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d0d0d0')),
+            ('ALIGNMENT', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        
+        story.append(info_table_3)
+        story.append(Spacer(1, 0.15*inch))
+        
+        # 4. TABLA DE DETALLES (ITEMS) - SEPARADOS POR TIPO
         if detalles and len(detalles) > 0:
-            # Header de tabla
-            header_detalle = [['ITEMS DEL REQUERIMIENTO']]
-            header_table = Table(header_detalle, colWidths=[7.35*inch])
-            header_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (0, 0), QUSKA_GREEN),
-                ('TEXTCOLOR', (0, 0), (0, 0), colors.white),
-                ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (0, 0), 11),
-                ('ALIGNMENT', (0, 0), (0, 0), 'LEFT'),
-                ('LEFTPADDING', (0, 0), (0, 0), 8),
-                ('TOPPADDING', (0, 0), (0, 0), 6),
-                ('BOTTOMPADDING', (0, 0), (0, 0), 6),
-            ]))
-            story.append(header_table)
+            # Separar materiales y servicios
+            materiales = [item for item in detalles if item.get('tipo_item') == 'MATERIAL']
+            servicios = [item for item in detalles if item.get('tipo_item') == 'SERVICIO']
             
-            # Tabla de detalles - NUEVA ESTRUCTURA: #, Tipo, Código, Descripción, Cantidad, Unidad
-            table_headers = [['#', 'Tipo', 'Código', 'Descripción', 'Cantidad', 'Unidad']]
-            table_data = table_headers + [[
-                str(idx + 1),
-                item['tipo_item'] or 'ITEM',
-                item.get('material_codigo') or '',
-                item['descripcion'] or '',
-                str(item['cantidad'] or 0),
-                item.get('unidad_abreviatura') or ''
-            ] for idx, item in enumerate(detalles)]
-            
-            details_table = Table(table_data, colWidths=[0.4*inch, 0.8*inch, 0.9*inch, 3.0*inch, 0.8*inch, 0.7*inch])
-            details_table.setStyle(TableStyle([
-                # Header
-                ('BACKGROUND', (0, 0), (-1, 0), QUSKA_DARK_GREEN),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 9),
-                ('ALIGNMENT', (0, 0), (-1, 0), 'CENTER'),
-                ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
+            # ==================== MATERIALES ====================
+            if materiales:
+                # Header de MATERIALES
+                header_materiales = [['MATERIALES']]
+                header_mat_table = Table(header_materiales, colWidths=[7.35*inch])
+                header_mat_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (0, 0), QUSKA_GREEN),
+                    ('TEXTCOLOR', (0, 0), (0, 0), colors.white),
+                    ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (0, 0), 11),
+                    ('ALIGNMENT', (0, 0), (0, 0), 'LEFT'),
+                    ('LEFTPADDING', (0, 0), (0, 0), 8),
+                    ('TOPPADDING', (0, 0), (0, 0), 6),
+                    ('BOTTOMPADDING', (0, 0), (0, 0), 6),
+                ]))
+                story.append(header_mat_table)
                 
-                # Data rows
-                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#ffffff')),
-                ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#333333')),
-                ('FONTSIZE', (0, 1), (-1, -1), 8),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d0d0d0')),
-                ('VALIGN', (0, 1), (-1, -1), 'MIDDLE'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 6),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-                ('TOPPADDING', (0, 0), (-1, -1), 6),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-                # Alineaciones específicas
-                ('ALIGNMENT', (0, 1), (0, -1), 'CENTER'),  # # centrado
-                ('ALIGNMENT', (1, 1), (1, -1), 'LEFT'),    # Tipo
-                ('ALIGNMENT', (2, 1), (2, -1), 'LEFT'),    # Código
-                ('ALIGNMENT', (3, 1), (3, -1), 'LEFT'),    # Descripción
-                ('ALIGNMENT', (4, 1), (4, -1), 'CENTER'),  # Cantidad
-                ('ALIGNMENT', (5, 1), (5, -1), 'CENTER'),  # Unidad
-            ]))
+                # Tabla de materiales
+                table_headers_mat = [['#', 'Código', 'Descripción', 'Cantidad', 'Unidad']]
+                table_data_mat = table_headers_mat + [[
+                    str(idx + 1),
+                    item.get('material_codigo') or '-',
+                    item['descripcion'] or '',
+                    str(item['cantidad'] or 0),
+                    item.get('unidad_abreviatura') or 'und'
+                ] for idx, item in enumerate(materiales)]
+                
+                materiales_table = Table(table_data_mat, colWidths=[0.4*inch, 1.0*inch, 4.0*inch, 1.0*inch, 0.95*inch])
+                materiales_table.setStyle(TableStyle([
+                    # Header
+                    ('BACKGROUND', (0, 0), (-1, 0), QUSKA_DARK_GREEN),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 9),
+                    ('ALIGNMENT', (0, 0), (-1, 0), 'CENTER'),
+                    ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
+                    
+                    # Data rows
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#ffffff')),
+                    ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#333333')),
+                    ('FONTSIZE', (0, 1), (-1, -1), 8),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d0d0d0')),
+                    ('VALIGN', (0, 1), (-1, -1), 'MIDDLE'),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                    ('TOPPADDING', (0, 0), (-1, -1), 6),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                    # Alineaciones
+                    ('ALIGNMENT', (0, 1), (0, -1), 'CENTER'),  # #
+                    ('ALIGNMENT', (1, 1), (1, -1), 'LEFT'),    # Código
+                    ('ALIGNMENT', (2, 1), (2, -1), 'LEFT'),    # Descripción
+                    ('ALIGNMENT', (3, 1), (3, -1), 'CENTER'),  # Cantidad
+                    ('ALIGNMENT', (4, 1), (4, -1), 'CENTER'),  # Unidad
+                ]))
+                
+                story.append(materiales_table)
+                story.append(Spacer(1, 0.15*inch))
             
-            story.append(details_table)
-            story.append(Spacer(1, 0.1*inch))
+            # ==================== SERVICIOS ====================
+            if servicios:
+                # Header de SERVICIOS
+                header_servicios = [['SERVICIOS']]
+                header_serv_table = Table(header_servicios, colWidths=[7.35*inch])
+                header_serv_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (0, 0), QUSKA_ORANGE),
+                    ('TEXTCOLOR', (0, 0), (0, 0), colors.white),
+                    ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (0, 0), 11),
+                    ('ALIGNMENT', (0, 0), (0, 0), 'LEFT'),
+                    ('LEFTPADDING', (0, 0), (0, 0), 8),
+                    ('TOPPADDING', (0, 0), (0, 0), 6),
+                    ('BOTTOMPADDING', (0, 0), (0, 0), 6),
+                ]))
+                story.append(header_serv_table)
+                
+                # Tabla de servicios
+                table_headers_serv = [['#', 'Descripción', 'Cantidad', 'Unidad']]
+                table_data_serv = table_headers_serv + [[
+                    str(idx + 1),
+                    item['descripcion'] or '',
+                    str(item['cantidad'] or 0),
+                    item.get('unidad_abreviatura') or 'und'
+                ] for idx, item in enumerate(servicios)]
+                
+                servicios_table = Table(table_data_serv, colWidths=[0.4*inch, 5.0*inch, 1.0*inch, 0.95*inch])
+                servicios_table.setStyle(TableStyle([
+                    # Header
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#CC7000')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 9),
+                    ('ALIGNMENT', (0, 0), (-1, 0), 'CENTER'),
+                    ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
+                    
+                    # Data rows
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#FFF8F0')),
+                    ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#333333')),
+                    ('FONTSIZE', (0, 1), (-1, -1), 8),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d0d0d0')),
+                    ('VALIGN', (0, 1), (-1, -1), 'MIDDLE'),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                    ('TOPPADDING', (0, 0), (-1, -1), 6),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                    # Alineaciones
+                    ('ALIGNMENT', (0, 1), (0, -1), 'CENTER'),  # #
+                    ('ALIGNMENT', (1, 1), (1, -1), 'LEFT'),    # Descripción
+                    ('ALIGNMENT', (2, 1), (2, -1), 'CENTER'),  # Cantidad
+                    ('ALIGNMENT', (3, 1), (3, -1), 'CENTER'),  # Unidad
+                ]))
+                
+                story.append(servicios_table)
+                story.append(Spacer(1, 0.1*inch))
         
         # 5. OBSERVACIONES
         if requerimiento.get('observaciones'):
