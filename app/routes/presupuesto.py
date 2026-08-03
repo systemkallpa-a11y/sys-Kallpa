@@ -605,15 +605,16 @@ def eliminar_presupuesto(id_presupuesto):
             print(f"[ELIMINAR_PRESUPUESTO] Iniciando para ID: {id_presupuesto}")
             print(f"{'='*80}")
             
-            # Soft delete: marcar como ELIMINADO
-            cursor.execute("""
-                UPDATE TblPresupuesto
-                SET estado = 'ELIMINADO',
-                    fecha_actualizacion = NOW()
-                WHERE id_presupuesto = %s
-            """, (id_presupuesto,))
+            # Usar SP que elimina presupuesto Y sus registros de aprobación
+            cursor.callproc('sp_MarcarPresupuestoEliminado', [id_presupuesto])
             
-            print(f"[ELIMINAR_PRESUPUESTO] [OK] Presupuesto marcado como eliminado")
+            # Obtener resultado del SP
+            for result in cursor.stored_results():
+                sp_result = result.fetchone()
+                if sp_result and sp_result[0] == 'ERROR':
+                    raise Error(sp_result[1])
+            
+            print(f"[ELIMINAR_PRESUPUESTO] [OK] Presupuesto y registros de aprobación eliminados")
             
             connection.commit()
             cursor.close()
