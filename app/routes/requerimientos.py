@@ -97,7 +97,7 @@ def obtener_requerimientos():
 @main_bp.route('/api/requerimientos/obtener/<int:id_requerimiento>', methods=['GET'])
 @login_required
 def obtener_requerimiento(id_requerimiento):
-    """Obtener datos completos de un requerimiento con todos sus detalles"""
+    """Obtener datos completos de un requerimiento con todos sus detalles (usando SPs)"""
     connection = get_db_connection()
     if not connection:
         return jsonify({'success': False, 'error': 'Error de conexión'}), 500
@@ -109,28 +109,15 @@ def obtener_requerimiento(id_requerimiento):
         print(f"[OBTENER_REQUERIMIENTO] Iniciando para ID: {id_requerimiento}")
         print(f"{'='*80}")
         
-        # 1. Obtener información del requerimiento CON usuario y presupuesto
-        cursor.execute("""
-            SELECT 
-                tr.id_requerimiento,
-                tr.num_usuario,
-                tr.codigo,
-                tr.descripcion,
-                tr.cantidad,
-                tr.estado,
-                tr.observaciones,
-                tr.id_presupuesto,
-                tr.id_tipo_documento,
-                tr.fecha_creacion,
-                tr.fecha_actualizacion,
-                CONCAT(COALESCE(p.nombres, ''), ' ', COALESCE(p.apellido_paterno, ''), ' ', COALESCE(p.apellido_materno, '')) as usuario_completo,
-                pr.numero_presupuesto
-            FROM TblRequerimiento tr
-            LEFT JOIN TblPersona p ON tr.num_usuario = p.num_documento
-            LEFT JOIN TblPresupuesto pr ON tr.id_presupuesto = pr.id_presupuesto
-            WHERE tr.id_requerimiento = %s
-        """, (id_requerimiento,))
-        requerimiento = cursor.fetchone()
+        # 1. Obtener información del requerimiento usando SP
+        cursor.callproc('sp_ObtenerRequerimiento', [id_requerimiento])
+        
+        # Obtener resultado del SP
+        requerimiento = None
+        for result in cursor.stored_results():
+            rows = result.fetchall()
+            if rows:
+                requerimiento = rows[0]
         
         if not requerimiento:
             print(f"[OBTENER_REQUERIMIENTO] [WARN] Requerimiento no encontrado")
@@ -138,33 +125,13 @@ def obtener_requerimiento(id_requerimiento):
             connection.close()
             return jsonify({'success': False, 'error': 'Requerimiento no encontrado'}), 404
         
-        # Limpiar nombres (eliminar espacios extras)
-        if requerimiento.get('usuario_completo'):
-            requerimiento['usuario_completo'] = ' '.join(requerimiento['usuario_completo'].split())
+        # 2. Obtener detalles usando SP
+        cursor.callproc('sp_ObtenerRequerimientoDetalles', [id_requerimiento])
         
-        # 2. Obtener detalles (con unidad via JOIN a TblMateriales y TblUnidadMedida)
-        cursor.execute("""
-            SELECT 
-                rd.id_detalle,
-                rd.id_requerimiento,
-                rd.id_material,
-                rd.tipo_item,
-                rd.descripcion,
-                rd.cantidad,
-                rd.observaciones,
-                rd.fecha_creacion,
-                COALESCE(m.nombre, '') as material_nombre,
-                COALESCE(m.codigo_material, '') as material_codigo,
-                COALESCE(um.nombre, '') as unidad_nombre,
-                COALESCE(um.abreviatura, '') as unidad_abreviatura
-            FROM TblRequerimientoDetalle rd
-            LEFT JOIN TblMateriales m ON rd.id_material = m.id_material
-            LEFT JOIN TblUnidadMedida um ON m.id_unidad = um.id_unidad
-            WHERE rd.id_requerimiento = %s
-            ORDER BY rd.tipo_item DESC, rd.id_detalle
-        """, (id_requerimiento,))
-        
-        detalles = cursor.fetchall()
+        # Obtener resultados del SP
+        detalles = []
+        for result in cursor.stored_results():
+            detalles = result.fetchall()
         
         # 3. Calcular resumen
         materiales = [d for d in detalles if d.get('tipo_item') == 'MATERIAL'] if detalles else []
@@ -176,7 +143,7 @@ def obtener_requerimiento(id_requerimiento):
             'cantidad_servicios': len(servicios)
         }
         
-        print(f"[OBTENER_REQUERIMIENTO] [OK] Requerimiento encontrado")
+        print(f"[OBTENER_REQUERIMIENTO] [OK] Requerimiento encontrado (via SP)")
         print(f"[OBTENER_REQUERIMIENTO]   Código: {requerimiento.get('codigo')}")
         print(f"[OBTENER_REQUERIMIENTO]   Solicitante: {requerimiento.get('usuario_completo')}")
         print(f"[OBTENER_REQUERIMIENTO]   Presupuesto: {requerimiento.get('numero_presupuesto')}")
@@ -220,29 +187,24 @@ def obtener_requerimiento_detalles(id_requerimiento):
     try:
         cursor = connection.cursor(dictionary=True)
         
-        # 1. Obtener información del requerimiento
+        # 1. Obtener información del requerimiento usando SP
         print(f"[OBTENER_REQUERIMIENTO_DETALLES] Obteniendo información del requerimiento...")
-        cursor.execute("""
-            SELECT 
-                id_requerimiento,
-                codigo,
-                descripcion,
-                cantidad,
-                solicitante,
-                estado,
-                observaciones,
-                fecha_creacion,
-                fecha_actualizacion
-            FROM TblRequerimiento
-            WHERE id_requerimiento = %s
-        """, (id_requerimiento,))
+        cursor.callproc('sp_ObtenerRequerimiento', [id_requerimiento])
         
-        requerimiento = cursor.fetchone()
+        # Obtener resultado del SP
+        requerimiento = None
+        for result in cursor.stored_results():
+            rows = result.fetchall()
+            if rows:
+                requerimiento = rows[0]
+        
         if not requerimiento:
             print(f"[OBTENER_REQUERIMIENTO_DETALLES] [ERROR] Requerimiento no encontrado")
+            cursor.close()
+            connection.close()
             return jsonify({'success': False, 'error': 'Requerimiento no encontrado'}), 404
         
-        print(f"[OBTENER_REQUERIMIENTO_DETALLES] ✓ Requerimiento obtenido")
+        print(f"[OBTENER_REQUERIMIENTO_DETALLES] ✓ Requerimiento obtenido (via SP)")
         
         # 2. Obtener detalles usando SP
         print(f"[OBTENER_REQUERIMIENTO_DETALLES] Obteniendo detalles...")
@@ -513,173 +475,70 @@ def actualizar_requerimiento(id_requerimiento):
 @main_bp.route('/api/requerimientos/eliminar/<int:id_requerimiento>', methods=['DELETE'])
 @login_required
 def eliminar_requerimiento(id_requerimiento):
-    """Eliminar un requerimiento completamente (Hard Delete)"""
+    """Eliminar un requerimiento completamente usando SP (Hard Delete)"""
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+    
     try:
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
-        
         cursor = connection.cursor(dictionary=True)
         
-        try:
-            print(f"\n{'='*80}")
-            print(f"[ELIMINAR_REQUERIMIENTO] HARD DELETE - Iniciando para ID: {id_requerimiento}")
-            print(f"{'='*80}")
-            
-            # Verificar que el requerimiento existe
-            cursor.execute("""
-                SELECT 
-                    id_requerimiento,
-                    codigo,
-                    id_presupuesto,
-                    (SELECT COUNT(*) FROM TblRequerimientoDetalle WHERE id_requerimiento = %s) as num_detalles
-                FROM TblRequerimiento
-                WHERE id_requerimiento = %s
-            """, (id_requerimiento, id_requerimiento))
-            
-            req = cursor.fetchone()
-            if not req:
-                print(f"[ELIMINAR_REQUERIMIENTO] [ERROR] Requerimiento no encontrado")
-                cursor.close()
-                connection.close()
-                return jsonify({'success': False, 'error': 'Requerimiento no encontrado'}), 404
-            
-            print(f"[ELIMINAR_REQUERIMIENTO] Requerimiento encontrado: {req['codigo']}")
-            print(f"  - ID: {req['id_requerimiento']}")
-            print(f"  - Presupuesto: {req['id_presupuesto']}")
-            print(f"  - Detalles: {req['num_detalles']}")
-            
-            # Obtener información del presupuesto si está vinculado
-            cantidad_requerimiento = 0
-            if req['id_presupuesto']:
-                cursor.execute("""
-                    SELECT COALESCE(SUM(cantidad), 0) as total_cantidad
-                    FROM TblRequerimientoDetalle
-                    WHERE id_requerimiento = %s
-                """, (id_requerimiento,))
-                
-                result = cursor.fetchone()
-                cantidad_requerimiento = result['total_cantidad'] if result else 0
-                print(f"[ELIMINAR_REQUERIMIENTO] Cantidad total a reversar en presupuesto: {cantidad_requerimiento}")
-            
-            # PASO 1: Eliminar detalles del requerimiento
-            print(f"\n[ELIMINAR_REQUERIMIENTO] PASO 1: Eliminando detalles...")
-            cursor.execute("""
-                DELETE FROM TblRequerimientoDetalle
-                WHERE id_requerimiento = %s
-            """, (id_requerimiento,))
-            detalles_eliminados = cursor.rowcount
-            print(f"  ✓ Eliminados {detalles_eliminados} detalles")
-            
-            # PASO 2: Eliminar registros de aprobación
-            print(f"\n[ELIMINAR_REQUERIMIENTO] PASO 2: Eliminando registros de aprobación...")
-            cursor.execute("""
-                DELETE FROM TblRegistroAprobacion
-                WHERE id_documento_referencia = %s
-                  AND id_tipo_documento = 2
-            """, (id_requerimiento,))
-            aprobaciones_eliminadas = cursor.rowcount
-            print(f"  ✓ Eliminadas {aprobaciones_eliminadas} aprobaciones")
-            
-            # PASO 3: Eliminar el requerimiento principal
-            print(f"\n[ELIMINAR_REQUERIMIENTO] PASO 3: Eliminando requerimiento...")
-            cursor.execute("""
-                DELETE FROM TblRequerimiento
-                WHERE id_requerimiento = %s
-            """, (id_requerimiento,))
-            requerimientos_eliminados = cursor.rowcount
-            print(f"  ✓ Requerimiento eliminado")
-            
-            # PASO 4: Reversar cambios en presupuesto si está vinculado
-            if req['id_presupuesto'] and cantidad_requerimiento > 0:
-                print(f"\n[ELIMINAR_REQUERIMIENTO] PASO 4: Reversando cambios en presupuesto...")
-                print(f"  Cantidad total a reversar: {cantidad_requerimiento}")
-                
-                # 4A: Actualizar totales en TblPresupuesto
-                print(f"  4A. Actualizando TblPresupuesto...")
-                cursor.execute("""
-                    UPDATE TblPresupuesto
-                    SET 
-                        cantidad_consumida = GREATEST(0, cantidad_consumida - %s),
-                        cantidad_saldo = cantidad_saldo + %s,
-                        monto_gastado = GREATEST(0, monto_gastado - %s),
-                        fecha_actualizacion = NOW()
-                    WHERE id_presupuesto = %s
-                """, (cantidad_requerimiento, cantidad_requerimiento, cantidad_requerimiento, req['id_presupuesto']))
-                
-                print(f"    ✓ cantidad_consumida -= {cantidad_requerimiento}")
-                print(f"    ✓ cantidad_saldo += {cantidad_requerimiento}")
-                print(f"    ✓ monto_gastado -= {cantidad_requerimiento}")
-                
-                # 4B: Actualizar detalles en TblPresupuestoDetalle
-                # Revert PASO 7: restar la cantidad que fue consumida de cada detalle
-                print(f"  4B. Actualizando TblPresupuestoDetalle...")
-                
-                # Obtener los detalles del requerimiento para reversar
-                cursor.execute("""
-                    SELECT descripcion, SUM(cantidad) as total_cantidad
-                    FROM TblRequerimientoDetalle
-                    WHERE id_requerimiento = %s
-                    GROUP BY LOWER(TRIM(descripcion))
-                """, (id_requerimiento,))
-                
-                detalles_req = cursor.fetchall()
-                
-                for detalle in detalles_req:
-                    descripcion = detalle['descripcion']
-                    cantidad_detalle = detalle['total_cantidad']
-                    
-                    # Restar la cantidad consumida (reversar PASO 7)
-                    cursor.execute("""
-                        UPDATE TblPresupuestoDetalle pd
-                        SET 
-                            pd.cantidad_consumida = GREATEST(0, pd.cantidad_consumida - %s),
-                            pd.cantidad_saldo = pd.cantidad - GREATEST(0, pd.cantidad_consumida - %s),
-                            pd.fecha_actualizacion = NOW()
-                        WHERE pd.id_presupuesto = %s
-                          AND LOWER(TRIM(pd.descripcion)) = LOWER(TRIM(%s))
-                    """, (cantidad_detalle, cantidad_detalle, req['id_presupuesto'], descripcion))
-                    
-                    updated = cursor.rowcount
-                    if updated > 0:
-                        print(f"    ✓ '{descripcion}': cantidad_saldo += {cantidad_detalle}")
-                
-                print(f"  ✓ TblPresupuestoDetalle actualizado")
-            
-            connection.commit()
-            
-            print(f"\n[ELIMINAR_REQUERIMIENTO] [✅ OK] Requerimiento eliminado completamente")
-            print(f"[ELIMINAR_REQUERIMIENTO] RESUMEN:")
-            print(f"  - Código: {req['codigo']}")
-            print(f"  - Detalles eliminados: {detalles_eliminados}")
-            print(f"  - Aprobaciones eliminadas: {aprobaciones_eliminadas}")
-            print(f"  - Presupuesto reversado: {'Sí' if req['id_presupuesto'] else 'No'}")
-            print(f"{'='*80}\n")
-            
-            cursor.close()
-            connection.close()
-            
-            return jsonify({
-                'success': True,
-                'message': f'Requerimiento {req["codigo"]} eliminado completamente',
-                'detalles': {
-                    'codigo': req['codigo'],
-                    'detalles_eliminados': detalles_eliminados,
-                    'aprobaciones_eliminadas': aprobaciones_eliminadas
-                }
-            }), 200
+        print(f"\n{'='*80}")
+        print(f"[ELIMINAR_REQUERIMIENTO] HARD DELETE - Iniciando para ID: {id_requerimiento}")
+        print(f"{'='*80}")
         
-        except Error as e:
-            connection.rollback()
-            cursor.close()
-            connection.close()
-            print(f"[ELIMINAR_REQUERIMIENTO] [ERROR] Error SQL: {e}")
-            print(f"{'='*80}\n")
-            return jsonify({'success': False, 'error': str(e)}), 500
+        # Llamar al SP para eliminar el requerimiento
+        args = [
+            id_requerimiento,  # IN: p_id_requerimiento
+            0,                  # OUT: p_codigo (placeholder)
+            0,                  # OUT: p_detalles_eliminados (placeholder)
+            0,                  # OUT: p_aprobaciones_eliminadas (placeholder)
+            False,              # OUT: p_presupuesto_reversado (placeholder)
+            ''                  # OUT: p_mensaje (placeholder)
+        ]
+        
+        result = cursor.callproc('sp_EliminarRequerimiento', args)
+        
+        # Extraer valores de salida (índices 1-5 son los OUT)
+        codigo = result[1]
+        detalles_eliminados = result[2]
+        aprobaciones_eliminadas = result[3]
+        presupuesto_reversado = result[4]
+        mensaje = result[5]
+        
+        print(f"\n[ELIMINAR_REQUERIMIENTO] [✅ OK] {mensaje}")
+        print(f"[ELIMINAR_REQUERIMIENTO] RESUMEN:")
+        print(f"  - Código: {codigo}")
+        print(f"  - Detalles eliminados: {detalles_eliminados}")
+        print(f"  - Aprobaciones eliminadas: {aprobaciones_eliminadas}")
+        print(f"  - Presupuesto reversado: {'Sí' if presupuesto_reversado else 'No'}")
+        print(f"{'='*80}\n")
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Requerimiento {codigo} eliminado completamente',
+            'detalles': {
+                'codigo': codigo,
+                'detalles_eliminados': detalles_eliminados,
+                'aprobaciones_eliminadas': aprobaciones_eliminadas,
+                'presupuesto_reversado': presupuesto_reversado
+            }
+        }), 200
     
+    except Error as e:
+        print(f"[ELIMINAR_REQUERIMIENTO] [ERROR] Error SQL: {e}")
+        print(f"{'='*80}\n")
+        if connection:
+            connection.close()
+        return jsonify({'success': False, 'error': str(e)}), 500
     except Exception as e:
         print(f"[ELIMINAR_REQUERIMIENTO] [ERROR] Error general: {e}")
         print(f"{'='*80}\n")
+        if connection:
+            connection.close()
         return jsonify({'success': False, 'error': str(e)}), 500
 @main_bp.route('/api/requerimientos/flujo/<int:id_requerimiento>', methods=['GET'])
 @login_required
@@ -779,7 +638,7 @@ def puede_aprobar_requerimiento(id_requerimiento):
 @main_bp.route('/api/requerimientos/aprobar/<int:id_requerimiento>', methods=['PUT'])
 @login_required
 def aprobar_requerimiento(id_requerimiento):
-    """Aprobar un requerimiento (SOLO para aprobadores autorizados)"""
+    """Aprobar un requerimiento usando SP (SOLO para aprobadores autorizados)"""
     num_documento = session.get('user_documento')
     
     try:
@@ -797,70 +656,22 @@ def aprobar_requerimiento(id_requerimiento):
         print(f"[APROBAR_REQUERIMIENTO] Usuario: {num_documento}")
         print(f"{'='*80}")
         
-        # 1. Verificar que el usuario es aprobador para ESTE requerimiento
-        cursor.execute("""
-            SELECT id_cargo FROM TblUsuario
-            WHERE num_documento = %s AND estado = 'Activo'
-            LIMIT 1
-        """, (num_documento,))
+        # Llamar al SP para aprobar
+        args = [
+            id_requerimiento,     # IN: p_id_requerimiento
+            num_documento,        # IN: p_num_documento_aprobador
+            comentario,           # IN: p_comentario
+            False,                # OUT: p_aprobacion_completa (placeholder)
+            ''                    # OUT: p_mensaje (placeholder)
+        ]
         
-        cargo_result = cursor.fetchone()
-        if not cargo_result:
-            cursor.close()
-            connection.close()
-            return jsonify({'success': False, 'error': 'Usuario no tiene cargo asignado'}), 403
+        result = cursor.callproc('sp_AprobarRequerimiento', args)
         
-        id_cargo = cargo_result['id_cargo']
+        # Extraer valores de salida
+        aprobacion_completa = result[3]
+        mensaje = result[4]
         
-        # 2. Verificar que existe un registro PENDIENTE para este usuario en este requerimiento
-        cursor.execute("""
-            SELECT ra.id_registro FROM TblRegistroAprobacion ra
-            WHERE ra.id_tipo_documento = 2 
-              AND ra.id_documento_referencia = %s
-              AND ra.id_cargo_aprobador = %s
-              AND ra.estado_aprobacion = 'PENDIENTE'
-            LIMIT 1
-        """, (id_requerimiento, id_cargo))
-        
-        registro = cursor.fetchone()
-        if not registro:
-            cursor.close()
-            connection.close()
-            print(f"[APROBAR_REQUERIMIENTO] ❌ Usuario no es aprobador autorizado para este requerimiento")
-            return jsonify({'success': False, 'error': 'No tienes permiso para aprobar este requerimiento'}), 403
-        
-        # 3. Actualizar registro de aprobación
-        cursor.execute("""
-            UPDATE TblRegistroAprobacion 
-            SET estado_aprobacion = 'APROBADO', 
-                num_documento_aprobador = %s,
-                comentario = %s,
-                fecha_aprobacion = NOW()
-            WHERE id_registro = %s
-        """, (num_documento, comentario, registro['id_registro']))
-        
-        # 4. Verificar si TODOS los pasos han sido aprobados
-        cursor.execute("""
-            SELECT COUNT(*) as total_pasos,
-                   SUM(CASE WHEN estado_aprobacion = 'APROBADO' THEN 1 ELSE 0 END) as aprobados
-            FROM TblRegistroAprobacion
-            WHERE id_tipo_documento = 2 AND id_documento_referencia = %s
-        """, (id_requerimiento,))
-        
-        pasos = cursor.fetchone()
-        
-        # Si todos están aprobados, cambiar estado a APROBADO
-        if pasos and pasos['total_pasos'] == pasos['aprobados']:
-            cursor.execute("""
-                UPDATE TblRequerimiento 
-                SET estado = 'APROBADO', fecha_actualizacion = NOW()
-                WHERE id_requerimiento = %s
-            """, (id_requerimiento,))
-            print(f"[APROBAR_REQUERIMIENTO] ✓ Todos los pasos aprobados - Requerimiento APROBADO")
-        
-        connection.commit()
-        
-        print(f"[APROBAR_REQUERIMIENTO] ✓ Aprobación registrada exitosamente")
+        print(f"[APROBAR_REQUERIMIENTO] {mensaje}")
         print(f"{'='*80}\n")
         
         cursor.close()
@@ -868,13 +679,19 @@ def aprobar_requerimiento(id_requerimiento):
         
         return jsonify({
             'success': True,
-            'message': 'Requerimiento aprobado exitosamente'
+            'message': 'Requerimiento aprobado exitosamente',
+            'aprobacion_completa': aprobacion_completa,
+            'detalle': mensaje
         }), 200
         
+    except Error as e:
+        print(f"[APROBAR_REQUERIMIENTO] [ERROR] Error SQL: {e}")
+        if connection:
+            connection.close()
+        return jsonify({'success': False, 'error': str(e)}), 500
     except Exception as e:
         print(f"[APROBAR_REQUERIMIENTO] [ERROR] Error: {e}")
         if connection:
-            connection.rollback()
             connection.close()
         return jsonify({'success': False, 'error': str(e)}), 500
 
