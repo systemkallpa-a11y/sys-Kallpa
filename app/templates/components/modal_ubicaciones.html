@@ -1,0 +1,188 @@
+<!-- Modal: Gestión de Ubicaciones de Marcación -->
+<div id="modal-ubicaciones" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
+        
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-emerald-600 to-green-700 text-white px-8 py-6 flex items-center justify-between border-b-2 border-emerald-700">
+            <div>
+                <h2 class="text-2xl font-bold flex items-center gap-3">
+                    <i class="fas fa-map-marked-alt"></i>
+                    Ubicaciones de Marcación
+                </h2>
+                <p class="text-emerald-100 text-sm mt-1">
+                    Usuario: <span id="ubicacion-usuario-nombre" class="font-semibold">---</span>
+                </p>
+            </div>
+            <button onclick="cerrarModalUbicaciones()" class="text-white hover:text-gray-200 transition-colors p-2 hover:bg-emerald-700 rounded-lg">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+
+        <!-- Contenido -->
+        <div class="flex-1 overflow-auto p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+                
+                <!-- Panel Izquierdo: Formulario -->
+                <div class="lg:col-span-1 space-y-4">
+                    <div class="bg-gray-50 dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                            <i class="fas fa-plus-circle text-emerald-600"></i>
+                            Nueva Ubicación
+                        </h3>
+                        
+                        <form id="form-ubicacion" class="space-y-4">
+                            <input type="hidden" id="ubicacion-id" value="">
+                            
+                            <!-- Nombre de la zona -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Nombre de la Zona <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" id="ubicacion-nombre" 
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500" 
+                                    placeholder="Ej: Oficina Central" required>
+                            </div>
+                            
+                            <!-- Tipo de zona -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Tipo de Zona
+                                </label>
+                                <select id="ubicacion-tipo" 
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                                    <option value="OFICINA">Oficina</option>
+                                    <option value="OBRA">Obra</option>
+                                    <option value="PROYECTO">Proyecto</option>
+                                    <option value="CLIENTE">Cliente</option>
+                                    <option value="OTRO">Otro</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Coordenadas (readonly) -->
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Latitud
+                                    </label>
+                                    <input type="text" id="ubicacion-latitud" readonly
+                                        class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 text-sm" 
+                                        placeholder="Click en mapa">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Longitud
+                                    </label>
+                                    <input type="text" id="ubicacion-longitud" readonly
+                                        class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 text-sm" 
+                                        placeholder="Click en mapa">
+                                </div>
+                            </div>
+                            
+                            <!-- Radio (slider) -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Radio Permitido: <span id="ubicacion-radio-display" class="text-emerald-600 font-bold">100</span> metros
+                                </label>
+                                <input type="range" id="ubicacion-radio" min="50" max="500" step="10" value="100"
+                                    class="w-full h-2 bg-gray-300 dark:bg-slate-600 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+                                <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    <span>50m</span>
+                                    <span>250m</span>
+                                    <span>500m</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Dirección -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Dirección de Referencia
+                                </label>
+                                <input type="text" id="ubicacion-direccion" 
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500" 
+                                    placeholder="Ej: Av. Javier Prado 123">
+                            </div>
+                            
+                            <!-- Descripción -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Descripción
+                                </label>
+                                <textarea id="ubicacion-descripcion" rows="2"
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500" 
+                                    placeholder="Notas adicionales..."></textarea>
+                            </div>
+                            
+                            <!-- Estado -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Estado
+                                </label>
+                                <select id="ubicacion-estado" 
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                                    <option value="ACTIVO">Activo</option>
+                                    <option value="INACTIVO">Inactivo</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Botones -->
+                            <div class="flex gap-2 pt-4">
+                                <button type="button" onclick="guardarUbicacion()" id="btn-guardar-ubicacion"
+                                    class="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors shadow-md">
+                                    <i class="fas fa-save mr-2"></i>Guardar Ubicación
+                                </button>
+                                <button type="button" onclick="nuevaUbicacion()"
+                                    class="px-4 py-3 bg-gray-300 dark:bg-slate-700 hover:bg-gray-400 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 rounded-lg font-semibold transition-colors">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Botón Mi Ubicación -->
+                    <button onclick="buscarMiUbicacion()"
+                        class="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors shadow-md flex items-center justify-center gap-2">
+                        <i class="fas fa-crosshairs"></i>
+                        Mi Ubicación
+                    </button>
+                </div>
+                
+                <!-- Panel Central: Mapa -->
+                <div class="lg:col-span-1 bg-gray-100 dark:bg-slate-800 rounded-lg overflow-hidden border border-gray-300 dark:border-slate-700 relative">
+                    <div id="mapa-ubicacion" class="w-full h-full min-h-[500px]"></div>
+                    <div class="absolute top-4 right-4 bg-white dark:bg-slate-800 px-3 py-2 rounded-lg shadow-lg text-xs text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600">
+                        <i class="fas fa-info-circle text-emerald-600 mr-1"></i>
+                        <strong>Click en el mapa</strong> para marcar ubicación
+                    </div>
+                </div>
+                
+                <!-- Panel Derecho: Lista de Ubicaciones -->
+                <div class="lg:col-span-1 space-y-4">
+                    <div class="bg-gray-50 dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                            <i class="fas fa-list text-emerald-600"></i>
+                            Ubicaciones Configuradas
+                        </h3>
+                        
+                        <div id="lista-ubicaciones" class="space-y-3 max-h-[600px] overflow-y-auto">
+                            <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                                <p class="text-sm">Cargando...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+<!-- Leaflet CSS (OpenStreetMap) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Script de Ubicaciones -->
+<script src="{{ url_for('static', filename='js/ubicaciones_marcacion.js') }}"></script>

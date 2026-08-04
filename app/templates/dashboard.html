@@ -130,17 +130,53 @@
                 html += '<tbody>';
                 
                 data.data.forEach(item => {
-                    const fecha = new Date(item.fecha_marcacion + 'T' + item.hora_marcacion);
-                    const fechaFormato = fecha.toLocaleDateString('es-ES');
-                    const horaFormato = fecha.toLocaleTimeString('es-ES');
+                    // Parsear fecha (puede venir como ISO string o date object)
+                    let fecha = item.fecha || item.fecha_marcacion;
+                    let hora = item.hora_marcacion || '00:00:00';
+                    
+                    // Convertir fecha a string si es necesario
+                    if (fecha) {
+                        fecha = String(fecha).split('T')[0]; // Extraer YYYY-MM-DD
+                    }
+                    
+                    // Convertir hora a HH:MM:SS si es necesario
+                    hora = String(hora).substring(0, 8);
+                    
+                    // Crear objeto Date
+                    const fechaHora = new Date(fecha + 'T' + hora);
+                    const fechaFormato = fechaHora.toLocaleDateString('es-ES');
+                    const horaFormato = hora.substring(0, 5); // HH:MM
+                    
                     const tipo = item.tipo_marcacion === 'ENTRADA' ? 'Entrada' : 'Salida';
                     const badgeColor = item.tipo_marcacion === 'ENTRADA' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+                    
+                    // Determinar estado visual
+                    const estado = item.estado_asistencia || 'ASISTIÓ';
+                    let estadoIcono = '';
+                    let estadoColor = '';
+                    
+                    if (estado === 'ASISTIÓ') {
+                        estadoIcono = '<i class="fas fa-check-circle text-green-600 dark:text-green-400"></i>';
+                        estadoColor = 'text-green-600 dark:text-green-400';
+                    } else if (estado === 'ASISTIÓ +5') {
+                        estadoIcono = '<i class="fas fa-clock text-yellow-600 dark:text-yellow-400"></i>';
+                        estadoColor = 'text-yellow-600 dark:text-yellow-400';
+                    } else if (estado === 'TARDE') {
+                        estadoIcono = '<i class="fas fa-exclamation-circle text-red-600 dark:text-red-400"></i>';
+                        estadoColor = 'text-red-600 dark:text-red-400';
+                    } else {
+                        estadoIcono = '<i class="fas fa-minus-circle text-gray-600 dark:text-gray-400"></i>';
+                        estadoColor = 'text-gray-600 dark:text-gray-400';
+                    }
                     
                     html += `<tr class="border-b border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700">
                         <td class="px-6 py-4 text-gray-900 dark:text-white font-medium">${fechaFormato}</td>
                         <td class="px-6 py-4 text-gray-700 dark:text-gray-300">${horaFormato}</td>
                         <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs font-semibold ${badgeColor}">${tipo}</span></td>
-                        <td class="px-6 py-4 text-center"><i class="fas fa-check-circle text-green-600 dark:text-green-400"></i></td>
+                        <td class="px-6 py-4 text-center">
+                            ${estadoIcono}
+                            <span class="${estadoColor} text-xs font-semibold ml-1">${estado}</span>
+                        </td>
                     </tr>`;
                 });
                 

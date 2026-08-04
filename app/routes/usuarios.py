@@ -686,3 +686,233 @@ def obtener_distritos(id_provincia):
     except Error as e:
         print(f"Error al obtener distritos: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# API: GESTIÓN DE UBICACIONES DE MARCACIÓN (CON STORED PROCEDURES)
+# ============================================================================
+
+@main_bp.route('/api/ubicaciones/obtener/<int:num_documento>', methods=['GET'])
+@login_required
+def obtener_ubicaciones_usuario(num_documento):
+    """Obtener todas las ubicaciones de marcación de un usuario usando SP"""
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+    
+    try:
+        cursor = connection.cursor(dictionary=True)
+        
+        print(f"[UBICACIONES] Obteniendo ubicaciones para documento: {num_documento}")
+        
+        # Llamar SP
+        cursor.callproc('sp_ObtenerUbicacionesUsuario', (num_documento,))
+        
+        # Obtener resultados
+        ubicaciones = []
+        for result in cursor.stored_results():
+            ubicaciones = result.fetchall()
+        
+        print(f"[UBICACIONES] {len(ubicaciones)} ubicaciones encontradas")
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({'success': True, 'data': ubicaciones}), 200
+    
+    except Error as e:
+        print(f"[UBICACIONES] Error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/ubicaciones/crear', methods=['POST'])
+@login_required
+def crear_ubicacion_marcacion():
+    """Crear nueva ubicación de marcación usando SP"""
+    try:
+        data = request.get_json()
+        
+        # Validar campos obligatorios
+        if not data.get('num_documento') or not data.get('nombre_zona'):
+            return jsonify({'success': False, 'error': 'Datos incompletos'}), 400
+        
+        if not data.get('latitud_centro') or not data.get('longitud_centro'):
+            return jsonify({'success': False, 'error': 'Coordenadas GPS requeridas'}), 400
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            # Obtener usuario actual
+            creado_por = session.get('user_documento')
+            
+            print(f"[UBICACIONES] Creando ubicación para documento: {data['num_documento']}")
+            print(f"[UBICACIONES] Nombre: {data['nombre_zona']}")
+            print(f"[UBICACIONES] Centro: ({data['latitud_centro']}, {data['longitud_centro']})")
+            print(f"[UBICACIONES] Radio: {data.get('radio_metros', 100)}m")
+            
+            # Llamar SP
+            cursor.execute("""
+                CALL sp_CrearUbicacionMarcacion(
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    @p_id_ubicacion, @p_mensaje
+                )
+            """, (
+                data['num_documento'],
+                data['nombre_zona'],
+                data['latitud_centro'],
+                data['longitud_centro'],
+                data.get('radio_metros', 100),
+                data.get('direccion_referencia'),
+                data.get('tipo_zona', 'OFICINA'),
+                data.get('descripcion'),
+                data.get('estado', 'ACTIVO'),
+                creado_por
+            ))
+            
+            # Obtener resultado
+            cursor.execute("SELECT @p_id_ubicacion as id_ubicacion, @p_mensaje as mensaje")
+            resultado = cursor.fetchone()
+            
+            # Consumir resultados restantes
+            while cursor.nextset():
+                pass
+            
+            cursor.close()
+            connection.close()
+            
+            print(f"[UBICACIONES] Resultado: {resultado['mensaje']}")
+            
+            if resultado and resultado['id_ubicacion'] > 0:
+                return jsonify({
+                    'success': True,
+                    'message': resultado['mensaje'],
+                    'id_ubicacion': resultado['id_ubicacion']
+                }), 201
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': resultado['mensaje'] if resultado else 'Error al crear ubicación'
+                }), 400
+        
+        except Error as e:
+            cursor.close()
+            connection.close()
+            print(f"[UBICACIONES] Error SQL: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    except Exception as e:
+        print(f"[UBICACIONES] Error general: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/ubicaciones/actualizar/<int:id_ubicacion>', methods=['PUT'])
+@login_required
+def actualizar_ubicacion_marcacion(id_ubicacion):
+    """Actualizar ubicación de marcación usando SP"""
+    try:
+        data = request.get_json()
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            print(f"[UBICACIONES] Actualizando ubicación ID: {id_ubicacion}")
+            print(f"[UBICACIONES] Nombre: {data['nombre_zona']}")
+            
+            # Llamar SP
+            cursor.execute("""
+                CALL sp_ActualizarUbicacionMarcacion(
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    @p_mensaje
+                )
+            """, (
+                id_ubicacion,
+                data['nombre_zona'],
+                data['latitud_centro'],
+                data['longitud_centro'],
+                data.get('radio_metros', 100),
+                data.get('direccion_referencia'),
+                data.get('tipo_zona', 'OFICINA'),
+                data.get('descripcion'),
+                data.get('estado', 'ACTIVO')
+            ))
+            
+            # Obtener resultado
+            cursor.execute("SELECT @p_mensaje as mensaje")
+            resultado = cursor.fetchone()
+            
+            # Consumir resultados restantes
+            while cursor.nextset():
+                pass
+            
+            cursor.close()
+            connection.close()
+            
+            print(f"[UBICACIONES] Resultado: {resultado['mensaje']}")
+            
+            return jsonify({
+                'success': True,
+                'message': resultado['mensaje'] if resultado else 'Ubicación actualizada exitosamente'
+            }), 200
+        
+        except Error as e:
+            cursor.close()
+            connection.close()
+            print(f"[UBICACIONES] Error SQL: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    except Exception as e:
+        print(f"[UBICACIONES] Error general: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/ubicaciones/eliminar/<int:id_ubicacion>', methods=['DELETE'])
+@login_required
+def eliminar_ubicacion_marcacion(id_ubicacion):
+    """Eliminar ubicación de marcación usando SP"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            print(f"[UBICACIONES] Eliminando ubicación ID: {id_ubicacion}")
+            
+            # Llamar SP
+            cursor.execute("""
+                CALL sp_EliminarUbicacionMarcacion(%s, @p_mensaje)
+            """, (id_ubicacion,))
+            
+            # Obtener resultado
+            cursor.execute("SELECT @p_mensaje as mensaje")
+            resultado = cursor.fetchone()
+            
+            # Consumir resultados restantes
+            while cursor.nextset():
+                pass
+            
+            cursor.close()
+            connection.close()
+            
+            print(f"[UBICACIONES] Resultado: {resultado['mensaje']}")
+            
+            return jsonify({
+                'success': True,
+                'message': resultado['mensaje'] if resultado else 'Ubicación eliminada exitosamente'
+            }), 200
+        
+        except Error as e:
+            cursor.close()
+            connection.close()
+            print(f"[UBICACIONES] Error SQL: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    except Exception as e:
+        print(f"[UBICACIONES] Error general: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
