@@ -62,8 +62,8 @@ BEGIN
             fecha_actualizacion
         ) VALUES (
             v_codigo_proyecto,
-            TRIM(p_nombre),
-            TRIM(p_descripcion),
+            UPPER(TRIM(p_nombre)),
+            UPPER(TRIM(p_descripcion)),
             NOW(),
             NOW()
         );
@@ -135,8 +135,8 @@ BEGIN
         ) VALUES (
             p_id_proyecto,
             v_codigo_obra,
-            TRIM(p_nombre),
-            TRIM(p_descripcion),
+            UPPER(TRIM(p_nombre)),
+            UPPER(TRIM(p_descripcion)),
             NOW(),
             NOW()
         );
