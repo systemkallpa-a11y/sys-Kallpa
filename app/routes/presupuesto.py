@@ -2049,3 +2049,160 @@ def obtener_flujo_aprobacion_presupuesto(id_presupuesto):
     except Error as e:
         print(f"[FLUJO_APROBACION_PRESUPUESTO] ❌ ERROR SQL: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# API: CREAR PROYECTO
+# ============================================================================
+@main_bp.route('/api/proyectos/crear', methods=['POST'])
+@login_required
+def crear_proyecto():
+    """Crear nuevo proyecto usando SP"""
+    try:
+        data = request.get_json()
+        
+        if not data.get('nombre'):
+            return jsonify({'success': False, 'error': 'El nombre es obligatorio'}), 400
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            print(f"\n{'='*80}")
+            print(f"[CREAR_PROYECTO] Iniciando creación de proyecto")
+            print(f"[CREAR_PROYECTO] Datos: {data}")
+            print(f"{'='*80}")
+            
+            # Solo enviar nombre y descripción (campos que existen en TblProyecto)
+            cursor.execute("""
+                CALL sp_CrearProyecto(
+                    %s, %s,
+                    @p_id_proyecto, @p_mensaje
+                )
+            """, (
+                data['nombre'],
+                data.get('descripcion')
+            ))
+            
+            cursor.execute("SELECT @p_id_proyecto as id_proyecto, @p_mensaje as mensaje")
+            resultado = cursor.fetchone()
+            
+            # Consumir resultados restantes
+            while cursor.nextset():
+                pass
+            
+            connection.commit()
+            cursor.close()
+            connection.close()
+            
+            if resultado and resultado['id_proyecto'] and resultado['id_proyecto'] > 0:
+                print(f"[CREAR_PROYECTO] ✅ Proyecto creado con ID: {resultado['id_proyecto']}")
+                print(f"{'='*80}\n")
+                return jsonify({
+                    'success': True,
+                    'message': resultado['mensaje'],
+                    'id_proyecto': resultado['id_proyecto']
+                }), 201
+            else:
+                print(f"[CREAR_PROYECTO] ❌ Error: {resultado.get('mensaje', 'Error desconocido')}")
+                print(f"{'='*80}\n")
+                return jsonify({
+                    'success': False,
+                    'error': resultado.get('mensaje', 'Error al crear proyecto')
+                }), 400
+        
+        except Error as e:
+            print(f"[CREAR_PROYECTO] ❌ Error SQL: {e}")
+            print(f"{'='*80}\n")
+            if connection:
+                connection.rollback()
+            cursor.close()
+            connection.close()
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    except Exception as e:
+        print(f"[CREAR_PROYECTO] ❌ Error general: {e}")
+        print(f"{'='*80}\n")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ============================================================================
+# API: CREAR OBRA
+# ============================================================================
+@main_bp.route('/api/obras/crear', methods=['POST'])
+@login_required
+def crear_obra():
+    """Crear nueva obra usando SP"""
+    try:
+        data = request.get_json()
+        
+        if not data.get('id_proyecto') or not data.get('nombre'):
+            return jsonify({'success': False, 'error': 'Proyecto y nombre son obligatorios'}), 400
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            print(f"\n{'='*80}")
+            print(f"[CREAR_OBRA] Iniciando creación de obra")
+            print(f"[CREAR_OBRA] Datos: {data}")
+            print(f"{'='*80}")
+            
+            # Solo enviar campos básicos que existen en TblObra
+            # El codigo_obra se genera automáticamente en el SP
+            cursor.execute("""
+                CALL sp_CrearObra(
+                    %s, %s, %s,
+                    @p_id_obra, @p_mensaje
+                )
+            """, (
+                data['id_proyecto'],
+                data['nombre'],
+                data.get('descripcion')
+            ))
+            
+            cursor.execute("SELECT @p_id_obra as id_obra, @p_mensaje as mensaje")
+            resultado = cursor.fetchone()
+            
+            # Consumir resultados restantes
+            while cursor.nextset():
+                pass
+            
+            connection.commit()
+            cursor.close()
+            connection.close()
+            
+            if resultado and resultado['id_obra'] and resultado['id_obra'] > 0:
+                print(f"[CREAR_OBRA] ✅ Obra creada con ID: {resultado['id_obra']}")
+                print(f"{'='*80}\n")
+                return jsonify({
+                    'success': True,
+                    'message': resultado['mensaje'],
+                    'id_obra': resultado['id_obra']
+                }), 201
+            else:
+                print(f"[CREAR_OBRA] ❌ Error: {resultado.get('mensaje', 'Error desconocido')}")
+                print(f"{'='*80}\n")
+                return jsonify({
+                    'success': False,
+                    'error': resultado.get('mensaje', 'Error al crear obra')
+                }), 400
+        
+        except Error as e:
+            print(f"[CREAR_OBRA] ❌ Error SQL: {e}")
+            print(f"{'='*80}\n")
+            if connection:
+                connection.rollback()
+            cursor.close()
+            connection.close()
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    except Exception as e:
+        print(f"[CREAR_OBRA] ❌ Error general: {e}")
+        print(f"{'='*80}\n")
+        return jsonify({'success': False, 'error': str(e)}), 500

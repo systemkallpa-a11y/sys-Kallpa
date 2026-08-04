@@ -1,4 +1,4 @@
-{% extends "base.html" %}{% block content %}<div class="flex flex-col h-screen bg-gray-50 dark:bg-slate-950"><!-- Topbar --><div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm"><!-- Header --><div class="px-6 py-4 flex items-center justify-between border-b border-gray-200 dark:border-slate-700"><div><h1 class="text-3xl font-bold text-gray-900 dark:text-white">Gestión de Presupuestos</h1><p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Administra los presupuestos con materiales y servicios</p></div><button id="btn-crear-presupuesto" class="flex items-center gap-2 px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg"><i class="fas fa-plus"></i><span>Crear Presupuesto</span></button></div><!-- Filtros Avanzados --><div id="filtros-panel" class="px-6 py-4 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700"><div class="flex items-center justify-between mb-4"><h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-widest flex items-center gap-2"><i class="fas fa-filter text-gray-600 dark:text-gray-400"></i>Filtros y Búsqueda Avanzada</h3><button type="button" onclick="toggleFiltrosPanel()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"><i id="toggle-filtros-icon" class="fas fa-chevron-up text-sm"></i></button></div><div id="filtros-contenido" class="grid grid-cols-12 gap-3"><input type="text" id="filtro-numero" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 placeholder-gray-500" placeholder="Número..."><select id="filtro-estado" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"><option value="">Estado</option><option value="PENDIENTE">PENDIENTE</option><option value="APROBADO">APROBADO</option><option value="RECHAZADO">RECHAZADO</option></select><select id="filtro-proyecto" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"><option value="">Proyecto</option></select><select id="filtro-obra" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"><option value="">Obra</option></select><input type="text" id="filtro-creador" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 placeholder-gray-500" placeholder="Creado por..."></div><div class="grid grid-cols-12 gap-3 mt-3"><input type="date" id="filtro-fecha-desde" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"><input type="date" id="filtro-fecha-hasta" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"><input type="number" id="filtro-monto-desde" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 placeholder-gray-500" placeholder="Monto desde..."><input type="number" id="filtro-monto-hasta" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 placeholder-gray-500" placeholder="Monto hasta..."><div class="col-span-4 flex gap-2"><button type="button" onclick="aplicarFiltros()" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium text-xs transition-colors"><i class="fas fa-search mr-1"></i>Buscar</button><button type="button" onclick="limpiarFiltros()" class="flex-1 px-4 py-2 bg-gray-400 hover:bg-gray-500 text-white rounded font-medium text-xs transition-colors"><i class="fas fa-redo mr-1"></i>Limpiar</button></div></div></div><!-- Contenido Principal - FLEX GROW --><div class="flex-1 overflow-hidden p-6"><div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden flex flex-col h-full"><div class="overflow-x-auto overflow-y-auto flex-1"><table id="tabla-presupuestos" class="w-full"><thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 sticky top-0"><tr><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Número</th><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Proyecto</th><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Obra</th><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Monto</th><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Estado</th><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Creado por</th><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Aprobado/Rechazado por</th><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Comentario Rechazo</th><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Acciones</th></tr></thead><tbody id="presupuestos-lista" class="divide-y divide-gray-200 dark:divide-slate-700"><tr><td colspan="7" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i>Cargando...</td></tr></tbody></table></div></div></div></div><!-- Modal: Crear Presupuesto --><div id="modal-presupuesto" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"><div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col"><!-- Header Premium --><div class="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-6 py-5 flex items-center justify-between border-b border-slate-700 flex-shrink-0"><div class="flex items-center gap-3"><div class="bg-slate-700 p-2 rounded-lg"><i class="fas fa-file-alt text-lg"></i></div><div><h2 id="modal-titulo" class="text-lg font-semibold">Crear Nuevo Presupuesto</h2><p class="text-slate-400 text-xs mt-0.5">Completa los detalles y agrega materiales y servicios</p></div></div><button onclick="cerrarModalPresupuesto()" class="text-slate-400 hover:text-white p-2 hover:bg-slate-700/50 rounded-lg transition-colors"><i class="fas fa-times text-lg"></i></button></div><!-- Contenido --><div class="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50 dark:bg-slate-800/50"><form id="form-presupuesto"><!-- SECCIÓN 1: Información Básica - Tarjeta --><div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-5"><div class="flex items-center gap-2 mb-4"><div class="bg-gray-100 dark:bg-slate-800 p-2 rounded"><i class="fas fa-clipboard text-gray-600 dark:text-gray-400 text-sm"></i></div><h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-widest">Información General</h3></div><div class="grid grid-cols-6 gap-3"><!-- Empresa --><div class="col-span-3"><label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Empresa *</label><select id="id_empresa" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500" required><option value="">Seleccionar...</option></select></div><!-- Proyecto --><div class="col-span-3"><label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Proyecto *</label><select id="id_proyecto" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500" required><option value="">Seleccionar...</option></select></div><!-- Obra --><div class="col-span-3"><label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Obra *</label><select id="id_obra" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500" required><option value="">Seleccionar...</option></select></div></div></div>
+{% extends "base.html" %}{% block content %}<div class="flex flex-col h-screen bg-gray-50 dark:bg-slate-950"><!-- Topbar --><div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm"><!-- Header --><div class="px-6 py-4 flex items-center justify-between border-b border-gray-200 dark:border-slate-700"><div><h1 class="text-3xl font-bold text-gray-900 dark:text-white">Gestión de Presupuestos</h1><p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Administra los presupuestos con materiales y servicios</p></div><div class="flex gap-2"><button id="btn-crear-presupuesto" class="flex items-center gap-2 px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg"><i class="fas fa-plus"></i><span>Crear Presupuesto</span></button><button id="btn-crear-proyecto" class="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg"><i class="fas fa-project-diagram"></i><span>Crear Proyecto</span></button><button id="btn-crear-obra" class="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg"><i class="fas fa-hard-hat"></i><span>Crear Obra</span></button></div></div><!-- Filtros Avanzados --><div id="filtros-panel" class="px-6 py-4 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700"><div class="flex items-center justify-between mb-4"><h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-widest flex items-center gap-2"><i class="fas fa-filter text-gray-600 dark:text-gray-400"></i>Filtros y Búsqueda Avanzada</h3><button type="button" onclick="toggleFiltrosPanel()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"><i id="toggle-filtros-icon" class="fas fa-chevron-up text-sm"></i></button></div><div id="filtros-contenido" class="grid grid-cols-12 gap-3"><input type="text" id="filtro-numero" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 placeholder-gray-500" placeholder="Número..."><select id="filtro-estado" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"><option value="">Estado</option><option value="PENDIENTE">PENDIENTE</option><option value="APROBADO">APROBADO</option><option value="RECHAZADO">RECHAZADO</option></select><select id="filtro-proyecto" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"><option value="">Proyecto</option></select><select id="filtro-obra" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"><option value="">Obra</option></select><input type="text" id="filtro-creador" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 placeholder-gray-500" placeholder="Creado por..."></div><div class="grid grid-cols-12 gap-3 mt-3"><input type="date" id="filtro-fecha-desde" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"><input type="date" id="filtro-fecha-hasta" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"><input type="number" id="filtro-monto-desde" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 placeholder-gray-500" placeholder="Monto desde..."><input type="number" id="filtro-monto-hasta" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 placeholder-gray-500" placeholder="Monto hasta..."><div class="col-span-4 flex gap-2"><button type="button" onclick="aplicarFiltros()" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium text-xs transition-colors"><i class="fas fa-search mr-1"></i>Buscar</button><button type="button" onclick="limpiarFiltros()" class="flex-1 px-4 py-2 bg-gray-400 hover:bg-gray-500 text-white rounded font-medium text-xs transition-colors"><i class="fas fa-redo mr-1"></i>Limpiar</button></div></div></div><!-- Contenido Principal - FLEX GROW --><div class="flex-1 overflow-hidden p-6"><div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden flex flex-col h-full"><div class="overflow-x-auto overflow-y-auto flex-1"><table id="tabla-presupuestos" class="w-full"><thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 sticky top-0"><tr><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Número</th><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Proyecto</th><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Obra</th><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Monto</th><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Estado</th><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Creado por</th><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Aprobado/Rechazado por</th><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Comentario Rechazo</th><th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Acciones</th></tr></thead><tbody id="presupuestos-lista" class="divide-y divide-gray-200 dark:divide-slate-700"><tr><td colspan="7" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i>Cargando...</td></tr></tbody></table></div></div></div></div><!-- Modal: Crear Presupuesto --><div id="modal-presupuesto" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"><div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col"><!-- Header Premium --><div class="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-6 py-5 flex items-center justify-between border-b border-slate-700 flex-shrink-0"><div class="flex items-center gap-3"><div class="bg-slate-700 p-2 rounded-lg"><i class="fas fa-file-alt text-lg"></i></div><div><h2 id="modal-titulo" class="text-lg font-semibold">Crear Nuevo Presupuesto</h2><p class="text-slate-400 text-xs mt-0.5">Completa los detalles y agrega materiales y servicios</p></div></div><button onclick="cerrarModalPresupuesto()" class="text-slate-400 hover:text-white p-2 hover:bg-slate-700/50 rounded-lg transition-colors"><i class="fas fa-times text-lg"></i></button></div><!-- Contenido --><div class="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50 dark:bg-slate-800/50"><form id="form-presupuesto"><!-- SECCIÓN 1: Información Básica - Tarjeta --><div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-5"><div class="flex items-center gap-2 mb-4"><div class="bg-gray-100 dark:bg-slate-800 p-2 rounded"><i class="fas fa-clipboard text-gray-600 dark:text-gray-400 text-sm"></i></div><h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-widest">Información General</h3></div><div class="grid grid-cols-6 gap-3"><!-- Empresa --><div class="col-span-3"><label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Empresa *</label><select id="id_empresa" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500" required><option value="">Seleccionar...</option></select></div><!-- Proyecto --><div class="col-span-3"><label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Proyecto *</label><select id="id_proyecto" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500" required><option value="">Seleccionar...</option></select></div><!-- Obra --><div class="col-span-3"><label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Obra *</label><select id="id_obra" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500" required><option value="">Seleccionar...</option></select></div></div></div>
 <!-- SECCIÓN 2: MATERIALES - Tarjeta --><div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-5"><div class="flex items-center gap-2 mb-4"><div class="bg-gray-100 dark:bg-slate-800 p-2 rounded"><i class="fas fa-cubes text-gray-600 dark:text-gray-400 text-sm"></i></div><h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-widest">Materiales</h3><span class="ml-auto bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 px-2.5 py-1 rounded text-xs font-medium" id="count-materiales">0 items</span></div><!-- Buscador y Filtro --><div class="flex gap-2 mb-3"><input type="text" id="buscador-material" class="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 placeholder-gray-500" placeholder="Buscar material por nombre o código..."><select id="filtro-categoria" class="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 min-w-[140px]"><option value="">Categoría</option></select><button type="button" onclick="abrirModalNuevoMaterial()" class="px-3 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded font-medium text-xs transition-colors flex items-center gap-1"><i class="fas fa-plus text-xs"></i><span>Nuevo</span></button></div><!-- Resultados de búsqueda --><div id="resultados-materiales" class="max-h-32 overflow-y-auto border border-gray-300 dark:border-slate-600 rounded bg-gray-50 dark:bg-slate-800/50 hidden mb-3"><div id="lista-resultados-materiales"></div></div><!-- Tabla de materiales agregados --><div class="overflow-x-auto border border-gray-200 dark:border-slate-700 rounded"><table class="w-full text-xs"><thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700"><tr><th class="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Material</th><th class="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Categoría</th><th class="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300">Unidad</th><th class="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300">Cantidad</th><th class="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">P. Unit.</th><th class="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">Subtotal</th><th class="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300">Acción</th></tr></thead><tbody id="tabla-materiales" class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700"></tbody></table><div id="sin-materiales" class="text-center py-4 text-gray-500 dark:text-gray-400 text-xs bg-white dark:bg-slate-900"><i class="fas fa-inbox mr-1"></i>Sin materiales agregados</div></div></div>
 <!-- SECCIÓN 3: SERVICIOS - Tarjeta --><div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-5"><div class="flex items-center gap-2 mb-4"><div class="bg-gray-100 dark:bg-slate-800 p-2 rounded"><i class="fas fa-cogs text-gray-600 dark:text-gray-400 text-sm"></i></div><h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-widest">Servicios</h3><span class="ml-auto bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 px-2.5 py-1 rounded text-xs font-medium" id="count-servicios">0 items</span></div><!-- Formulario para agregar servicio --><div class="bg-gray-50 dark:bg-slate-800/30 p-3 rounded mb-3 border border-gray-200 dark:border-slate-700"><div class="grid grid-cols-6 gap-2 mb-2"><input type="text" id="servicio-descripcion" class="col-span-3 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500" placeholder="Descripción del servicio..."><input type="number" id="servicio-cantidad" class="col-span-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 text-center" placeholder="Cant" value="1" step="0.01" min="0.01"><input type="number" id="servicio-precio" class="col-span-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 text-right" placeholder="Precio" step="0.01" min="0"></div><button type="button" onclick="agregarServicio()" class="w-full px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded font-medium text-xs transition-colors"><i class="fas fa-plus mr-1"></i>Agregar Servicio</button></div><!-- Tabla de servicios agregados --><div class="overflow-x-auto border border-gray-200 dark:border-slate-700 rounded"><table class="w-full text-xs"><thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700"><tr><th class="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Descripción</th><th class="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300">Cantidad</th><th class="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">P. Unit.</th><th class="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">Subtotal</th><th class="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300">Acción</th></tr></thead><tbody id="tabla-servicios" class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700"></tbody></table><div id="sin-servicios" class="text-center py-4 text-gray-500 dark:text-gray-400 text-xs bg-white dark:bg-slate-900"><i class="fas fa-inbox mr-1"></i>Sin servicios agregados</div></div></div>
 <!-- SECCIÓN 4: COMENTARIOS --><div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-5"><div class="flex items-center gap-2 mb-4"><div class="bg-gray-100 dark:bg-slate-800 p-2 rounded"><i class="fas fa-comment text-gray-600 dark:text-gray-400 text-sm"></i></div><h3 class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-widest">Comentarios</h3></div><textarea id="comentarios" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 resize-none" placeholder="Agrega comentarios o notas adicionales..."></textarea></div><!-- SECCIÓN 5: Desglose Financiero (ACTUALIZADO CON CAMPOS EDITABLES) --><div class="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-5 border border-gray-200 dark:border-slate-700"><p class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-widest mb-4">📊 Desglose Financiero</p>
@@ -523,4 +523,298 @@ async function aplicarFiltros() {console.log('\n' + '='.repeat(80));console.log(
 
 function limpiarFiltros() {document.getElementById('filtro-numero').value = '';document.getElementById('filtro-estado').value = '';document.getElementById('filtro-proyecto').value = '';document.getElementById('filtro-obra').value = '';document.getElementById('filtro-fecha-desde').value = '';document.getElementById('filtro-fecha-hasta').value = '';document.getElementById('filtro-creador').value = '';document.getElementById('filtro-monto-desde').value = '';document.getElementById('filtro-monto-hasta').value = '';cargarPresupuestos();}async function cargarObras() {const idProyecto = document.getElementById('id_proyecto').value;if (!idProyecto) {const select = document.getElementById('id_obra');select.innerHTML = '<option value="">Seleccionar...</option>';return;}try {const response = await fetch(`/api/presupuestos/obras/listar?id_proyecto=${idProyecto}`);const data = await response.json();if (data.success) {const select = document.getElementById('id_obra');select.innerHTML = '<option value="">Seleccionar...</option>';data.data.forEach(o => {select.innerHTML += `<option value="${o.id_obra}">${o.nombre}</option>`;});}} catch (error) {console.error('Error al cargar obras:', error);}}
 async function guardarPresupuesto() {console.log('\n' + '='.repeat(80));console.log('[GUARDAR_PRESUPUESTO] Iniciando guardado...');console.log('='.repeat(80));const formulario = document.getElementById('form-presupuesto');const modo = formulario.dataset.modo || 'creacion';const id_presupuesto = formulario.dataset.id_presupuesto;console.log(`[GUARDAR_PRESUPUESTO] Modo: ${modo}`);if (modo === 'edicion') {console.log(`[GUARDAR_PRESUPUESTO] ID Presupuesto a editar: ${id_presupuesto}`);}const id_empresa = parseInt(document.getElementById('id_empresa').value);const id_proyecto = parseInt(document.getElementById('id_proyecto').value);const id_obra = parseInt(document.getElementById('id_obra').value);const comentarios = document.getElementById('comentarios').value;const gastos_generales = parseFloat(document.getElementById('gastos-generales').value) || 0;const utilidad = parseFloat(document.getElementById('utilidad').value) || 0;const supervision_obra = parseFloat(document.getElementById('supervision-obra').value) || 0;console.log('\n[GUARDAR_PRESUPUESTO] DATOS DEL FORMULARIO:');console.log('─'.repeat(80));console.log(`  id_empresa: ${id_empresa}`);console.log(`  id_proyecto: ${id_proyecto}`);console.log(`  id_obra: ${id_obra}`);console.log(`  comentarios: ${comentarios || '(vacío)'}`);console.log(`  gastos_generales: ${gastos_generales}`);console.log(`  utilidad: ${utilidad}`);console.log(`  supervision_obra: ${supervision_obra}`);console.log(`  materiales: ${materiales_agregados.length} items`);console.log(`  servicios: ${servicios_agregados.length} items`);console.log('─'.repeat(80));if (materiales_agregados.length > 0) {console.log('\n[GUARDAR_PRESUPUESTO] MATERIALES DETALLADOS:');materiales_agregados.forEach((m, idx) => {console.log(`  [${idx + 1}] ${m.nombre}: ${m.cantidad} x ${m.precio_unitario} = ${m.subtotal}`);});}if (servicios_agregados.length > 0) {console.log('\n[GUARDAR_PRESUPUESTO] SERVICIOS DETALLADOS:');servicios_agregados.forEach((s, idx) => {console.log(`  [${idx + 1}] ${s.descripcion}: ${s.cantidad} x ${s.precio_unitario} = ${s.subtotal}`);});}const datos = {id_empresa: id_empresa,id_proyecto: id_proyecto,id_obra: id_obra,comentarios: comentarios,gastos_generales: gastos_generales,utilidad: utilidad,supervision_obra: supervision_obra,materiales: materiales_agregados,servicios: servicios_agregados};console.log('\n[GUARDAR_PRESUPUESTO] JSON A ENVIAR AL SERVIDOR:');console.log('─'.repeat(80));console.log(JSON.stringify(datos, null, 2));console.log('─'.repeat(80));try {let endpoint = '/api/presupuestos/crear';let method = 'POST';if (modo === 'edicion' && id_presupuesto) {endpoint = `/api/presupuestos/actualizar/${id_presupuesto}`;method = 'PUT';console.log(`\n[GUARDAR_PRESUPUESTO] Modo: EDICIÓN`);console.log(`[GUARDAR_PRESUPUESTO] Endpoint: ${endpoint}`);console.log(`[GUARDAR_PRESUPUESTO] Método: ${method}`);} else {console.log(`\n[GUARDAR_PRESUPUESTO] Modo: CREACIÓN`);console.log(`[GUARDAR_PRESUPUESTO] Endpoint: ${endpoint}`);console.log(`[GUARDAR_PRESUPUESTO] Método: ${method}`);}console.log(`\n[GUARDAR_PRESUPUESTO] Enviando solicitud...`);const response = await fetch(endpoint, {method: method,headers: { 'Content-Type': 'application/json' },body: JSON.stringify(datos)});console.log(`[GUARDAR_PRESUPUESTO] Response status: ${response.status}`);const result = await response.json();console.log(`[GUARDAR_PRESUPUESTO] Response JSON:`);console.log(JSON.stringify(result, null, 2));if (result.success) {const mensaje = modo === 'edicion' ? 'Presupuesto actualizado correctamente' : 'Presupuesto creado correctamente';console.log(`\n[GUARDAR_PRESUPUESTO] ✓ EXITOSO: ${mensaje}`);if (result.data && result.data.id_presupuesto_creado) {console.log(`[GUARDAR_PRESUPUESTO] ID creado: ${result.data.id_presupuesto_creado}`);}console.log('='.repeat(80) + '\n');mostrarExito(mensaje);cerrarModalPresupuesto();cargarPresupuestos();} else {console.log(`\n[GUARDAR_PRESUPUESTO] ✗ ERROR: ${result.error}`);console.log('='.repeat(80) + '\n');mostrarError(result.error || 'Error al guardar');}} catch (error) {console.error(`\n[GUARDAR_PRESUPUESTO] ✗ ERROR DE CONEXIÓN:`, error);console.log('='.repeat(80) + '\n');mostrarError('Error de conexión');}}async function eliminarPresupuesto(id) {if (!confirm('¿Eliminar este presupuesto?')) return;try {const response = await fetch(`/api/presupuestos/eliminar/${id}`, { method: 'DELETE' });const data = await response.json();if (data.success) {mostrarExito('Presupuesto eliminado');cargarPresupuestos();} else {mostrarError(data.error);}} catch (error) {mostrarError('Error de conexión');}}function editarPresupuesto(id) {console.log('[EDITAR] Abriendo presupuesto para editar:', id);cargarDatosPresupuestoParaEditar(id);}async function cargarDatosPresupuestoParaEditar(id_presupuesto) {try {console.log('[EDITAR] Cargando encabezado...');const responseEncabezado = await fetch(`/api/presupuestos/obtener-para-editar/${id_presupuesto}`);const dataEncabezado = await responseEncabezado.json();if (!dataEncabezado.success || !dataEncabezado.data) {mostrarError('Presupuesto no encontrado');return;}const presupuesto = dataEncabezado.data.presupuesto || dataEncabezado.data;console.log('[EDITAR] Encabezado cargado:', presupuesto);console.log('[EDITAR] Cargando detalles...');const responseDetalles = await fetch(`/api/presupuestos/obtener-detalles/${id_presupuesto}`);const dataDetalles = await responseDetalles.json();console.log('[EDITAR] Response completo de detalles:', dataDetalles);console.log('[EDITAR] dataDetalles.data:', dataDetalles.data);if (!dataDetalles.success) {mostrarError('Error al cargar detalles');return;}const detalles = (dataDetalles.data && Array.isArray(dataDetalles.data.detalles)) ? dataDetalles.data.detalles : [];console.log('[EDITAR] Detalles extraídos:', detalles);console.log('[EDITAR] ¿Es array?:', Array.isArray(detalles));limpiarForm();materiales_agregados = [];servicios_agregados = [];id_contador_material = 0;id_contador_servicio = 0;console.log('[EDITAR] Cargando datos maestros...');await cargarEmpresas();await cargarProyectos();await cargarCategorias();console.log('[EDITAR] Rellenando formulario...');const idEmpresa = presupuesto.id_empresa;const nombreEmpresa = presupuesto.nombre_empresa;const idProyecto = presupuesto.id_proyecto;const idObra = presupuesto.id_obra;console.log('[EDITAR] IDs y nombres:', { idEmpresa, nombreEmpresa, idProyecto, idObra });if (idEmpresa) {document.getElementById('id_empresa').value = idEmpresa;console.log('[EDITAR] Empresa cargada: ID=', idEmpresa);}if (idProyecto) {document.getElementById('id_proyecto').value = idProyecto;console.log('[EDITAR] Proyecto cargado: ID=', idProyecto);}if (idProyecto && idObra) {await cargarObrasParaEdicion(idProyecto, idObra);}document.getElementById('comentarios').value = presupuesto.observaciones || '';document.getElementById('gastos-generales').value = parseFloat(presupuesto.gastos_generales || 0).toFixed(2);document.getElementById('utilidad').value = parseFloat(presupuesto.utilidad || 0).toFixed(2);document.getElementById('supervision-obra').value = parseFloat(presupuesto.supervision_obra || 0).toFixed(2);console.log('[EDITAR] Procesando detalles...');if (Array.isArray(detalles) && detalles.length > 0) {detalles.forEach((detalle) => {if (detalle.tipo_item === 'MATERIAL') {id_contador_material++;materiales_agregados.push({id_temporal: id_contador_material,id_detalle: detalle.id_detalle,id_material: detalle.id_material,nombre: detalle.nombre_item,codigo: detalle.codigo_material || '',categoria: detalle.categoria || '',unidad: detalle.unidad_medida || '',cantidad: parseFloat(detalle.cantidad),precio_unitario: parseFloat(detalle.precio_unitario),subtotal: parseFloat(detalle.subtotal)});} else if (detalle.tipo_item === 'SERVICIO') {id_contador_servicio++;servicios_agregados.push({id_temporal: id_contador_servicio,id_detalle: detalle.id_detalle,descripcion: detalle.descripcion,cantidad: parseFloat(detalle.cantidad),precio_unitario: parseFloat(detalle.precio_unitario),subtotal: parseFloat(detalle.subtotal)});}});} else {console.log('[EDITAR] No hay detalles para procesar');}console.log('[EDITAR] Materiales:', materiales_agregados);console.log('[EDITAR] Servicios:', servicios_agregados);renderizarMateriales();renderizarServicios();actualizarTotales();document.getElementById('modal-titulo').textContent = `Editar Presupuesto #${id_presupuesto}`;document.getElementById('form-presupuesto').dataset.id_presupuesto = id_presupuesto;document.getElementById('form-presupuesto').dataset.modo = 'edicion';document.getElementById('modal-presupuesto').classList.remove('hidden');console.log('[EDITAR] Presupuesto cargado en modo edición');} catch (error) {console.error('[EDITAR] Error:', error);mostrarError('Error al cargar presupuesto');}}async function cargarObrasParaEdicion(id_proyecto, id_obra_seleccionada) {try {const response = await fetch(`/api/presupuestos/obras/listar?id_proyecto=${id_proyecto}`);const data = await response.json();if (data.success) {const select = document.getElementById('id_obra');select.innerHTML = '<option value="">Seleccionar...</option>';data.data.forEach(o => {select.innerHTML += `<option value="${o.id_obra}" ${o.id_obra === id_obra_seleccionada ? 'selected' : ''}>${o.nombre}</option>`;});}} catch (error) {console.error('Error al cargar obras:', error);}}function cerrarModalPresupuesto() {const formulario = document.getElementById('form-presupuesto');delete formulario.dataset.id_presupuesto;delete formulario.dataset.modo;document.getElementById('modal-presupuesto').classList.add('hidden');limpiarForm();}</script>
+
+<!-- ========================================================================== -->
+<!-- MODAL: CREAR PROYECTO -->
+<!-- ========================================================================== -->
+<div id="modal-crear-proyecto" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 99999; justify-content: center; align-items: center; padding: 16px;">
+    <div style="background-color: white; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); width: 100%; max-width: 42rem; max-height: 90vh; overflow-y: auto; position: relative; z-index: 100000;">
+        <!-- Header -->
+        <div style="background: linear-gradient(to right, #2563eb, #1d4ed8); color: white; padding: 1.5rem; border-top-left-radius: 12px; border-top-right-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0;">Crear Nuevo Proyecto</h2>
+                <p style="color: #dbeafe; font-size: 0.875rem; margin: 0.25rem 0 0 0;">Ingresa los datos del proyecto</p>
+            </div>
+            <button onclick="cerrarModalProyecto()" type="button" style="background: none; border: none; color: white; cursor: pointer; padding: 0.5rem; font-size: 1.25rem;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <!-- Formulario -->
+        <form id="form-crear-proyecto" style="padding: 1.5rem;">
+            <!-- Nombre del Proyecto -->
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">
+                    Nombre del Proyecto <span style="color: #ef4444;">*</span>
+                </label>
+                <input type="text" id="proyecto-nombre" required
+                    style="width: 100%; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; background-color: white; color: #111827;"
+                    placeholder="Ej: Construcción Edificio Residencial">
+            </div>
+            
+            <!-- Descripción -->
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">
+                    Descripción
+                </label>
+                <textarea id="proyecto-descripcion" rows="3"
+                    style="width: 100%; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; background-color: white; color: #111827; resize: none;"
+                    placeholder="Descripción detallada del proyecto..."></textarea>
+            </div>
+            
+            <!-- Botones -->
+            <div style="display: flex; gap: 0.75rem; padding-top: 1rem;">
+                <button type="button" onclick="cerrarModalProyecto()"
+                    style="flex: 1; padding: 0.5rem 1rem; background-color: #d1d5db; color: #374151; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer;">
+                    Cancelar
+                </button>
+                <button type="submit"
+                    style="flex: 1; padding: 0.5rem 1rem; background-color: #2563eb; color: white; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer;">
+                    <i class="fas fa-save" style="margin-right: 0.5rem;"></i>Guardar Proyecto
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================================== -->
+<!-- MODAL: CREAR OBRA -->
+<!-- ========================================================================== -->
+<div id="modal-crear-obra" class="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4" style="display: none;">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl relative z-[10000]" style="max-height: 90vh; overflow-y: auto;">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-emerald-600 to-green-700 text-white px-6 py-4 flex items-center justify-between rounded-t-xl">
+            <div>
+                <h2 class="text-xl font-bold">Crear Nueva Obra</h2>
+                <p class="text-emerald-100 text-sm">Ingresa los datos de la obra</p>
+            </div>
+            <button onclick="cerrarModalObra()" type="button" class="text-white hover:text-gray-200 p-2">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        
+        <!-- Formulario -->
+        <form id="form-crear-obra" class="p-6 space-y-4">
+            <!-- Proyecto -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Proyecto <span class="text-red-500">*</span>
+                </label>
+                <select id="obra-id-proyecto" required
+                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                    <option value="">Seleccionar proyecto...</option>
+                </select>
+            </div>
+            
+            <!-- Nombre de la Obra -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Nombre de la Obra <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="obra-nombre" required
+                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500" 
+                    placeholder="Ej: Torre A - Departamentos">
+            </div>
+            
+            <!-- Descripción -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Descripción
+                </label>
+                <textarea id="obra-descripcion" rows="3"
+                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 resize-none" 
+                    placeholder="Descripción detallada de la obra..."></textarea>
+            </div>
+            
+            <!-- Botones -->
+            <div class="flex gap-3 pt-4">
+                <button type="button" onclick="cerrarModalObra()"
+                    class="flex-1 px-4 py-2 bg-gray-300 dark:bg-slate-700 hover:bg-gray-400 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 rounded-lg font-semibold transition-colors">
+                    Cancelar
+                </button>
+                <button type="submit"
+                    class="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors">
+                    <i class="fas fa-save mr-2"></i>Guardar Obra
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// ============================================================================
+// MODAL: CREAR PROYECTO
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    // MOVER MODALES AL BODY (fuera del contenedor con overflow)
+    const modalProyecto = document.getElementById('modal-crear-proyecto');
+    const modalObra = document.getElementById('modal-crear-obra');
+    
+    if (modalProyecto && modalProyecto.parentElement.tagName !== 'BODY') {
+        document.body.appendChild(modalProyecto);
+        console.log('[INIT] Modal proyecto movido al body');
+    }
+    
+    if (modalObra && modalObra.parentElement.tagName !== 'BODY') {
+        document.body.appendChild(modalObra);
+        console.log('[INIT] Modal obra movido al body');
+    }
+    
+    const btnCrearProyecto = document.getElementById('btn-crear-proyecto');
+    const btnCrearObra = document.getElementById('btn-crear-obra');
+    
+    console.log('[INIT] Botón Crear Proyecto:', btnCrearProyecto);
+    console.log('[INIT] Botón Crear Obra:', btnCrearObra);
+    
+    if (btnCrearProyecto) {
+        btnCrearProyecto.addEventListener('click', function() {
+            console.log('[CLICK] Abriendo modal de proyecto');
+            const modal = document.getElementById('modal-crear-proyecto');
+            console.log('[CLICK] Modal elemento:', modal);
+            if (modal) {
+                modal.style.display = 'flex';
+                console.log('[CLICK] Modal abierto con display flex');
+            } else {
+                console.error('[ERROR] Modal no encontrado');
+            }
+        });
+    }
+    
+    if (btnCrearObra) {
+        btnCrearObra.addEventListener('click', async function() {
+            console.log('[CLICK] Abriendo modal de obra');
+            const modal = document.getElementById('modal-crear-obra');
+            console.log('[CLICK] Modal obra elemento:', modal);
+            if (modal) {
+                modal.style.display = 'flex';
+                console.log('[CLICK] Modal obra abierto con display flex');
+                await cargarProyectosParaObra();
+            } else {
+                console.error('[ERROR] Modal obra no encontrado');
+            }
+        });
+    }
+    
+    // Form submit handlers
+    const formProyecto = document.getElementById('form-crear-proyecto');
+    if (formProyecto) {
+        formProyecto.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const datos = {
+                nombre: document.getElementById('proyecto-nombre').value.trim(),
+                descripcion: document.getElementById('proyecto-descripcion').value.trim()
+            };
+            
+            console.log('[SUBMIT] Creando proyecto:', datos);
+            
+            try {
+                const response = await fetch('/api/proyectos/crear', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(datos)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    cerrarModalProyecto();
+                    await cargarProyectos();
+                } else {
+                    alert('❌ Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Error al crear proyecto');
+            }
+        });
+    }
+    
+    const formObra = document.getElementById('form-crear-obra');
+    if (formObra) {
+        formObra.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const datos = {
+                id_proyecto: parseInt(document.getElementById('obra-id-proyecto').value),
+                nombre: document.getElementById('obra-nombre').value.trim(),
+                descripcion: document.getElementById('obra-descripcion').value.trim()
+            };
+            
+            console.log('[SUBMIT] Creando obra:', datos);
+            
+            try {
+                const response = await fetch('/api/obras/crear', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(datos)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    cerrarModalObra();
+                    await cargarProyectos();
+                } else {
+                    alert('❌ Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Error al crear obra');
+            }
+        });
+    }
+});
+
+function cerrarModalProyecto() {
+    const modal = document.getElementById('modal-crear-proyecto');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    document.getElementById('form-crear-proyecto').reset();
+}
+
+function cerrarModalObra() {
+    const modal = document.getElementById('modal-crear-obra');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    document.getElementById('form-crear-obra').reset();
+}
+
+async function cargarProyectosParaObra() {
+    try {
+        const response = await fetch('/api/presupuestos/proyectos/listar', {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        const data = await response.json();
+        const select = document.getElementById('obra-id-proyecto');
+        select.innerHTML = '<option value="">Seleccionar proyecto...</option>';
+        
+        if (data.success && data.data) {
+            data.data.forEach(proyecto => {
+                const option = document.createElement('option');
+                option.value = proyecto.id_proyecto;
+                option.textContent = proyecto.nombre;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error al cargar proyectos:', error);
+    }
+}
+</script>
+
 {% endblock %}
