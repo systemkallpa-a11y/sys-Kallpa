@@ -166,7 +166,7 @@ def login():
         if redirect_to == 'dashboard':
             return redirect(url_for('main.dashboard'))
         else:  # marcacion es el default
-            return redirect(url_for('main.marcacion_kallpa'))
+            return redirect(url_for('marcacion.marcacion_kallpa'))
     
     # GET request
     redirect_to = request.args.get('redirect', 'marcacion')

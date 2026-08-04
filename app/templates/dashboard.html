@@ -112,7 +112,7 @@
 <script>
     // Cargar historial de marcaciones
     function cargarHistorial() {
-        fetch('{{ url_for("main.obtener_historial_marcacion") }}', {
+        fetch('{{ url_for("marcacion.obtener_historial_marcacion") }}', {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             }

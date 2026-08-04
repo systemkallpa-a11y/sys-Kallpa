@@ -57,6 +57,7 @@ def create_app():
     from app.routes.requerimientos_pdf import requerimientos_pdf_bp
     from app.routes.empresa_logo import logo_bp
     from app.routes.materiales import materiales_bp
+    from app.routes.marcacion import marcacion_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
@@ -64,6 +65,7 @@ def create_app():
     app.register_blueprint(requerimientos_pdf_bp)
     app.register_blueprint(logo_bp)
     app.register_blueprint(materiales_bp)
+    app.register_blueprint(marcacion_bp)
     
     # Asegurar que todas las respuestas HTML tengan charset UTF-8
     @app.after_request

@@ -6,6 +6,9 @@
     <title>Marcación - Kallpa</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Face-API.js para detección de rostros -->
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </head>
 <body class="bg-slate-950">
 <div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-8 px-4">
@@ -96,6 +99,51 @@
             </div>
         </div>
 
+        <!-- Modal de Detección de Rostro -->
+        <div id="modalDeteccionRostro" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-slate-800 rounded-2xl p-6 max-w-lg w-full border border-purple-500/30 shadow-2xl">
+                <div class="text-center mb-4">
+                    <h3 class="text-2xl font-bold text-white mb-2">
+                        <i class="fas fa-camera text-purple-400"></i>
+                        Verificación de Identidad
+                    </h3>
+                    <p class="text-gray-400 text-sm">Posiciona tu rostro en el centro</p>
+                </div>
+
+                <!-- Vista previa de la cámara -->
+                <div class="relative bg-black rounded-xl overflow-hidden mb-4" style="aspect-ratio: 4/3;">
+                    <video id="videoDeteccion" autoplay playsinline class="w-full h-full object-cover"></video>
+                    <canvas id="canvasDeteccion" class="absolute top-0 left-0 w-full h-full"></canvas>
+                    
+                    <!-- Overlay de detección -->
+                    <div id="overlayDeteccion" class="absolute inset-0 flex items-center justify-center">
+                        <div class="text-center text-white bg-black/70 px-6 py-4 rounded-xl">
+                            <i class="fas fa-user-circle text-4xl mb-2 text-purple-400"></i>
+                            <p class="font-semibold">Buscando rostro...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estado de detección -->
+                <div id="estadoDeteccion" class="mb-4 p-3 rounded-lg bg-blue-700/20 border border-blue-500/30 text-blue-300 text-center text-sm">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Iniciando cámara...</span>
+                </div>
+
+                <!-- Botones -->
+                <div class="flex gap-3">
+                    <button onclick="cancelarDeteccionRostro()" 
+                        class="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-colors">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button id="btnCapturarRostro" onclick="capturarConRostro()" disabled
+                        class="flex-1 px-4 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fas fa-check"></i> Capturar
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Botón Logout -->
         <div class="mt-6 text-center">
             <a href="{{ url_for('auth.logout') }}" 
@@ -119,7 +167,7 @@
 
     // ==================== CARGAR ESTADO ACTUAL ====================
     function cargarEstadoMarcacion() {
-        fetch('{{ url_for("main.obtener_estado_marcacion") }}', {
+        fetch('{{ url_for("marcacion.obtener_estado_marcacion") }}', {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             }
@@ -152,25 +200,245 @@
         });
     }
 
-    // ==================== REGISTRAR MARCACIÓN ====================
-    function registrarMarcacion(tipo) {
-        const btn = event.target.closest('button');
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
+    // ==================== CAPTURAR UBICACIÓN GPS ====================
+    function obtenerUbicacion() {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                reject(new Error('Geolocalización no soportada'));
+                return;
+            }
 
-        fetch('{{ url_for("main.registrar_marcacion") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify({
-                tipo_marcacion: tipo
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    resolve({
+                        latitud: position.coords.latitude,
+                        longitud: position.coords.longitude,
+                        precision: position.coords.accuracy
+                    });
+                },
+                (error) => {
+                    console.warn('Error obteniendo ubicación:', error);
+                    resolve(null); // Continuar sin ubicación
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        });
+    }
+
+    // ==================== FACE-API.JS: DETECCIÓN DE ROSTROS ====================
+    let faceApiLoaded = false;
+    let videoStream = null;
+    let detectionInterval = null;
+    let tipoMarcacionActual = null;
+
+    // Cargar modelos de Face-API.js
+    async function cargarModelosFaceAPI() {
+        if (faceApiLoaded) return true;
+        
+        try {
+            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+            await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+            faceApiLoaded = true;
+            console.log('✅ Face-API.js modelos cargados');
+            return true;
+        } catch (error) {
+            console.error('❌ Error cargando modelos Face-API:', error);
+            return false;
+        }
+    }
+
+    // Abrir modal de detección de rostro
+    async function abrirModalDeteccionRostro(tipo) {
+        tipoMarcacionActual = tipo;
+        const modal = document.getElementById('modalDeteccionRostro');
+        const video = document.getElementById('videoDeteccion');
+        const canvas = document.getElementById('canvasDeteccion');
+        const estadoDiv = document.getElementById('estadoDeteccion');
+        const btnCapturar = document.getElementById('btnCapturarRostro');
+        
+        modal.classList.remove('hidden');
+        btnCapturar.disabled = true;
+        
+        // Actualizar estado: Cargando modelos
+        estadoDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Cargando modelos de IA...</span>';
+        estadoDiv.className = 'mb-4 p-3 rounded-lg bg-blue-700/20 border border-blue-500/30 text-blue-300 text-center text-sm';
+        
+        // Cargar modelos si no están cargados
+        const modelosOK = await cargarModelosFaceAPI();
+        if (!modelosOK) {
+            estadoDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <span>Error cargando modelos. Continuando sin detección...</span>';
+            estadoDiv.className = 'mb-4 p-3 rounded-lg bg-yellow-700/20 border border-yellow-500/30 text-yellow-300 text-center text-sm';
+            btnCapturar.disabled = false;
+            return;
+        }
+        
+        // Actualizar estado: Iniciando cámara
+        estadoDiv.innerHTML = '<i class="fas fa-camera"></i> <span>Iniciando cámara...</span>';
+        
+        try {
+            // Solicitar acceso a la cámara
+            videoStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    facingMode: 'user',
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                } 
+            });
+            
+            video.srcObject = videoStream;
+            await video.play();
+            
+            // Ajustar tamaño del canvas
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // Actualizar estado: Buscando rostro
+            estadoDiv.innerHTML = '<i class="fas fa-search"></i> <span>Buscando rostro...</span>';
+            estadoDiv.className = 'mb-4 p-3 rounded-lg bg-purple-700/20 border border-purple-500/30 text-purple-300 text-center text-sm';
+            
+            // Iniciar detección en tiempo real
+            detectionInterval = setInterval(async () => {
+                await detectarRostro(video, canvas, estadoDiv, btnCapturar);
+            }, 500); // Detectar cada 500ms
+            
+        } catch (error) {
+            console.error('Error accediendo a la cámara:', error);
+            estadoDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <span>No se pudo acceder a la cámara</span>';
+            estadoDiv.className = 'mb-4 p-3 rounded-lg bg-red-700/20 border border-red-500/30 text-red-300 text-center text-sm';
+        }
+    }
+
+    // Detectar rostro en tiempo real
+    async function detectarRostro(video, canvas, estadoDiv, btnCapturar) {
+        try {
+            const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions());
+            
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (detections.length > 0) {
+                // ✅ ROSTRO DETECTADO
+                const overlay = document.getElementById('overlayDeteccion');
+                overlay.style.display = 'none';
+                
+                // Dibujar recuadro verde alrededor del rostro
+                detections.forEach(detection => {
+                    const box = detection.box;
+                    ctx.strokeStyle = '#10b981'; // Verde
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(box.x, box.y, box.width, box.height);
+                    
+                    // Dibujar círculo de confirmación
+                    ctx.fillStyle = '#10b981';
+                    ctx.beginPath();
+                    ctx.arc(box.x + box.width / 2, box.y - 20, 15, 0, 2 * Math.PI);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('✓', box.x + box.width / 2, box.y - 13);
+                });
+                
+                estadoDiv.innerHTML = '<i class="fas fa-check-circle text-green-400"></i> <span class="text-green-300">✅ Rostro detectado - Presiona "Capturar"</span>';
+                estadoDiv.className = 'mb-4 p-3 rounded-lg bg-green-700/20 border border-green-500/30 text-green-300 text-center text-sm';
+                btnCapturar.disabled = false;
+                
+            } else {
+                // ❌ NO HAY ROSTRO
+                const overlay = document.getElementById('overlayDeteccion');
+                overlay.style.display = 'flex';
+                
+                estadoDiv.innerHTML = '<i class="fas fa-search"></i> <span>Buscando rostro... Centra tu cara</span>';
+                estadoDiv.className = 'mb-4 p-3 rounded-lg bg-yellow-700/20 border border-yellow-500/30 text-yellow-300 text-center text-sm';
+                btnCapturar.disabled = true;
+            }
+        } catch (error) {
+            console.error('Error en detección:', error);
+        }
+    }
+
+    // Capturar foto con rostro verificado
+    async function capturarConRostro() {
+        const video = document.getElementById('videoDeteccion');
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+        
+        const fotoBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+        
+        // Cerrar modal
+        cerrarModalDeteccionRostro();
+        
+        // Continuar con el registro
+        await enviarMarcacion(tipoMarcacionActual, fotoBase64);
+    }
+
+    // Cancelar detección de rostro
+    function cancelarDeteccionRostro() {
+        cerrarModalDeteccionRostro();
+    }
+
+    // Cerrar modal y limpiar recursos
+    function cerrarModalDeteccionRostro() {
+        const modal = document.getElementById('modalDeteccionRostro');
+        modal.classList.add('hidden');
+        
+        // Detener detección
+        if (detectionInterval) {
+            clearInterval(detectionInterval);
+            detectionInterval = null;
+        }
+        
+        // Detener stream de video
+        if (videoStream) {
+            videoStream.getTracks().forEach(track => track.stop());
+            videoStream = null;
+        }
+    }
+
+    // Enviar marcación con GPS y foto
+    async function enviarMarcacion(tipo, fotoBase64) {
+        try {
+            // Mostrar mensaje de captura
             const mensajeDiv = document.getElementById('mensajeMarcacion');
+            mensajeDiv.className = 'mb-6 p-4 rounded-lg bg-blue-700/30 border border-blue-600 text-blue-300 text-center';
+            mensajeDiv.innerHTML = `
+                <i class="fas fa-spinner fa-spin text-2xl mb-2 block"></i>
+                <p><strong>Registrando marcación...</strong></p>
+                <p class="text-sm mt-1">GPS y verificación facial</p>
+            `;
+            mensajeDiv.classList.remove('hidden');
+
+            // Capturar ubicación GPS
+            const ubicacion = await obtenerUbicacion();
+
+            console.log('📍 Ubicación:', ubicacion);
+            console.log('📷 Foto capturada:', fotoBase64 ? 'Sí' : 'No');
+
+            // Enviar marcación con datos capturados
+            const response = await fetch('{{ url_for("marcacion.registrar_marcacion") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    tipo_marcacion: tipo,
+                    latitud: ubicacion?.latitud || null,
+                    longitud: ubicacion?.longitud || null,
+                    precision: ubicacion?.precision || null,
+                    foto_base64: fotoBase64 || null
+                })
+            });
+
+            const data = await response.json();
             
             if (data.success) {
                 mensajeDiv.className = 'mb-6 p-4 rounded-lg bg-green-700/30 border border-green-600 text-green-300 text-center';
@@ -178,6 +446,8 @@
                     <i class="fas fa-check-circle text-2xl mb-2 block"></i>
                     <p><strong>${tipo === 'ENTRADA' ? 'Entrada' : 'Salida'} registrada exitosamente</strong></p>
                     <p class="text-sm mt-1">${new Date().toLocaleTimeString('es-ES')}</p>
+                    ${ubicacion ? '<p class="text-xs mt-1">📍 Ubicación registrada</p>' : ''}
+                    ${fotoBase64 ? '<p class="text-xs mt-1">📷 Rostro verificado</p>' : ''}
                 `;
                 mensajeDiv.classList.remove('hidden');
                 
@@ -199,20 +469,40 @@
             setTimeout(() => {
                 mensajeDiv.classList.add('hidden');
             }, 5000);
-        })
-        .catch(error => {
+
+        } catch (error) {
             console.error('Error:', error);
-            alert('Error al registrar marcación');
-        })
-        .finally(() => {
+            const mensajeDiv = document.getElementById('mensajeMarcacion');
+            mensajeDiv.className = 'mb-6 p-4 rounded-lg bg-red-700/30 border border-red-600 text-red-300 text-center';
+            mensajeDiv.innerHTML = `
+                <i class="fas fa-exclamation-circle text-2xl mb-2 block"></i>
+                <p><strong>Error:</strong> No se pudo registrar la marcación</p>
+            `;
+            mensajeDiv.classList.remove('hidden');
+        }
+    }
+
+    // ==================== REGISTRAR MARCACIÓN CON DETECCIÓN DE ROSTRO ====================
+    async function registrarMarcacion(tipo) {
+        const btn = event.target.closest('button');
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+
+        try {
+            // Abrir modal de detección de rostro
+            await abrirModalDeteccionRostro(tipo);
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al abrir la cámara');
+        } finally {
             btn.disabled = false;
             btn.style.opacity = '1';
-        });
+        }
     }
 
     // ==================== CARGAR HISTORIAL ====================
     function cargarHistorialMarcaciones() {
-        fetch('{{ url_for("main.obtener_historial_marcacion") }}', {
+        fetch('{{ url_for("marcacion.obtener_historial_marcacion") }}', {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             }
