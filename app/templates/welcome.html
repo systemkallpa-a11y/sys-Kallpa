@@ -428,31 +428,272 @@
         }
 
         /* Responsive */
+        @media (max-width: 1200px) {
+            .hero-features {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .projects-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
         @media (max-width: 968px) {
-            .hero-content, .mv-grid {
-                grid-template-columns: 1fr;
+            .top-bar-left {
+                flex-wrap: wrap;
+                gap: 10px;
             }
-
-            .hero-left h1 {
-                font-size: 36px;
+            
+            .top-bar-left span {
+                font-size: 11px;
             }
-
-            .section-title {
-                font-size: 32px;
+            
+            .top-bar-right {
+                gap: 10px;
             }
-
-            .org-level {
-                flex-direction: column;
-                align-items: center;
+            
+            .header-content {
+                flex-wrap: wrap;
+                gap: 15px;
+                justify-content: center;
             }
-
+            
+            .logo img {
+                height: 40px;
+            }
+            
             .header-actions {
                 gap: 8px;
+                width: 100%;
+                justify-content: center;
             }
 
             .header-btn {
                 padding: 8px 16px;
                 font-size: 12px;
+                flex: 1;
+                justify-content: center;
+            }
+            
+            .hero-content {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+
+            .hero-left h1 {
+                font-size: 36px;
+            }
+            
+            .hero-left p {
+                font-size: 16px;
+            }
+            
+            .hero-features {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+            
+            .feature-box {
+                padding: 15px;
+            }
+            
+            .feature-box h3 {
+                font-size: 24px;
+            }
+            
+            .hero-right {
+                order: -1;
+            }
+            
+            .hero-image {
+                height: 250px;
+                font-size: 80px;
+            }
+
+            .section-title {
+                font-size: 28px;
+                margin-bottom: 30px;
+            }
+            
+            section {
+                padding: 50px 20px;
+            }
+            
+            .mv-grid {
+                grid-template-columns: 1fr;
+                gap: 25px;
+            }
+            
+            .mv-card {
+                padding: 25px;
+            }
+            
+            .mv-card h3 {
+                font-size: 24px;
+            }
+            
+            .mv-card p {
+                font-size: 14px;
+            }
+            
+            .projects-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .org-level {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .org-box {
+                min-width: auto;
+                width: 100%;
+            }
+            
+            .team-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .whatsapp-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 26px;
+                bottom: 20px;
+                right: 20px;
+            }
+        }
+        
+        @media (max-width: 640px) {
+            .top-bar {
+                font-size: 11px;
+                padding: 8px 0;
+            }
+            
+            .top-bar-content {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            
+            .top-bar-left {
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .hero-banner {
+                padding: 40px 15px;
+            }
+            
+            .hero-left h1 {
+                font-size: 28px;
+                margin-bottom: 15px;
+            }
+            
+            .hero-left p {
+                font-size: 14px;
+                margin-bottom: 20px;
+            }
+            
+            .hero-features {
+                gap: 10px;
+            }
+            
+            .feature-box h3 {
+                font-size: 20px;
+            }
+            
+            .feature-box p {
+                font-size: 11px;
+            }
+            
+            .section-title {
+                font-size: 24px;
+            }
+            
+            .mv-card {
+                padding: 20px;
+            }
+            
+            .mv-card h3 {
+                font-size: 20px;
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .mv-card p {
+                font-size: 13px;
+            }
+            
+            .project-image {
+                height: 150px;
+                font-size: 48px;
+            }
+            
+            .project-info {
+                padding: 20px;
+            }
+            
+            .project-info h3 {
+                font-size: 18px;
+            }
+            
+            .org-box {
+                padding: 15px 20px;
+            }
+            
+            .org-box h4 {
+                font-size: 14px;
+            }
+            
+            .org-box p {
+                font-size: 11px;
+            }
+            
+            .team-photo {
+                height: 200px;
+                font-size: 60px;
+            }
+            
+            .team-info {
+                padding: 20px;
+            }
+            
+            .team-info h3 {
+                font-size: 18px;
+            }
+            
+            .team-info .cargo {
+                font-size: 13px;
+            }
+            
+            .team-info p {
+                font-size: 12px;
+            }
+            
+            footer {
+                padding: 30px 20px 15px;
+                font-size: 12px;
+            }
+        }
+        
+        @media (max-width: 380px) {
+            .hero-left h1 {
+                font-size: 24px;
+            }
+            
+            .section-title {
+                font-size: 20px;
+            }
+            
+            .header-btn {
+                font-size: 11px;
+                padding: 6px 12px;
+            }
+            
+            .feature-box h3 {
+                font-size: 18px;
             }
         }
     </style>
