@@ -225,7 +225,7 @@ def obtener_estado_marcacion():
 @marcacion_bp.route('/api/marcacion/historial', methods=['GET'])
 @login_required
 def obtener_historial_marcacion():
-    """Obtener historial de marcaciones del usuario"""
+    """Obtener historial de marcaciones del usuario con estados de asistencia"""
     try:
         num_documento = session.get('user_documento')
         dias = request.args.get('dias', 7, type=int)
@@ -237,25 +237,34 @@ def obtener_historial_marcacion():
         try:
             cursor = connection.cursor(dictionary=True)
             
-            print(f"[HISTORIAL] 🔄 Obteniendo historial para documento {num_documento}, últimos {dias} días")
+            print(f"[HISTORIAL] 🔄 Obteniendo historial CON ESTADOS para documento {num_documento}, últimos {dias} días")
             
-            # Obtener historial de marcaciones desde TblMarcacion
-            query = """
-                SELECT 
-                    id_marcacion,
-                    num_documento,
-                    tipo_marcacion,
-                    fecha_marcacion
-                FROM TblMarcacion
-                WHERE num_documento = %s
-                AND DATE(fecha_marcacion) >= DATE(NOW() - INTERVAL %s DAY)
-                ORDER BY fecha_marcacion DESC
-                LIMIT 100
-            """
-            cursor.execute(query, (num_documento, dias))
-            marcaciones = cursor.fetchall()
+            # Llamar SP que calcula estados de asistencia
+            cursor.callproc('sp_ObtenerHistorialConEstados', (num_documento, dias))
             
-            print(f"[HISTORIAL] ✅ {len(marcaciones)} marcaciones encontradas")
+            # Obtener resultados
+            marcaciones = []
+            for result in cursor.stored_results():
+                marcaciones = result.fetchall()
+            
+            print(f"[HISTORIAL] ✅ {len(marcaciones)} marcaciones encontradas con estados")
+            
+            # 🔧 Serializar datos para JSON (convertir datetime, date, timedelta, etc.)
+            import datetime as dt_module
+            for marcacion in marcaciones:
+                for key, value in marcacion.items():
+                    # Convertir datetime a ISO string
+                    if isinstance(value, datetime):
+                        marcacion[key] = value.isoformat()
+                    # Convertir date a string YYYY-MM-DD
+                    elif isinstance(value, dt_module.date):
+                        marcacion[key] = value.strftime('%Y-%m-%d')
+                    # Convertir timedelta a string
+                    elif hasattr(value, 'total_seconds'):  # timedelta
+                        marcacion[key] = str(value)
+                    # Asegurar que cualquier fecha sea string
+                    elif hasattr(value, 'strftime'):
+                        marcacion[key] = value.strftime('%Y-%m-%d')
             
             cursor.close()
             connection.close()

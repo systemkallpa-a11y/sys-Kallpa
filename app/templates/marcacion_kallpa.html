@@ -1,161 +1,237 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Marcación - Kallpa</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Face-API.js para detección de rostros -->
     <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    
+    <style>
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(34, 197, 94, 0.6); }
+        }
+
+        .slide-in { animation: slideIn 0.6s ease-out; }
+        .float-animation { animation: float 4s ease-in-out infinite; }
+
+        body {
+            background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #065f46 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .glass-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-entrada {
+            background: linear-gradient(135deg, #22c55e 0%, #4ade80 100%);
+            box-shadow: 0 8px 20px rgba(34, 197, 94, 0.4);
+        }
+
+        .btn-entrada:active {
+            transform: scale(0.98);
+            box-shadow: 0 4px 10px rgba(34, 197, 94, 0.6);
+        }
+
+        .btn-salida {
+            background: linear-gradient(135deg, #dc2626 0%, #f87171 100%);
+            box-shadow: 0 8px 20px rgba(220, 38, 38, 0.4);
+        }
+
+        .btn-salida:active {
+            transform: scale(0.98);
+            box-shadow: 0 4px 10px rgba(220, 38, 38, 0.6);
+        }
+
+        .badge-asistio {
+            background: linear-gradient(135deg, #22c55e 0%, #4ade80 100%);
+            color: white;
+        }
+
+        .badge-tolerancia {
+            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+            color: white;
+        }
+
+        .badge-tarde {
+            background: linear-gradient(135deg, #dc2626 0%, #f87171 100%);
+            color: white;
+        }
+
+        /* Optimización táctil móvil */
+        button, .btn {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+    </style>
 </head>
 <body class="bg-slate-950">
-<div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-8 px-4">
-    <div class="max-w-2xl mx-auto">
-        
-        <!-- Header -->
-        <div class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-white mb-2">Marcación Kallpa</h1>
-            <p class="text-gray-400">Sistema de Registro de Asistencia</p>
-            <p id="fechaActual" class="text-lg text-purple-400 mt-4 font-semibold"></p>
-        </div>
+    <!-- Fondo animado -->
+    <div class="fixed inset-0 -z-10 bg-gradient-to-b from-green-900 via-emerald-700 to-slate-950"></div>
+    
+    <!-- Elementos decorativos flotantes -->
+    <div class="fixed top-10 right-5 w-64 h-64 bg-green-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse -z-5"></div>
+    <div class="fixed bottom-10 left-5 w-64 h-64 bg-emerald-400 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse -z-5" style="animation-delay: 2s;"></div>
 
-        <!-- Información del Usuario -->
-        <div class="bg-slate-800/50 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-slate-700/50">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-2xl font-bold text-white mb-2">
-                        {{ session.get('user_name', 'Usuario') }}
-                    </h2>
-                    <p class="text-gray-400">
-                        <span class="text-purple-400 font-semibold">Documento:</span> 
-                        {{ session.get('user_documento', '--') }}
-                    </p>
-                    <p class="text-gray-400">
-                        <span class="text-purple-400 font-semibold">Cargo:</span> 
-                        {{ session.get('user_cargo', '--') }}
-                    </p>
-                    <p class="text-gray-400">
-                        <span class="text-purple-400 font-semibold">Área:</span> 
-                        {{ session.get('user_area', '--') }}
-                    </p>
-                </div>
-                <div class="text-right">
-                    <div id="estadoMarcacion" class="text-center px-6 py-4 rounded-xl bg-gray-700/50 border border-gray-600">
-                        <p class="text-gray-400 text-sm mb-2">Estado Actual</p>
-                        <p id="estadoTexto" class="text-2xl font-bold text-yellow-400">Cargando...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Botones de Marcación -->
-        <div class="grid grid-cols-2 gap-4 mb-6">
-            <!-- Botón Entrada -->
-            <button onclick="registrarMarcacion('ENTRADA')" 
-                class="group relative inline-flex items-center justify-center px-6 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl shadow-xl shadow-green-500/30 hover:shadow-2xl hover:shadow-green-500/50 transition-all duration-500 hover:scale-105 overflow-hidden border-2 border-green-400/30">
-                <span class="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></span>
-                <span class="relative flex items-center justify-center gap-3">
-                    <i class="fas fa-sign-in-alt text-2xl"></i>
-                    <div>
-                        <div>Marcar</div>
-                        <div class="text-sm">Entrada</div>
-                    </div>
-                </span>
-            </button>
-
-            <!-- Botón Salida -->
-            <button onclick="registrarMarcacion('SALIDA')" 
-                class="group relative inline-flex items-center justify-center px-6 py-4 text-lg font-bold text-white bg-gradient-to-r from-red-600 to-orange-600 rounded-2xl shadow-xl shadow-red-500/30 hover:shadow-2xl hover:shadow-red-500/50 transition-all duration-500 hover:scale-105 overflow-hidden border-2 border-red-400/30">
-                <span class="absolute inset-0 bg-gradient-to-r from-red-500 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></span>
-                <span class="relative flex items-center justify-center gap-3">
-                    <i class="fas fa-sign-out-alt text-2xl"></i>
-                    <div>
-                        <div>Marcar</div>
-                        <div class="text-sm">Salida</div>
-                    </div>
-                </span>
-            </button>
-        </div>
-
-        <!-- Estado de Marcación -->
-        <div id="mensajeMarcacion" class="mb-6 p-4 rounded-lg bg-slate-700/50 border border-slate-600 text-gray-300 text-center hidden">
-            <!-- Mensaje dinámico aquí -->
-        </div>
-
-        <!-- Historial de Marcaciones -->
-        <div class="bg-slate-800/50 backdrop-blur-xl rounded-2xl p-6 border border-slate-700/50">
-            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <i class="fas fa-history text-purple-400"></i>
-                Historial de Marcaciones (Últimos 7 días)
-            </h3>
+    <div class="min-h-screen px-4 py-6 pb-20">
+        <div class="max-w-md mx-auto space-y-6">
             
-            <div id="historialMarcaciones" class="space-y-2 max-h-96 overflow-y-auto">
-                <div class="text-center text-gray-400 py-8">
-                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                    <p>Cargando historial...</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal de Detección de Rostro -->
-        <div id="modalDeteccionRostro" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-            <div class="bg-slate-800 rounded-2xl p-6 max-w-lg w-full border border-purple-500/30 shadow-2xl">
-                <div class="text-center mb-4">
-                    <h3 class="text-2xl font-bold text-white mb-2">
-                        <i class="fas fa-camera text-purple-400"></i>
-                        Verificación de Identidad
-                    </h3>
-                    <p class="text-gray-400 text-sm">Posiciona tu rostro en el centro</p>
-                </div>
-
-                <!-- Vista previa de la cámara -->
-                <div class="relative bg-black rounded-xl overflow-hidden mb-4" style="aspect-ratio: 4/3;">
-                    <video id="videoDeteccion" autoplay playsinline class="w-full h-full object-cover"></video>
-                    <canvas id="canvasDeteccion" class="absolute top-0 left-0 w-full h-full"></canvas>
-                    
-                    <!-- Overlay de detección -->
-                    <div id="overlayDeteccion" class="absolute inset-0 flex items-center justify-center">
-                        <div class="text-center text-white bg-black/70 px-6 py-4 rounded-xl">
-                            <i class="fas fa-user-circle text-4xl mb-2 text-purple-400"></i>
-                            <p class="font-semibold">Buscando rostro...</p>
+            <!-- Header con Logo -->
+            <div class="text-center slide-in float-animation">
+                <div class="mb-4 flex justify-center">
+                    <div class="relative">
+                        <div class="absolute -inset-3 bg-gradient-to-r from-green-600 to-emerald-500 rounded-full blur-xl opacity-50"></div>
+                        <div class="relative bg-white p-2 rounded-2xl shadow-2xl">
+                            <img src="{{ url_for('static', filename='images/Logo Kallpa.png') }}" alt="Kallpa" class="h-16 w-16">
                         </div>
                     </div>
                 </div>
+                <h1 class="text-3xl font-black mb-1">
+                    <span class="bg-gradient-to-r from-white via-green-100 to-white bg-clip-text text-transparent">
+                        Kallpa
+                    </span>
+                </h1>
+                <p class="text-green-200 font-semibold text-xs tracking-wider">MARCACIÓN DE ASISTENCIA</p>
+                <p id="fechaActual" class="text-white/80 text-sm mt-2"></p>
+            </div>
 
-                <!-- Estado de detección -->
-                <div id="estadoDeteccion" class="mb-4 p-3 rounded-lg bg-blue-700/20 border border-blue-500/30 text-blue-300 text-center text-sm">
-                    <i class="fas fa-info-circle"></i>
-                    <span>Iniciando cámara...</span>
+            <!-- Card Usuario y Estado -->
+            <div class="glass-card rounded-2xl p-5 slide-in">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-user text-white text-xl"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h2 class="text-white font-bold text-lg truncate">
+                            {{ session.get('user_name', 'Usuario') }}
+                        </h2>
+                        <p class="text-green-200 text-sm truncate">{{ session.get('user_cargo', '--') }}</p>
+                    </div>
                 </div>
-
-                <!-- Botones -->
-                <div class="flex gap-3">
-                    <button onclick="cancelarDeteccionRostro()" 
-                        class="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-colors">
-                        <i class="fas fa-times"></i> Cancelar
-                    </button>
-                    <button id="btnCapturarRostro" onclick="capturarConRostro()" disabled
-                        class="flex-1 px-4 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i class="fas fa-check"></i> Capturar
-                    </button>
+                
+                <!-- Estado Actual -->
+                <div id="estadoMarcacion" class="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-slate-400 text-xs mb-1">Estado Actual</p>
+                            <p id="estadoTexto" class="text-white font-bold text-base">Cargando...</p>
+                            <p id="estadoHora" class="text-slate-400 text-xs mt-1"></p>
+                        </div>
+                        <div id="estadoIcono" class="text-4xl">⏳</div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Botón Logout -->
-        <div class="mt-6 text-center">
+            <!-- Botones de Marcación -->
+            <div class="grid grid-cols-2 gap-4 slide-in" style="animation-delay: 0.2s;">
+                <!-- Botón Entrada -->
+                <button onclick="registrarMarcacion('ENTRADA')" 
+                    class="btn-entrada rounded-2xl p-6 text-white font-bold text-center shadow-lg active:scale-95 transition-all duration-200">
+                    <i class="fas fa-sign-in-alt text-3xl mb-2 block"></i>
+                    <span class="text-sm">ENTRADA</span>
+                </button>
+
+                <!-- Botón Salida -->
+                <button onclick="registrarMarcacion('SALIDA')" 
+                    class="btn-salida rounded-2xl p-6 text-white font-bold text-center shadow-lg active:scale-95 transition-all duration-200">
+                    <i class="fas fa-sign-out-alt text-3xl mb-2 block"></i>
+                    <span class="text-sm">SALIDA</span>
+                </button>
+            </div>
+
+            <!-- Mensaje de Marcación -->
+            <div id="mensajeMarcacion" class="hidden"></div>
+
+            <!-- Historial de Marcaciones -->
+            <div class="glass-card rounded-2xl p-5 slide-in" style="animation-delay: 0.4s;">
+                <div class="flex items-center gap-3 mb-4">
+                    <i class="fas fa-history text-2xl text-green-400"></i>
+                    <div class="flex-1">
+                        <h3 class="text-white font-bold text-lg">Historial</h3>
+                        <p class="text-slate-400 text-xs">Últimos 7 días</p>
+                    </div>
+                </div>
+                
+                <div id="historialMarcaciones">
+                    <div class="text-center text-slate-400 py-8">
+                        <i class="fas fa-spinner fa-spin text-3xl mb-3 text-green-400"></i>
+                        <p class="text-sm">Cargando...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón Cerrar Sesión -->
             <a href="{{ url_for('auth.logout') }}" 
-                class="inline-flex items-center gap-2 px-6 py-3 bg-slate-700/50 hover:bg-slate-600/50 text-gray-300 hover:text-white rounded-lg transition-all duration-300 border border-slate-600">
-                <i class="fas fa-sign-out-alt"></i>
-                Cerrar Sesión
+                class="glass-card rounded-2xl p-4 flex items-center justify-center gap-3 text-white hover:bg-slate-800/80 transition-all slide-in" style="animation-delay: 0.6s;">
+                <i class="fas fa-sign-out-alt text-lg"></i>
+                <span class="font-semibold">Cerrar Sesión</span>
             </a>
         </div>
     </div>
-</div>
 
-<script>
+    <!-- Modal de Detección de Rostro -->
+    <div id="modalDeteccionRostro" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-card rounded-3xl p-6 max-w-md w-full shadow-2xl">
+            <div class="text-center mb-4">
+                <i class="fas fa-camera text-4xl text-green-400 mb-2"></i>
+                <h3 class="text-2xl font-bold text-white mb-1">Verificación Facial</h3>
+                <p class="text-slate-300 text-sm">Posiciona tu rostro en el centro</p>
+            </div>
+
+            <!-- Vista previa de la cámara -->
+            <div class="relative bg-slate-900 rounded-2xl overflow-hidden mb-4" style="aspect-ratio: 4/3;">
+                <video id="videoDeteccion" autoplay playsinline class="w-full h-full object-cover"></video>
+                <canvas id="canvasDeteccion" class="absolute top-0 left-0 w-full h-full"></canvas>
+                
+                <!-- Overlay de detección -->
+                <div id="overlayDeteccion" class="absolute inset-0 flex items-center justify-center">
+                    <div class="text-center text-white bg-black/70 px-6 py-4 rounded-2xl">
+                        <i class="fas fa-user-circle text-4xl mb-2 text-green-400"></i>
+                        <p class="font-semibold">Buscando rostro...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estado de detección -->
+            <div id="estadoDeteccion" class="mb-4 p-3 rounded-xl bg-blue-900/30 border border-blue-500/30 text-blue-300 text-center text-sm">
+                <i class="fas fa-info-circle"></i>
+                <span>Iniciando cámara...</span>
+            </div>
+
+            <!-- Botones -->
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="cancelarDeteccionRostro()" 
+                    class="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-semibold transition-all active:scale-95">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button id="btnCapturarRostro" onclick="capturarConRostro()" disabled
+                    class="px-4 py-3 btn-entrada text-white rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95">
+                    <i class="fas fa-check"></i> Capturar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
     // ==================== ACTUALIZAR FECHA ====================
     function actualizarFecha() {
         const ahora = new Date();
@@ -177,20 +253,24 @@
             if (data.success) {
                 const estado = data.estado;
                 const estadoTexto = document.getElementById('estadoTexto');
-                const estadoDiv = document.getElementById('estadoMarcacion');
+                const estadoIcono = document.getElementById('estadoIcono');
+                const estadoHora = document.getElementById('estadoHora');
                 
                 if (estado === 'DENTRO') {
-                    estadoTexto.textContent = '✓ DENTRO';
-                    estadoTexto.className = 'text-2xl font-bold text-green-400';
-                    estadoDiv.className = 'text-center px-6 py-4 rounded-xl bg-green-700/20 border border-green-600/50';
+                    estadoTexto.textContent = 'DENTRO';
+                    estadoTexto.className = 'text-white font-bold text-base';
+                    estadoIcono.textContent = '✅';
+                    estadoHora.textContent = `Entrada: ${data.hora || ''}`;
                 } else if (estado === 'FUERA') {
-                    estadoTexto.textContent = '✗ FUERA';
-                    estadoTexto.className = 'text-2xl font-bold text-red-400';
-                    estadoDiv.className = 'text-center px-6 py-4 rounded-xl bg-red-700/20 border border-red-600/50';
+                    estadoTexto.textContent = 'FUERA';
+                    estadoTexto.className = 'text-white font-bold text-base';
+                    estadoIcono.textContent = '🚪';
+                    estadoHora.textContent = data.hora ? `Salida: ${data.hora}` : 'Sin marcaciones';
                 } else {
-                    estadoTexto.textContent = '? SIN DATOS';
-                    estadoTexto.className = 'text-2xl font-bold text-yellow-400';
-                    estadoDiv.className = 'text-center px-6 py-4 rounded-xl bg-yellow-700/20 border border-yellow-600/50';
+                    estadoTexto.textContent = 'SIN DATOS';
+                    estadoTexto.className = 'text-white font-bold text-base';
+                    estadoIcono.textContent = '❓';
+                    estadoHora.textContent = '';
                 }
             }
         })
@@ -408,11 +488,11 @@
         try {
             // Mostrar mensaje de captura
             const mensajeDiv = document.getElementById('mensajeMarcacion');
-            mensajeDiv.className = 'mb-6 p-4 rounded-lg bg-blue-700/30 border border-blue-600 text-blue-300 text-center';
+            mensajeDiv.className = 'glass-card rounded-2xl p-4 text-center text-white border border-green-500/30';
             mensajeDiv.innerHTML = `
-                <i class="fas fa-spinner fa-spin text-2xl mb-2 block"></i>
-                <p><strong>Registrando marcación...</strong></p>
-                <p class="text-sm mt-1">GPS y verificación facial</p>
+                <i class="fas fa-spinner fa-spin text-2xl mb-2 block text-green-400"></i>
+                <p class="font-bold">Registrando marcación...</p>
+                <p class="text-xs mt-1 text-slate-300">GPS y verificación facial</p>
             `;
             mensajeDiv.classList.remove('hidden');
 
@@ -441,13 +521,13 @@
             const data = await response.json();
             
             if (data.success) {
-                mensajeDiv.className = 'mb-6 p-4 rounded-lg bg-green-700/30 border border-green-600 text-green-300 text-center';
+                mensajeDiv.className = 'glass-card rounded-2xl p-4 text-center border border-green-500';
                 mensajeDiv.innerHTML = `
-                    <i class="fas fa-check-circle text-2xl mb-2 block"></i>
-                    <p><strong>${tipo === 'ENTRADA' ? 'Entrada' : 'Salida'} registrada exitosamente</strong></p>
-                    <p class="text-sm mt-1">${new Date().toLocaleTimeString('es-ES')}</p>
-                    ${ubicacion ? '<p class="text-xs mt-1">📍 Ubicación registrada</p>' : ''}
-                    ${fotoBase64 ? '<p class="text-xs mt-1">📷 Rostro verificado</p>' : ''}
+                    <i class="fas fa-check-circle text-3xl mb-2 block text-green-400"></i>
+                    <p class="font-bold text-white text-lg">${tipo === 'ENTRADA' ? 'Entrada' : 'Salida'} registrada</p>
+                    <p class="text-sm mt-1 text-slate-300">${new Date().toLocaleTimeString('es-ES')}</p>
+                    ${ubicacion ? '<p class="text-xs mt-1 text-green-300">📍 Ubicación capturada</p>' : ''}
+                    ${fotoBase64 ? '<p class="text-xs mt-1 text-green-300">📷 Rostro verificado</p>' : ''}
                 `;
                 mensajeDiv.classList.remove('hidden');
                 
@@ -457,10 +537,11 @@
                     cargarHistorialMarcaciones();
                 }, 1000);
             } else {
-                mensajeDiv.className = 'mb-6 p-4 rounded-lg bg-red-700/30 border border-red-600 text-red-300 text-center';
+                mensajeDiv.className = 'glass-card rounded-2xl p-4 text-center border border-red-500';
                 mensajeDiv.innerHTML = `
-                    <i class="fas fa-exclamation-circle text-2xl mb-2 block"></i>
-                    <p><strong>Error:</strong> ${data.error || 'No se pudo registrar la marcación'}</p>
+                    <i class="fas fa-exclamation-circle text-3xl mb-2 block text-red-400"></i>
+                    <p class="font-bold text-white">Error</p>
+                    <p class="text-sm mt-1 text-red-300">${data.error || 'No se pudo registrar'}</p>
                 `;
                 mensajeDiv.classList.remove('hidden');
             }
@@ -473,10 +554,11 @@
         } catch (error) {
             console.error('Error:', error);
             const mensajeDiv = document.getElementById('mensajeMarcacion');
-            mensajeDiv.className = 'mb-6 p-4 rounded-lg bg-red-700/30 border border-red-600 text-red-300 text-center';
+            mensajeDiv.className = 'glass-card rounded-2xl p-4 text-center border border-red-500';
             mensajeDiv.innerHTML = `
-                <i class="fas fa-exclamation-circle text-2xl mb-2 block"></i>
-                <p><strong>Error:</strong> No se pudo registrar la marcación</p>
+                <i class="fas fa-exclamation-circle text-3xl mb-2 block text-red-400"></i>
+                <p class="font-bold text-white">Error de conexión</p>
+                <p class="text-sm mt-1 text-red-300">No se pudo registrar la marcación</p>
             `;
             mensajeDiv.classList.remove('hidden');
         }
@@ -501,6 +583,7 @@
     }
 
     // ==================== CARGAR HISTORIAL ====================
+    // ==================== CARGAR HISTORIAL CON ESTADOS ====================
     function cargarHistorialMarcaciones() {
         fetch('{{ url_for("marcacion.obtener_historial_marcacion") }}', {
             headers: {
@@ -512,41 +595,226 @@
             const historialDiv = document.getElementById('historialMarcaciones');
             
             if (data.success && data.data && data.data.length > 0) {
-                let html = '';
+                console.log('📊 Datos recibidos con estados:', data.data);
+                
+                // Agrupar marcaciones por fecha con estados
+                const marcacionesPorFecha = {};
+                
                 data.data.forEach(marcacion => {
-                    const fecha = new Date(marcacion.fecha_marcacion + 'T' + marcacion.hora_marcacion);
-                    const fechaFormato = fecha.toLocaleDateString('es-ES');
-                    const horaFormato = fecha.toLocaleTimeString('es-ES');
+                    // 🔧 Extraer fecha en formato YYYY-MM-DD (garantizado por backend)
+                    let fecha = null;
                     
-                    const esentrada = marcacion.tipo_marcacion === 'ENTRADA';
-                    const color = esentrada ? 'green' : 'red';
-                    const icono = esentrada ? 'sign-in-alt' : 'sign-out-alt';
-                    const tipo = esentrada ? 'Entrada' : 'Salida';
+                    if (marcacion.fecha) {
+                        fecha = String(marcacion.fecha).split('T')[0]; // Extraer solo YYYY-MM-DD
+                    } else if (marcacion.fecha_marcacion) {
+                        fecha = String(marcacion.fecha_marcacion).split('T')[0];
+                    }
+                    
+                    // 🔧 Extraer hora en formato HH:MM
+                    let hora = '00:00';
+                    if (marcacion.hora_marcacion) {
+                        hora = String(marcacion.hora_marcacion).substring(0, 5);
+                    } else if (marcacion.fecha_marcacion) {
+                        const parts = String(marcacion.fecha_marcacion).split('T');
+                        if (parts.length > 1) {
+                            hora = parts[1].substring(0, 5);
+                        }
+                    }
+                    
+                    const estado = marcacion.estado_asistencia || 'ASISTIÓ';
+                    const minutos = marcacion.minutos_diferencia || 0;
+                    const tipo = marcacion.tipo_marcacion;
+                    
+                    console.log(`📅 Procesando: fecha=${fecha}, hora=${hora}, estado=${estado}, tipo=${tipo}`);
+                    
+                    if (!fecha || fecha === 'null') {
+                        console.warn('⚠️ Fecha no válida, omitiendo marcación:', marcacion);
+                        return;
+                    }
+                    
+                    if (!marcacionesPorFecha[fecha]) {
+                        marcacionesPorFecha[fecha] = {
+                            turno1_entrada: null,
+                            turno1_entrada_estado: null,
+                            turno1_entrada_minutos: 0,
+                            turno1_salida: null,
+                            turno2_entrada: null,
+                            turno2_entrada_estado: null,
+                            turno2_entrada_minutos: 0,
+                            turno2_salida: null
+                        };
+                    }
+                    
+                    // Determinar turno (usar variable 'tipo' ya declarada arriba)
+                    const horaNum = parseInt(hora.split(':')[0]);
+                    const turno = marcacion.turno || (horaNum < 12 ? 1 : 2);
+                    
+                    if (tipo === 'ENTRADA') {
+                        if (turno === 1 && !marcacionesPorFecha[fecha].turno1_entrada) {
+                            marcacionesPorFecha[fecha].turno1_entrada = hora;
+                            marcacionesPorFecha[fecha].turno1_entrada_estado = estado;
+                            marcacionesPorFecha[fecha].turno1_entrada_minutos = minutos;
+                        } else if (turno === 2 && !marcacionesPorFecha[fecha].turno2_entrada) {
+                            marcacionesPorFecha[fecha].turno2_entrada = hora;
+                            marcacionesPorFecha[fecha].turno2_entrada_estado = estado;
+                            marcacionesPorFecha[fecha].turno2_entrada_minutos = minutos;
+                        }
+                    } else if (tipo === 'SALIDA') {
+                        if (turno === 1 && !marcacionesPorFecha[fecha].turno1_salida) {
+                            marcacionesPorFecha[fecha].turno1_salida = hora;
+                        } else if (turno === 2 && !marcacionesPorFecha[fecha].turno2_salida) {
+                            marcacionesPorFecha[fecha].turno2_salida = hora;
+                        }
+                    }
+                });
+                
+                // Generar HTML compacto para móviles (estilo oscuro)
+                let html = '';
+                
+                // Función helper para renderizar entrada con estado
+                function renderizarEntrada(hora, estado, minutos) {
+                    if (!hora) {
+                        return `<div class="text-slate-500 text-xs">--:--</div>`;
+                    }
+                    
+                    let badge = '';
+                    let textoEstado = '';
+                    
+                    if (estado === 'ASISTIÓ') {
+                        badge = 'badge-asistio';
+                        textoEstado = '✓ A tiempo';
+                    } else if (estado === 'ASISTIÓ +5') {
+                        badge = 'badge-tolerancia';
+                        textoEstado = `+${minutos}min`;
+                    } else if (estado === 'TARDE') {
+                        badge = 'badge-tarde';
+                        textoEstado = `Tarde +${minutos}min`;
+                    } else {
+                        badge = 'bg-slate-700 text-slate-300';
+                        textoEstado = estado || 'Sin horario';
+                    }
+                    
+                    return `
+                        <div class="space-y-1">
+                            <div class="text-white font-bold text-sm">
+                                <i class="fas fa-arrow-right text-xs"></i> ${hora}
+                            </div>
+                            <div class="${badge} px-2 py-0.5 rounded-lg text-[10px] font-semibold inline-block">
+                                ${textoEstado}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                function renderizarSalida(hora) {
+                    if (!hora) {
+                        return `<div class="text-slate-500 text-xs">--:--</div>`;
+                    }
+                    return `
+                        <div class="text-white font-bold text-sm">
+                            <i class="fas fa-arrow-left text-xs"></i> ${hora}
+                        </div>
+                    `;
+                }
+                
+                // Ordenar fechas de más reciente a más antigua
+                const fechasOrdenadas = Object.keys(marcacionesPorFecha).sort().reverse();
+                
+                console.log('📅 Fechas a renderizar:', fechasOrdenadas);
+                
+                // Renderizar como cards compactas (no tabla)
+                fechasOrdenadas.forEach(fecha => {
+                    const datos = marcacionesPorFecha[fecha];
+                    
+                    // Parsear fecha YYYY-MM-DD
+                    let fechaFormato = fecha;
+                    try {
+                        const partes = fecha.split('-');
+                        if (partes.length === 3) {
+                            const year = parseInt(partes[0]);
+                            const month = parseInt(partes[1]) - 1;
+                            const day = parseInt(partes[2]);
+                            const fechaObj = new Date(year, month, day);
+                            
+                            if (!isNaN(fechaObj.getTime())) {
+                                const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+                                const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                                fechaFormato = `${dias[fechaObj.getDay()]}, ${day} ${meses[fechaObj.getMonth()]}`;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('❌ Error parseando fecha:', fecha, error);
+                    }
+                    
+                    // Verificar si hay marcaciones ese día
+                    const hayMarcaciones = datos.turno1_entrada || datos.turno1_salida || datos.turno2_entrada || datos.turno2_salida;
+                    
+                    if (!hayMarcaciones) return; // Omitir días sin marcaciones
                     
                     html += `
-                        <div class="flex items-center justify-between p-3 rounded-lg bg-slate-700/30 border border-slate-600">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full bg-${color}-600/30 flex items-center justify-center">
-                                    <i class="fas fa-${icono} text-${color}-400"></i>
-                                </div>
-                                <div>
-                                    <p class="font-semibold text-white">${tipo}</p>
-                                    <p class="text-sm text-gray-400">${fechaFormato}</p>
-                                </div>
+                        <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-4 mb-3">
+                            <!-- Fecha -->
+                            <div class="flex items-center gap-2 mb-3 pb-2 border-b border-slate-700">
+                                <i class="fas fa-calendar text-green-400"></i>
+                                <span class="text-white font-bold text-sm">${fechaFormato}</span>
                             </div>
-                            <div class="text-right">
-                                <p class="font-bold text-white">${horaFormato}</p>
-                                <p class="text-xs text-gray-500 mt-1">ID: ${marcacion.id_marcacion}</p>
+                            
+                            <!-- Turnos -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <!-- Turno 1 -->
+                                <div>
+                                    <div class="text-slate-400 text-[10px] font-semibold mb-2 flex items-center gap-1">
+                                        <i class="fas fa-sun text-xs"></i> MAÑANA
+                                    </div>
+                                    <div class="space-y-2">
+                                        <div>
+                                            <div class="text-slate-500 text-[9px] mb-1">ENTRADA</div>
+                                            ${renderizarEntrada(datos.turno1_entrada, datos.turno1_entrada_estado, datos.turno1_entrada_minutos)}
+                                        </div>
+                                        <div>
+                                            <div class="text-slate-500 text-[9px] mb-1">SALIDA</div>
+                                            ${renderizarSalida(datos.turno1_salida)}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Turno 2 -->
+                                <div>
+                                    <div class="text-slate-400 text-[10px] font-semibold mb-2 flex items-center gap-1">
+                                        <i class="fas fa-moon text-xs"></i> TARDE
+                                    </div>
+                                    <div class="space-y-2">
+                                        <div>
+                                            <div class="text-slate-500 text-[9px] mb-1">ENTRADA</div>
+                                            ${renderizarEntrada(datos.turno2_entrada, datos.turno2_entrada_estado, datos.turno2_entrada_minutos)}
+                                        </div>
+                                        <div>
+                                            <div class="text-slate-500 text-[9px] mb-1">SALIDA</div>
+                                            ${renderizarSalida(datos.turno2_salida)}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     `;
                 });
+                
+                // Si no hay marcaciones
+                if (html === '') {
+                    html = `
+                        <div class="text-center text-slate-400 py-8">
+                            <i class="fas fa-inbox text-3xl mb-2 opacity-50"></i>
+                            <p class="text-sm">No hay marcaciones en los últimos 7 días</p>
+                        </div>
+                    `;
+                }
+                
                 historialDiv.innerHTML = html;
             } else {
                 historialDiv.innerHTML = `
-                    <div class="text-center text-gray-400 py-8">
-                        <i class="fas fa-inbox text-3xl mb-2"></i>
-                        <p>No hay marcaciones en los últimos 7 días</p>
+                    <div class="text-center text-slate-400 py-8">
+                        <i class="fas fa-inbox text-3xl mb-2 opacity-50"></i>
+                        <p class="text-sm">No hay marcaciones en los últimos 7 días</p>
                     </div>
                 `;
             }
@@ -556,7 +824,7 @@
             document.getElementById('historialMarcaciones').innerHTML = `
                 <div class="text-center text-red-400 py-8">
                     <i class="fas fa-exclamation-circle text-3xl mb-2"></i>
-                    <p>Error al cargar el historial</p>
+                    <p class="text-sm">Error al cargar el historial</p>
                 </div>
             `;
         });
