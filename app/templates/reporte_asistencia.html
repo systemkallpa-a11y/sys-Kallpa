@@ -1,0 +1,538 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col h-screen bg-gray-50 dark:bg-slate-950">
+    <!-- Header -->
+    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
+        <div class="px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">📊 Reporte de Asistencia</h1>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Control y seguimiento de asistencia de todos los usuarios</p>
+                </div>
+                <div class="flex gap-2">
+                    <button id="btn-exportar" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
+                        <i class="fas fa-file-excel mr-2"></i>Exportar a Excel
+                    </button>
+                    <button id="btn-actualizar" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>Actualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="px-6 py-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700">
+            <div class="grid grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Desde</label>
+                    <input type="date" id="fecha_desde" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Hasta</label>
+                    <input type="date" id="fecha_hasta" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Usuario</label>
+                    <input type="text" id="filtro_usuario" placeholder="Buscar por nombre..." class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="aplicarFiltros()" class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                        <i class="fas fa-search mr-2"></i>Buscar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Título de sección -->
+    <div class="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
+        <div class="px-6 py-3">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                <i class="fas fa-users mr-2 text-blue-600"></i>Resumen de Asistencia por Usuario
+            </h2>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="flex-1 overflow-auto p-6">
+        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Usuario</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Email</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Días Asistidos</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Total Entradas</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Total Salidas</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Primera Marcación</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Última Marcación</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-resumen" class="divide-y divide-gray-200 dark:divide-slate-700">
+                        <tr>
+                            <td colspan="8" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Cargando...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Detalle del Día -->
+<div id="modal-detalle-dia" class="hidden fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white px-6 py-4 flex items-center justify-between">
+            <div>
+                <h2 class="text-xl font-bold">📋 Detalle de Marcaciones del Día</h2>
+                <p id="modal-info-usuario" class="text-blue-100 text-sm mt-1"></p>
+            </div>
+            <button onclick="cerrarModalDetalle()" class="text-white hover:text-gray-200 p-2">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Contenido con scroll -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+            <!-- Mapa de Google Maps -->
+            <div class="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    <i class="fas fa-map-marked-alt text-blue-600 mr-2"></i>Mapa de Ubicaciones
+                </h3>
+                <div id="mapa-marcaciones" class="w-full h-96 rounded-lg border-2 border-gray-300 dark:border-slate-600"></div>
+            </div>
+
+            <!-- Grid de Fotos -->
+            <div class="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    <i class="fas fa-images text-blue-600 mr-2"></i>Fotos de las Marcaciones
+                </h3>
+                <div id="grid-fotos" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <!-- Las fotos se insertarán aquí dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Tabla de Marcaciones Detalladas -->
+            <div class="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    <i class="fas fa-list text-blue-600 mr-2"></i>Detalle de Marcaciones
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-200 dark:bg-slate-700">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Hora</th>
+                                <th class="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">Tipo</th>
+                                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Coordenadas</th>
+                                <th class="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">Precisión</th>
+                                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Dispositivo</th>
+                                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Observación</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-detalle-marcaciones" class="divide-y divide-gray-200 dark:divide-slate-600">
+                            <!-- Las filas se insertarán aquí -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 bg-gray-100 dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 flex justify-end">
+            <button onclick="cerrarModalDetalle()" class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================================================
+// VARIABLES GLOBALES
+// ============================================================================
+let datosResumen = [];
+
+// ============================================================================
+// INICIALIZACIÓN
+// ============================================================================
+document.addEventListener('DOMContentLoaded', function() {
+    // Establecer fechas por defecto (últimos 30 días)
+    const hoy = new Date();
+    const hace30Dias = new Date();
+    hace30Dias.setDate(hace30Dias.getDate() - 30);
+    
+    document.getElementById('fecha_hasta').valueAsDate = hoy;
+    document.getElementById('fecha_desde').valueAsDate = hace30Dias;
+    
+    // Cargar datos iniciales
+    cargarResumen();
+    
+    // Evento de actualizar
+    document.getElementById('btn-actualizar').addEventListener('click', function() {
+        cargarResumen();
+    });
+    
+    // Evento de exportar
+    document.getElementById('btn-exportar').addEventListener('click', exportarExcel);
+});
+
+// ============================================================================
+// FUNCIONES DE CARGA DE DATOS
+// ============================================================================
+async function cargarResumen() {
+    try {
+        const fechaDesde = document.getElementById('fecha_desde').value;
+        const fechaHasta = document.getElementById('fecha_hasta').value;
+        
+        const params = new URLSearchParams();
+        if (fechaDesde) params.append('fecha_desde', fechaDesde);
+        if (fechaHasta) params.append('fecha_hasta', fechaHasta);
+        
+        const response = await fetch(`/api/marcacion/resumen-usuarios?${params}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            datosResumen = data.data;
+            renderizarResumen(datosResumen);
+        } else {
+            alert('Error al cargar resumen: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al cargar resumen');
+    }
+}
+
+// ============================================================================
+// FUNCIONES DE RENDERIZADO
+// ============================================================================
+function renderizarResumen(datos) {
+    const tbody = document.getElementById('tabla-resumen');
+    
+    if (datos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">No hay datos para mostrar</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = datos.map(item => `
+        <tr class="hover:bg-gray-50 dark:hover:bg-slate-800">
+            <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">${item.nombre_completo}</td>
+            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${item.email || '-'}</td>
+            <td class="px-6 py-4 text-sm text-center text-gray-900 dark:text-white font-semibold">${item.dias_asistidos}</td>
+            <td class="px-6 py-4 text-sm text-center text-gray-900 dark:text-white">${item.total_entradas}</td>
+            <td class="px-6 py-4 text-sm text-center text-gray-900 dark:text-white">${item.total_salidas}</td>
+            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${item.primera_marcacion ? new Date(item.primera_marcacion).toLocaleString() : '-'}</td>
+            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${item.ultima_marcacion ? new Date(item.ultima_marcacion).toLocaleString() : '-'}</td>
+            <td class="px-6 py-4 text-center">
+                <button onclick="abrirSelectorFecha('${item.num_documento}', '${item.nombre_completo}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors">
+                    <i class="fas fa-eye mr-1"></i>Ver Detalle
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// ============================================================================
+// FUNCIÓN DE FILTRADO
+// ============================================================================
+function aplicarFiltros() {
+    cargarResumen();
+}
+
+// ============================================================================
+// FUNCIÓN DE EXPORTAR
+// ============================================================================
+function exportarExcel() {
+    alert('Funcionalidad de exportación en desarrollo');
+}
+
+// ============================================================================
+// FUNCIÓN PARA ABRIR SELECTOR DE FECHA
+// ============================================================================
+function abrirSelectorFecha(numDocumento, nombreCompleto) {
+    const fechaDesde = document.getElementById('fecha_desde').value;
+    const fechaHasta = document.getElementById('fecha_hasta').value;
+    
+    // Crear modal de selección de fecha
+    const modalHTML = `
+        <div id="modal-selector-fecha" class="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md">
+                <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white px-6 py-4 flex items-center justify-between rounded-t-xl">
+                    <div>
+                        <h2 class="text-xl font-bold">Seleccionar Fecha</h2>
+                        <p class="text-blue-100 text-sm mt-1">${nombreCompleto}</p>
+                    </div>
+                    <button onclick="cerrarSelectorFecha()" class="text-white hover:text-gray-200 p-2">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Selecciona una fecha para ver el detalle:
+                    </label>
+                    <input type="date" id="fecha-seleccionada" 
+                           min="${fechaDesde}" 
+                           max="${fechaHasta}" 
+                           value="${fechaHasta}"
+                           class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
+                    <input type="hidden" id="num-documento-seleccionado" value="${numDocumento}">
+                    <input type="hidden" id="nombre-completo-seleccionado" value="${nombreCompleto}">
+                </div>
+                <div class="px-6 py-4 bg-gray-100 dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3 rounded-b-xl">
+                    <button onclick="cerrarSelectorFecha()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors">
+                        Cancelar
+                    </button>
+                    <button onclick="verDetalleConFecha()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                        <i class="fas fa-eye mr-2"></i>Ver Detalle
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function cerrarSelectorFecha() {
+    const modal = document.getElementById('modal-selector-fecha');
+    if (modal) modal.remove();
+}
+
+function verDetalleConFecha() {
+    const fechaSeleccionada = document.getElementById('fecha-seleccionada').value;
+    const numDocumento = document.getElementById('num-documento-seleccionado').value;
+    const nombreCompleto = document.getElementById('nombre-completo-seleccionado').value;
+    
+    if (!fechaSeleccionada) {
+        alert('Por favor selecciona una fecha');
+        return;
+    }
+    
+    cerrarSelectorFecha();
+    verDetalleDia(numDocumento, fechaSeleccionada, nombreCompleto);
+}
+
+// ============================================================================
+// FUNCIÓN PARA VER DETALLE DEL DÍA
+// ============================================================================
+let mapaGlobal = null;
+let marcadoresGlobales = [];
+
+async function verDetalleDia(numDocumento, fecha, nombreCompleto) {
+    try {
+        console.log(`[DETALLE] Abriendo detalle para documento=${numDocumento}, fecha=${fecha}`);
+        
+        const response = await fetch(`/api/marcacion/detalle-dia?num_documento=${numDocumento}&fecha=${fecha}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            alert('Error al cargar detalle: ' + data.error);
+            return;
+        }
+        
+        console.log('[DETALLE] Datos recibidos:', data);
+        
+        if (data.marcaciones.length === 0) {
+            alert(`No hay marcaciones registradas para ${nombreCompleto} en la fecha ${fecha}`);
+            return;
+        }
+        
+        // Actualizar información del usuario
+        document.getElementById('modal-info-usuario').textContent = 
+            `${nombreCompleto || data.usuario.nombre_completo} - ${fecha} (${data.marcaciones.length} marcaciones)`;
+        
+        // Renderizar fotos
+        renderizarFotos(data.marcaciones);
+        
+        // Renderizar tabla de marcaciones
+        renderizarTablaDetalle(data.marcaciones);
+        
+        // Mostrar modal
+        document.getElementById('modal-detalle-dia').classList.remove('hidden');
+        
+        // Inicializar mapa después de mostrar el modal
+        setTimeout(() => {
+            inicializarMapa(data.marcaciones);
+        }, 300);
+        
+    } catch (error) {
+        console.error('[DETALLE] Error:', error);
+        alert('Error al cargar el detalle');
+    }
+}
+
+function cerrarModalDetalle() {
+    document.getElementById('modal-detalle-dia').classList.add('hidden');
+    
+    // Limpiar mapa
+    if (mapaGlobal) {
+        marcadoresGlobales.forEach(marker => marker.setMap(null));
+        marcadoresGlobales = [];
+    }
+}
+
+function renderizarFotos(marcaciones) {
+    const gridFotos = document.getElementById('grid-fotos');
+    
+    const fotosHTML = marcaciones.map((m, index) => {
+        if (m.foto_base64) {
+            const tipoColor = m.tipo_marcacion === 'ENTRADA' ? 'green' : 'red';
+            return `
+                <div class="relative group">
+                    <img src="data:image/jpeg;base64,${m.foto_base64}" 
+                         alt="${m.tipo_marcacion}" 
+                         class="w-full h-48 object-cover rounded-lg shadow-md cursor-pointer hover:opacity-90 transition-opacity"
+                         onclick="verFotoGrande('data:image/jpeg;base64,${m.foto_base64}')">
+                    <div class="absolute top-2 left-2 px-2 py-1 bg-${tipoColor}-600 text-white text-xs font-bold rounded">
+                        ${m.tipo_marcacion}
+                    </div>
+                    <div class="absolute bottom-2 left-2 px-2 py-1 bg-black/70 text-white text-xs rounded">
+                        ${m.hora}
+                    </div>
+                </div>
+            `;
+        } else {
+            return `
+                <div class="w-full h-48 bg-gray-200 dark:bg-slate-700 rounded-lg flex items-center justify-center">
+                    <div class="text-center text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-camera-slash text-3xl mb-2"></i>
+                        <p class="text-xs">Sin foto</p>
+                        <p class="text-xs font-bold">${m.tipo_marcacion}</p>
+                        <p class="text-xs">${m.hora}</p>
+                    </div>
+                </div>
+            `;
+        }
+    }).join('');
+    
+    gridFotos.innerHTML = fotosHTML || '<p class="text-center text-gray-500 dark:text-gray-400">No hay fotos disponibles</p>';
+}
+
+function verFotoGrande(src) {
+    // Crear modal temporal para ver foto grande
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/90 z-[99999] flex items-center justify-center p-4';
+    modal.onclick = () => modal.remove();
+    modal.innerHTML = `
+        <img src="${src}" class="max-w-full max-h-full rounded-lg shadow-2xl">
+        <button onclick="this.parentElement.remove()" class="absolute top-4 right-4 text-white text-2xl">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    document.body.appendChild(modal);
+}
+
+function renderizarTablaDetalle(marcaciones) {
+    const tbody = document.getElementById('tabla-detalle-marcaciones');
+    
+    tbody.innerHTML = marcaciones.map(m => `
+        <tr class="bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800">
+            <td class="px-4 py-3 text-sm text-gray-900 dark:text-white">${m.hora}</td>
+            <td class="px-4 py-3 text-center">
+                <span class="px-2 py-1 text-xs font-medium rounded-full ${m.tipo_marcacion === 'ENTRADA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                    ${m.tipo_marcacion}
+                </span>
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                ${m.latitud && m.longitud ? `${parseFloat(m.latitud).toFixed(6)}, ${parseFloat(m.longitud).toFixed(6)}` : '-'}
+            </td>
+            <td class="px-4 py-3 text-center text-sm text-gray-600 dark:text-gray-400">
+                ${m.precision ? `±${m.precision}m` : '-'}
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">${m.dispositivo || '-'}</td>
+            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">${m.observacion || '-'}</td>
+        </tr>
+    `).join('');
+}
+
+function inicializarMapa(marcaciones) {
+    const contenedorMapa = document.getElementById('mapa-marcaciones');
+    
+    // Filtrar solo marcaciones con coordenadas
+    const marcacionesConGPS = marcaciones.filter(m => m.latitud && m.longitud);
+    
+    if (marcacionesConGPS.length === 0) {
+        contenedorMapa.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400"><i class="fas fa-map-marked-slash text-4xl mr-3"></i><span>No hay ubicaciones GPS disponibles</span></div>';
+        return;
+    }
+    
+    // Calcular centro del mapa (promedio de todas las coordenadas)
+    const latPromedio = marcacionesConGPS.reduce((sum, m) => sum + parseFloat(m.latitud), 0) / marcacionesConGPS.length;
+    const lngPromedio = marcacionesConGPS.reduce((sum, m) => sum + parseFloat(m.longitud), 0) / marcacionesConGPS.length;
+    
+    // Crear mapa
+    mapaGlobal = new google.maps.Map(contenedorMapa, {
+        center: { lat: latPromedio, lng: lngPromedio },
+        zoom: 15,
+        mapTypeId: 'roadmap'
+    });
+    
+    // Agregar marcadores
+    marcacionesConGPS.forEach((m, index) => {
+        const color = m.tipo_marcacion === 'ENTRADA' ? 'green' : 'red';
+        const marker = new google.maps.Marker({
+            position: { lat: parseFloat(m.latitud), lng: parseFloat(m.longitud) },
+            map: mapaGlobal,
+            title: `${m.tipo_marcacion} - ${m.hora}`,
+            label: {
+                text: (index + 1).toString(),
+                color: 'white',
+                fontSize: '12px',
+                fontWeight: 'bold'
+            },
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 12,
+                fillColor: color,
+                fillOpacity: 1,
+                strokeColor: 'white',
+                strokeWeight: 2
+            }
+        });
+        
+        // Info window
+        const infoWindow = new google.maps.InfoWindow({
+            content: `
+                <div style="padding: 8px;">
+                    <h4 style="font-weight: bold; margin-bottom: 4px;">${m.tipo_marcacion}</h4>
+                    <p style="margin: 2px 0;">Hora: ${m.hora}</p>
+                    <p style="margin: 2px 0;">Precisión: ±${m.precision}m</p>
+                    ${m.dispositivo ? `<p style="margin: 2px 0;">Dispositivo: ${m.dispositivo}</p>` : ''}
+                </div>
+            `
+        });
+        
+        marker.addListener('click', () => {
+            infoWindow.open(mapaGlobal, marker);
+        });
+        
+        marcadoresGlobales.push(marker);
+    });
+    
+    // Ajustar vista para mostrar todos los marcadores
+    if (marcacionesConGPS.length > 1) {
+        const bounds = new google.maps.LatLngBounds();
+        marcacionesConGPS.forEach(m => {
+            bounds.extend({ lat: parseFloat(m.latitud), lng: parseFloat(m.longitud) });
+        });
+        mapaGlobal.fitBounds(bounds);
+    }
+}
+</script>
+
+<!-- Google Maps API -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAL3YZoZV352Pi89gF8Hjc-avNIqDighaI"></script>
+
+<style>
+.tab-button.active {
+    border-bottom-width: 2px;
+}
+</style>
+
+{% endblock %}
