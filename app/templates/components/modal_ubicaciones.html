@@ -58,6 +58,26 @@
                                 </select>
                             </div>
                             
+                            <!-- 🔍 BÚSQUEDA POR DIRECCIÓN/CIUDAD -->
+                            <div class="border-t border-gray-300 dark:border-slate-600 pt-4">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    <i class="fas fa-search mr-1"></i> Buscar Ubicación
+                                </label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="buscar-ubicacion" 
+                                        class="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500" 
+                                        placeholder="Ej: Lima, Miraflores, Av. Benavides 1234">
+                                    <button type="button" onclick="buscarDireccionEnMapa()" 
+                                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    <i class="fas fa-lightbulb text-yellow-500 mr-1"></i>
+                                    Busca por ciudad, distrito o dirección completa
+                                </p>
+                            </div>
+                            
                             <!-- Coordenadas (readonly) -->
                             <div class="grid grid-cols-2 gap-2">
                                 <div>

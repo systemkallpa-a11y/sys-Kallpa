@@ -470,6 +470,173 @@ function buscarMiUbicacion() {
 }
 
 // ============================================================================
+// 🔍 BUSCAR DIRECCIÓN EN MAPA (GEOCODIFICACIÓN)
+// ============================================================================
+async function buscarDireccionEnMapa() {
+    const busqueda = document.getElementById('buscar-ubicacion').value.trim();
+    
+    if (!busqueda) {
+        mostrarAlerta('Error', 'Ingresa una ciudad o dirección para buscar', 'error');
+        return;
+    }
+    
+    const btn = document.querySelector('button[onclick="buscarDireccionEnMapa()"]');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    try {
+        // Usar Nominatim de OpenStreetMap para geocodificación
+        // Agregar ",Perú" para mejorar resultados
+        const query = busqueda.includes('Perú') || busqueda.includes('Peru') 
+            ? busqueda 
+            : `${busqueda}, Perú`;
+        
+        console.log('[BÚSQUEDA] Buscando:', query);
+        
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({
+                q: query,
+                format: 'json',
+                limit: 5,
+                addressdetails: 1,
+                countrycodes: 'pe'  // Limitar a Perú
+            }),
+            {
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'KallpaApp/1.0'  // Nominatim requiere User-Agent
+                }
+            }
+        );
+        
+        const resultados = await response.json();
+        
+        console.log('[BÚSQUEDA] Resultados:', resultados);
+        
+        if (resultados && resultados.length > 0) {
+            // Tomar el primer resultado
+            const mejor = resultados[0];
+            const lat = parseFloat(mejor.lat);
+            const lon = parseFloat(mejor.lon);
+            
+            console.log(`[BÚSQUEDA] ✓ Encontrado: ${mejor.display_name}`);
+            console.log(`[BÚSQUEDA] Coordenadas: ${lat}, ${lon}`);
+            
+            // Centrar mapa y colocar marcador
+            mapaUbicaciones.setView([lat, lon], 16);
+            colocarMarcador(lat, lon);
+            
+            // Rellenar dirección automáticamente si está vacía
+            const campoDir = document.getElementById('ubicacion-direccion');
+            if (!campoDir.value) {
+                // Construir dirección legible
+                const address = mejor.address || {};
+                const partes = [
+                    address.road || address.suburb,
+                    address.neighbourhood || address.city_district,
+                    address.city || address.town || address.municipality,
+                    address.state
+                ].filter(Boolean);
+                
+                campoDir.value = partes.join(', ');
+            }
+            
+            mostrarAlerta('Éxito', `Ubicación encontrada: ${mejor.display_name.substring(0, 60)}...`, 'success');
+            
+            // Mostrar opciones si hay múltiples resultados
+            if (resultados.length > 1) {
+                mostrarOpcionesUbicacion(resultados);
+            }
+        } else {
+            console.log('[BÚSQUEDA] ✗ Sin resultados');
+            mostrarAlerta('Error', 'No se encontró la ubicación. Intenta ser más específico (ej: Lima, Miraflores)', 'error');
+        }
+    } catch (error) {
+        console.error('[BÚSQUEDA] Error:', error);
+        mostrarAlerta('Error', 'Error al buscar la ubicación. Verifica tu conexión', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-search"></i>';
+    }
+}
+
+// ============================================================================
+// MOSTRAR OPCIONES DE UBICACIÓN (MÚLTIPLES RESULTADOS)
+// ============================================================================
+function mostrarOpcionesUbicacion(resultados) {
+    if (resultados.length <= 1) return;
+    
+    // Crear modal temporal con opciones
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4';
+    modal.id = 'modal-opciones-busqueda';
+    
+    let html = `
+        <div class="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <div class="bg-emerald-600 text-white px-6 py-4 flex items-center justify-between">
+                <h3 class="text-lg font-bold"><i class="fas fa-map-marked-alt mr-2"></i>Selecciona la ubicación correcta</h3>
+                <button onclick="document.getElementById('modal-opciones-busqueda').remove()" 
+                    class="text-white hover:text-gray-200 p-2">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-3">
+    `;
+    
+    resultados.forEach((resultado, index) => {
+        const address = resultado.address || {};
+        const tipo = resultado.type || 'place';
+        const icono = {
+            'city': 'fa-city',
+            'town': 'fa-building',
+            'village': 'fa-home',
+            'road': 'fa-road',
+            'suburb': 'fa-map-marker-alt',
+            'neighbourhood': 'fa-map-pin'
+        };
+        
+        html += `
+            <button onclick="seleccionarUbicacion(${resultado.lat}, ${resultado.lon}, '${resultado.display_name.replace(/'/g, "\\'")}'); document.getElementById('modal-opciones-busqueda').remove();"
+                class="w-full text-left p-4 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-emerald-50 dark:hover:bg-slate-700 transition-colors">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <i class="fas ${icono[tipo] || 'fa-map-marker-alt'}"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-semibold text-gray-900 dark:text-white">${resultado.display_name}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            <i class="fas fa-location-dot mr-1"></i>${resultado.lat}, ${resultado.lon}
+                        </p>
+                    </div>
+                </div>
+            </button>
+        `;
+    });
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    modal.innerHTML = html;
+    document.body.appendChild(modal);
+}
+
+// ============================================================================
+// SELECCIONAR UBICACIÓN (DESDE MODAL DE OPCIONES)
+// ============================================================================
+function seleccionarUbicacion(lat, lon, displayName) {
+    mapaUbicaciones.setView([lat, lon], 16);
+    colocarMarcador(lat, lon);
+    
+    // Actualizar dirección si está vacía
+    const campoDir = document.getElementById('ubicacion-direccion');
+    if (!campoDir.value) {
+        campoDir.value = displayName.substring(0, 100);
+    }
+}
+
+// ============================================================================
 // UTILIDAD: MOSTRAR ALERTAS
 // ============================================================================
 function mostrarAlerta(titulo, mensaje, tipo) {
@@ -504,5 +671,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const radioInput = document.getElementById('ubicacion-radio');
     if (radioInput) {
         radioInput.addEventListener('input', actualizarRadioCirculo);
+    }
+    
+    // Listener para buscar al presionar Enter
+    const buscarInput = document.getElementById('buscar-ubicacion');
+    if (buscarInput) {
+        buscarInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                buscarDireccionEnMapa();
+            }
+        });
     }
 });
