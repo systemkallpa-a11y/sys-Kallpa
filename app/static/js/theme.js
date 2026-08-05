@@ -27,13 +27,10 @@ themeToggle.addEventListener('click', () => {
     updateThemeIcon();
 });
 
-// Apply saved theme on load
+// FORZAR SIEMPRE TEMA LIGHT AL CARGAR
 window.addEventListener('DOMContentLoaded', () => {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    if (savedTheme === 'dark') {
-        html.classList.add('dark');
-    } else {
-        html.classList.remove('dark');
-    }
+    // SIEMPRE remover dark y establecer light
+    html.classList.remove('dark');
+    localStorage.setItem('theme', 'light');
     updateThemeIcon();
 });

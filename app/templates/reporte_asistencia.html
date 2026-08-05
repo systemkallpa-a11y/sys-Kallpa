@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block title %}Kallpa - Reporte de Asistencia{% endblock %}
+
 {% block content %}
 <div class="flex flex-col h-screen bg-gray-50 dark:bg-slate-950">
     <!-- Header -->
@@ -23,21 +25,32 @@
 
         <!-- Filtros -->
         <div class="px-6 py-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700">
-            <div class="grid grid-cols-4 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Desde</label>
-                    <input type="date" id="fecha_desde" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
+            <div class="flex items-end gap-4">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mes</label>
+                    <select id="mes_seleccionado" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
+                        <option value="01">Enero</option>
+                        <option value="02">Febrero</option>
+                        <option value="03">Marzo</option>
+                        <option value="04">Abril</option>
+                        <option value="05">Mayo</option>
+                        <option value="06">Junio</option>
+                        <option value="07">Julio</option>
+                        <option value="08">Agosto</option>
+                        <option value="09">Septiembre</option>
+                        <option value="10">Octubre</option>
+                        <option value="11">Noviembre</option>
+                        <option value="12">Diciembre</option>
+                    </select>
+                </div>
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Año</label>
+                    <select id="anio_seleccionado" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
+                        <!-- Se llenará dinámicamente con JavaScript -->
+                    </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Hasta</label>
-                    <input type="date" id="fecha_hasta" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Usuario</label>
-                    <input type="text" id="filtro_usuario" placeholder="Buscar por nombre..." class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
-                </div>
-                <div class="flex items-end">
-                    <button onclick="aplicarFiltros()" class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                    <button onclick="aplicarFiltros()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
                         <i class="fas fa-search mr-2"></i>Buscar
                     </button>
                 </div>
@@ -162,13 +175,23 @@ let datosResumen = [];
 // INICIALIZACIÓN
 // ============================================================================
 document.addEventListener('DOMContentLoaded', function() {
-    // Establecer fechas por defecto (últimos 30 días)
-    const hoy = new Date();
-    const hace30Dias = new Date();
-    hace30Dias.setDate(hace30Dias.getDate() - 30);
+    // Llenar selector de años (últimos 5 años y próximos 2)
+    const anioActual = new Date().getFullYear();
+    const selectAnio = document.getElementById('anio_seleccionado');
     
-    document.getElementById('fecha_hasta').valueAsDate = hoy;
-    document.getElementById('fecha_desde').valueAsDate = hace30Dias;
+    for (let i = anioActual - 5; i <= anioActual + 2; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = i;
+        if (i === anioActual) {
+            option.selected = true;
+        }
+        selectAnio.appendChild(option);
+    }
+    
+    // Establecer mes actual por defecto
+    const mesActual = String(new Date().getMonth() + 1).padStart(2, '0');
+    document.getElementById('mes_seleccionado').value = mesActual;
     
     // Cargar datos iniciales
     cargarResumen();
@@ -187,12 +210,20 @@ document.addEventListener('DOMContentLoaded', function() {
 // ============================================================================
 async function cargarResumen() {
     try {
-        const fechaDesde = document.getElementById('fecha_desde').value;
-        const fechaHasta = document.getElementById('fecha_hasta').value;
+        const mes = document.getElementById('mes_seleccionado').value;
+        const anio = document.getElementById('anio_seleccionado').value;
         
         const params = new URLSearchParams();
-        if (fechaDesde) params.append('fecha_desde', fechaDesde);
-        if (fechaHasta) params.append('fecha_hasta', fechaHasta);
+        
+        // Construir rango de fechas del mes seleccionado
+        if (mes && anio) {
+            const fechaDesde = `${anio}-${mes}-01`;
+            const ultimoDia = new Date(anio, mes, 0).getDate();
+            const fechaHasta = `${anio}-${mes}-${ultimoDia}`;
+            
+            params.append('fecha_desde', fechaDesde);
+            params.append('fecha_hasta', fechaHasta);
+        }
         
         const response = await fetch(`/api/marcacion/resumen-usuarios?${params}`);
         const data = await response.json();
@@ -256,8 +287,13 @@ function exportarExcel() {
 // FUNCIÓN PARA ABRIR SELECTOR DE FECHA
 // ============================================================================
 function abrirSelectorFecha(numDocumento, nombreCompleto) {
-    const fechaDesde = document.getElementById('fecha_desde').value;
-    const fechaHasta = document.getElementById('fecha_hasta').value;
+    const mes = document.getElementById('mes_seleccionado').value;
+    const anio = document.getElementById('anio_seleccionado').value;
+    
+    // Construir fechas mínima y máxima del mes seleccionado
+    const minFecha = `${anio}-${mes}-01`;
+    const ultimoDia = new Date(anio, mes, 0).getDate();
+    const maxFecha = `${anio}-${mes}-${ultimoDia}`;
     
     // Crear modal de selección de fecha
     const modalHTML = `
@@ -277,9 +313,9 @@ function abrirSelectorFecha(numDocumento, nombreCompleto) {
                         Selecciona una fecha para ver el detalle:
                     </label>
                     <input type="date" id="fecha-seleccionada" 
-                           min="${fechaDesde}" 
-                           max="${fechaHasta}" 
-                           value="${fechaHasta}"
+                           min="${minFecha}"
+                           max="${maxFecha}"
+                           value="${maxFecha}"
                            class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
                     <input type="hidden" id="num-documento-seleccionado" value="${numDocumento}">
                     <input type="hidden" id="nombre-completo-seleccionado" value="${nombreCompleto}">

@@ -177,20 +177,15 @@ def obtener_estado_marcacion():
         try:
             cursor = connection.cursor(dictionary=True)
             
-            # Obtener la última marcación del día
-            cursor.execute("""
-                SELECT 
-                    id_marcacion,
-                    tipo_marcacion,
-                    fecha_marcacion
-                FROM TblMarcacion
-                WHERE num_documento = %s
-                    AND DATE(fecha_marcacion) = CURDATE()
-                ORDER BY fecha_marcacion DESC
-                LIMIT 1
-            """, (num_documento,))
+            # Llamar SP para obtener el estado de marcación
+            cursor.callproc('sp_ObtenerEstadoMarcacion', (num_documento,))
             
-            ultima_marcacion = cursor.fetchone()
+            # Obtener resultado
+            ultima_marcacion = None
+            for result in cursor.stored_results():
+                result_list = result.fetchall()
+                if result_list:
+                    ultima_marcacion = result_list[0]
             
             cursor.close()
             connection.close()
@@ -202,9 +197,18 @@ def obtener_estado_marcacion():
                 else:
                     estado = 'FUERA'
                 
-                # Convertir fecha_marcacion a string para extraer la hora
-                fecha_hora = ultima_marcacion['fecha_marcacion']
-                hora_str = fecha_hora.strftime('%H:%M:%S') if isinstance(fecha_hora, datetime) else str(fecha_hora).split()[1] if ' ' in str(fecha_hora) else str(fecha_hora)
+                # Extraer hora
+                hora = ultima_marcacion.get('hora')
+                if isinstance(hora, datetime):
+                    hora_str = hora.strftime('%H:%M:%S')
+                elif hasattr(hora, 'total_seconds'):  # timedelta
+                    total_seconds = int(hora.total_seconds())
+                    hours = total_seconds // 3600
+                    minutes = (total_seconds % 3600) // 60
+                    seconds = total_seconds % 60
+                    hora_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                else:
+                    hora_str = str(hora) if hora else None
                 
                 return jsonify({
                     'success': True,
@@ -318,55 +322,17 @@ def obtener_reporte_todos():
             print(f"[REPORTE_TODOS] 🔄 Obteniendo reporte de asistencia")
             print(f"[REPORTE_TODOS] 📅 Fechas: desde={fecha_desde}, hasta={fecha_hasta}")
             
-            # Query base para obtener todas las marcaciones con información del usuario
-            query = """
-                SELECT 
-                    m.id_marcacion,
-                    m.num_documento,
-                    CONCAT(
-                        COALESCE(p.nombres, ''),
-                        ' ',
-                        COALESCE(p.apellido_paterno, ''),
-                        ' ',
-                        COALESCE(p.apellido_materno, '')
-                    ) as nombre_completo,
-                    p.email,
-                    m.tipo_marcacion,
-                    m.fecha_marcacion,
-                    DATE(m.fecha_marcacion) as fecha,
-                    TIME(m.fecha_marcacion) as hora,
-                    m.latitud,
-                    m.longitud,
-                    m.precision,
-                    m.dispositivo,
-                    m.observacion,
-                    CASE WHEN m.foto_base64 IS NOT NULL AND m.foto_base64 != '' THEN 1 ELSE 0 END as tiene_foto
-                FROM TblMarcacion m
-                INNER JOIN TblUsuario u ON m.num_documento = u.num_documento
-                INNER JOIN TblPersona p ON u.num_documento = p.num_documento
-                WHERE 1=1
-            """
+            # Llamar SP para obtener reporte de marcaciones
+            cursor.callproc('sp_ReporteMarcacionesTodos', (
+                fecha_desde if fecha_desde else None,
+                fecha_hasta if fecha_hasta else None,
+                num_documento if num_documento else None
+            ))
             
-            params = []
-            
-            # Filtro por rango de fechas
-            if fecha_desde:
-                query += " AND DATE(m.fecha_marcacion) >= %s"
-                params.append(fecha_desde)
-            
-            if fecha_hasta:
-                query += " AND DATE(m.fecha_marcacion) <= %s"
-                params.append(fecha_hasta)
-            
-            # Filtro por usuario específico
-            if num_documento:
-                query += " AND m.num_documento = %s"
-                params.append(num_documento)
-            
-            query += " ORDER BY m.fecha_marcacion DESC"
-            
-            cursor.execute(query, tuple(params))
-            marcaciones = cursor.fetchall()
+            # Obtener resultados
+            marcaciones = []
+            for result in cursor.stored_results():
+                marcaciones = result.fetchall()
             
             print(f"[REPORTE_TODOS] ✅ {len(marcaciones)} marcaciones encontradas")
             
@@ -420,47 +386,18 @@ def obtener_resumen_usuarios():
             cursor = connection.cursor(dictionary=True)
             
             print(f"[RESUMEN_USUARIOS] 🔄 Obteniendo resumen de usuarios")
+            print(f"[RESUMEN_USUARIOS] 📅 Fechas: desde={fecha_desde}, hasta={fecha_hasta}")
             
-            query = """
-                SELECT 
-                    u.num_documento,
-                    CONCAT(
-                        COALESCE(p.nombres, ''),
-                        ' ',
-                        COALESCE(p.apellido_paterno, ''),
-                        ' ',
-                        COALESCE(p.apellido_materno, '')
-                    ) as nombre_completo,
-                    p.email,
-                    COUNT(DISTINCT DATE(m.fecha_marcacion)) as dias_asistidos,
-                    SUM(CASE WHEN m.tipo_marcacion = 'ENTRADA' THEN 1 ELSE 0 END) as total_entradas,
-                    SUM(CASE WHEN m.tipo_marcacion = 'SALIDA' THEN 1 ELSE 0 END) as total_salidas,
-                    MIN(m.fecha_marcacion) as primera_marcacion,
-                    MAX(m.fecha_marcacion) as ultima_marcacion
-                FROM TblUsuario u
-                INNER JOIN TblPersona p ON u.num_documento = p.num_documento
-                LEFT JOIN TblMarcacion m ON u.num_documento = m.num_documento
-            """
+            # Llamar SP para obtener resumen de usuarios
+            cursor.callproc('sp_ResumenUsuariosAsistencia', (
+                fecha_desde if fecha_desde else None,
+                fecha_hasta if fecha_hasta else None
+            ))
             
-            params = []
-            conditions = []
-            
-            if fecha_desde:
-                conditions.append("DATE(m.fecha_marcacion) >= %s")
-                params.append(fecha_desde)
-            
-            if fecha_hasta:
-                conditions.append("DATE(m.fecha_marcacion) <= %s")
-                params.append(fecha_hasta)
-            
-            if conditions:
-                query += " WHERE " + " AND ".join(conditions)
-            
-            query += " GROUP BY u.num_documento, p.nombres, p.apellido_paterno, p.apellido_materno, p.email"
-            query += " ORDER BY nombre_completo"
-            
-            cursor.execute(query, tuple(params))
-            resumen = cursor.fetchall()
+            # Obtener resultados
+            resumen = []
+            for result in cursor.stored_results():
+                resumen = result.fetchall()
             
             print(f"[RESUMEN_USUARIOS] ✅ {len(resumen)} usuarios en el resumen")
             
@@ -514,50 +451,29 @@ def obtener_detalle_dia():
             
             print(f"[DETALLE_DIA] 🔄 Obteniendo detalle para documento={num_documento}, fecha={fecha}")
             
-            # Obtener información del usuario
-            cursor.execute("""
-                SELECT 
-                    u.num_documento,
-                    CONCAT(
-                        COALESCE(p.nombres, ''),
-                        ' ',
-                        COALESCE(p.apellido_paterno, ''),
-                        ' ',
-                        COALESCE(p.apellido_materno, '')
-                    ) as nombre_completo,
-                    p.email
-                FROM TblUsuario u
-                INNER JOIN TblPersona p ON u.num_documento = p.num_documento
-                WHERE u.num_documento = %s
-            """, (num_documento,))
+            # Llamar SP para obtener detalle del día
+            cursor.callproc('sp_ObtenerDetalleDia', (num_documento, fecha))
             
-            usuario = cursor.fetchone()
+            # Obtener ambos resultsets
+            usuario = None
+            marcaciones = []
+            
+            result_index = 0
+            for result in cursor.stored_results():
+                result_data = result.fetchall()
+                if result_index == 0:
+                    # Primer resultset: información del usuario
+                    if result_data:
+                        usuario = result_data[0]
+                elif result_index == 1:
+                    # Segundo resultset: marcaciones del día
+                    marcaciones = result_data
+                result_index += 1
             
             if not usuario:
                 cursor.close()
                 connection.close()
                 return jsonify({'success': False, 'error': 'Usuario no encontrado'}), 404
-            
-            # Obtener todas las marcaciones del día con fotos
-            cursor.execute("""
-                SELECT 
-                    m.id_marcacion,
-                    m.tipo_marcacion,
-                    m.fecha_marcacion,
-                    TIME(m.fecha_marcacion) as hora,
-                    m.latitud,
-                    m.longitud,
-                    m.precision,
-                    m.foto_base64,
-                    m.dispositivo,
-                    m.observacion
-                FROM TblMarcacion m
-                WHERE m.num_documento = %s
-                    AND DATE(m.fecha_marcacion) = %s
-                ORDER BY m.fecha_marcacion ASC
-            """, (num_documento, fecha))
-            
-            marcaciones = cursor.fetchall()
             
             print(f"[DETALLE_DIA] ✅ {len(marcaciones)} marcaciones encontradas")
             
