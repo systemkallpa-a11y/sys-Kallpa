@@ -347,6 +347,21 @@ function abrirSelectorFecha(numDocumento, nombreCompleto) {
     const ultimoDia = new Date(anio, mes, 0).getDate();
     const maxFecha = `${anio}-${mes}-${ultimoDia}`;
     
+    // Obtener fecha actual en zona horaria de Perú (UTC-5)
+    const fechaActualPeru = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
+    const diaActual = String(fechaActualPeru.getDate()).padStart(2, '0');
+    const mesActual = String(fechaActualPeru.getMonth() + 1).padStart(2, '0');
+    const anioActual = fechaActualPeru.getFullYear();
+    const fechaHoy = `${anioActual}-${mesActual}-${diaActual}`;
+    
+    // Determinar fecha por defecto:
+    // - Si la fecha de hoy está dentro del rango del mes seleccionado, usar hoy
+    // - Si no, usar el último día del mes seleccionado
+    let fechaDefault = maxFecha;
+    if (fechaHoy >= minFecha && fechaHoy <= maxFecha) {
+        fechaDefault = fechaHoy;
+    }
+    
     // Crear modal de selección de fecha
     const modalHTML = `
         <div id="modal-selector-fecha" class="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
@@ -367,7 +382,7 @@ function abrirSelectorFecha(numDocumento, nombreCompleto) {
                     <input type="date" id="fecha-seleccionada" 
                            min="${minFecha}"
                            max="${maxFecha}"
-                           value="${maxFecha}"
+                           value="${fechaDefault}"
                            class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
                     <input type="hidden" id="num-documento-seleccionado" value="${numDocumento}">
                     <input type="hidden" id="nombre-completo-seleccionado" value="${nombreCompleto}">
