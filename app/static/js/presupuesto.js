@@ -1217,7 +1217,7 @@ async function cargarPresupuestos() {
         if (!data.data || data.data.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                    <td colspan="10" class="px-6 py-8 text-center text-gray-500">
                         <i class="fas fa-inbox mr-2"></i>Sin presupuestos
                     </td>
                 </tr>
@@ -1232,8 +1232,24 @@ async function cargarPresupuestos() {
                 'RECHAZADO': 'bg-red-100 text-red-800'
             };
             
+            // Formatear fecha_actualizacion
+            let fechaFormateada = '-';
+            if (p.fecha_actualizacion) {
+                try {
+                    const fecha = new Date(p.fecha_actualizacion);
+                    fechaFormateada = fecha.toLocaleDateString('es-PE', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+                } catch (e) {
+                    console.error('Error formateando fecha:', e);
+                }
+            }
+            
             return `
                 <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 text-sm text-gray-600">${fechaFormateada}</td>
                     <td class="px-6 py-4 text-sm font-medium text-gray-900">${p.numero_presupuesto}</td>
                     <td class="px-6 py-4 text-sm text-gray-600">${p.proyecto || '-'}</td>
                     <td class="px-6 py-4 text-sm text-gray-600">${p.obra || '-'}</td>
@@ -1243,6 +1259,9 @@ async function cargarPresupuestos() {
                             ${p.estado}
                         </span>
                     </td>
+                    <td class="px-6 py-4 text-sm text-gray-600">${p.creado_por || '-'}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600">${p.aprobado_rechazado_por || '-'}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600">${p.comentario_rechazo || '-'}</td>
                     <td class="px-6 py-4 text-sm">
                         <div class="flex gap-2">
                             <button onclick="abrirModalEditar(${p.id_presupuesto})" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition">
