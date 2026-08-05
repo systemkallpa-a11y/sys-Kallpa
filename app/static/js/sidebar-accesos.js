@@ -84,7 +84,7 @@ function renderizarSidebar(menus, submenus, menusCompletos) {
         const submenusDatos = acceso.submenus;
         const esMenuCompleto = acceso.esMenuCompleto;
         
-        console.log(`[SIDEBAR-ACCESOS] Procesando menú: ${menu.nombre}, completo: ${esMenuCompleto}, submenus: ${submenusDatos.length}`);
+        console.log(`[SIDEBAR-ACCESOS] Procesando menú: ${menu.nombre}, icono: "${menu.icono}", completo: ${esMenuCompleto}, submenus: ${submenusDatos.length}`);
         
         // Crear estructura del menú
         const divMenu = document.createElement('div');
@@ -99,7 +99,7 @@ function renderizarSidebar(menus, submenus, menusCompletos) {
             divMenu.innerHTML = `
                 <button class="w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200 group text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 submenuToggle" onclick="toggleSubmenu(this)">
                     <span class="flex items-center gap-3">
-                        <i class="fas ${menu.icono} w-5 text-center text-gray-400 group-hover:text-[#4D148C] transition-colors"></i>
+                        <i class="fas ${menu.icono || 'fa-folder'} w-5 text-center text-gray-400 group-hover:text-[#4D148C] transition-colors"></i>
                         <span>${menu.nombre}</span>
                     </span>
                     <i class="fas fa-chevron-down text-sm transition-transform duration-300 text-gray-400"></i>
@@ -118,7 +118,7 @@ function renderizarSidebar(menus, submenus, menusCompletos) {
                 // Usar la ruta del submenú directamente
                 const ruta = submenu.ruta || '#';
                 
-                console.log(`[SIDEBAR-ACCESOS] Agregando submenú: ${submenu.nombre} -> ${ruta}`);
+                console.log(`[SIDEBAR-ACCESOS] Agregando submenú: ${submenu.nombre}, icono: "${submenu.icono}" -> ${ruta}`);
                 
                 submenuLink.href = ruta;
                 submenuLink.className = 'flex items-center w-full px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group text-gray-600 dark:text-gray-400 hover:bg-[#4D148C]/10 dark:hover:bg-[#4D148C]/30 hover:text-[#4D148C] dark:hover:text-[#4D148C]';
@@ -134,7 +134,7 @@ function renderizarSidebar(menus, submenus, menusCompletos) {
             
             divMenu.innerHTML = `
                 <a href="#" class="flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all duration-200 group text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
-                    <i class="fas ${menu.icono} w-5 text-center text-gray-400 group-hover:text-[#4D148C] transition-colors"></i>
+                    <i class="fas ${menu.icono || 'fa-folder'} w-5 text-center text-gray-400 group-hover:text-[#4D148C] transition-colors"></i>
                     <span class="ml-3">${menu.nombre}</span>
                 </a>
             `;
