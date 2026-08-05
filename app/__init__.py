@@ -32,6 +32,9 @@ def create_app():
     app.config['PRESERVE_CONTEXT_ON_EXCEPTION'] = False
     app.config['JSON_SORT_KEYS'] = False
     
+    # VERSION DE ASSETS - Incrementar este número cuando se actualicen archivos estáticos
+    app.config['ASSETS_VERSION'] = '20260805_1'
+    
     # Configurar logging
     if not app.debug:
         # Crear directorio de logs si no existe
@@ -66,6 +69,11 @@ def create_app():
     app.register_blueprint(logo_bp)
     app.register_blueprint(materiales_bp)
     app.register_blueprint(marcacion_bp)
+    
+    # Inyectar versión de assets en todos los templates
+    @app.context_processor
+    def inject_assets_version():
+        return {'assets_version': app.config.get('ASSETS_VERSION', '1')}
     
     # Asegurar que todas las respuestas HTML tengan charset UTF-8
     @app.after_request
