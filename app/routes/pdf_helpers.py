@@ -21,6 +21,11 @@ import os
 
 
 # ============================================================================
+# CONSTANTE GLOBAL: ANCHO ESTÁNDAR DE TABLAS
+# ============================================================================
+ANCHO_TABLA_ESTANDAR = 8.0*inch  # Todas las secciones usan este ancho para alineación perfecta
+
+# ============================================================================
 # CLASE: PDFStyles - Gestión centralizada de estilos y colores
 # ============================================================================
 
@@ -157,29 +162,44 @@ def crear_info_presupuesto(presupuesto, styles):
         styles (dict): Diccionario de estilos
         
     Returns:
-        Table: Tabla con información estructurada en 3 columnas x 2 filas
+        Table: Tabla con información estructurada
     """
+    # Usar Paragraph para renderizar HTML correctamente
     info_data = [
         [
-            f"<b>NÚMERO:</b>",
-            f"{presupuesto['numero_presupuesto']}",
-            f"<b>ESTADO:</b>",
-            f"{presupuesto['estado']}",
-            f"<b>FECHA:</b>",
-            f"{presupuesto['fecha_creacion'].strftime('%d/%m/%Y') if presupuesto['fecha_creacion'] else 'N/A'}"
+            Paragraph("<b>NÚMERO:</b>", styles['normal']),
+            Paragraph(f"{presupuesto['numero_presupuesto']}", styles['normal']),
+            Paragraph("<b>ESTADO:</b>", styles['normal']),
+            Paragraph(f"{presupuesto['estado']}", styles['normal']),
+            Paragraph("<b>FECHA:</b>", styles['normal']),
+            Paragraph(f"{presupuesto['fecha_creacion'].strftime('%d/%m/%Y') if presupuesto['fecha_creacion'] else 'N/A'}", styles['normal'])
         ],
         [
-            f"<b>PROYECTO:</b>",
-            f"{presupuesto.get('nombre_proyecto', 'N/A')}",
-            f"<b>OBRA:</b>",
-            f"{presupuesto.get('nombre_obra', 'N/A')}",
-            f"<b>MONEDA:</b>",
-            f"S/. (Soles)"
+            Paragraph("<b>PROYECTO:</b>", styles['normal']),
+            Paragraph(f"{presupuesto.get('nombre_proyecto', 'N/A')}", styles['normal']),
+            Paragraph("<b>OBRA:</b>", styles['normal']),
+            Paragraph(f"{presupuesto.get('nombre_obra', 'N/A')}", styles['normal']),
+            "",  # Celda que se fusionará
+            ""   # Celda que se fusionará
         ],
     ]
     
-    info_table = Table(info_data, colWidths=[0.85*inch, 1.95*inch, 0.85*inch, 1.95*inch, 0.85*inch, 1.95*inch])
+    # Anchos ajustados para usar ANCHO_TABLA_ESTANDAR (8.0")
+    # Distribución: 6 columnas con proporciones equilibradas
+    col_widths = [
+        0.8*inch,   # Etiqueta 1
+        1.86*inch,  # Valor 1
+        0.8*inch,   # Etiqueta 2
+        1.86*inch,  # Valor 2
+        0.8*inch,   # Etiqueta 3
+        1.88*inch   # Valor 3
+    ]  # Total = 8.0"
+    
+    info_table = Table(info_data, colWidths=col_widths)
     info_table.setStyle(TableStyle([
+        # ⭐ FUSIONAR CELDAS para OBRA (columnas 3-5 de la fila 1)
+        ('SPAN', (3, 1), (5, 1)),  # La celda de OBRA ocupa 3 columnas
+        
         # Etiquetas (columnas pares: 0, 2, 4)
         ('TEXTCOLOR', (0, 0), (0, -1), PDFStyles.PRIMARY_COLOR),
         ('TEXTCOLOR', (2, 0), (2, -1), PDFStyles.PRIMARY_COLOR),
@@ -223,32 +243,42 @@ def crear_responsable(presupuesto, styles):
     Returns:
         tuple: (header_table, resp_table)
     """
-    # Encabezado
+    # Encabezado - 8.0" para alinear con otras secciones
     header_data = [['RESPONSABLE']]
-    header_table = Table(header_data, colWidths=[7.35*inch])
+    header_table = Table(header_data, colWidths=[ANCHO_TABLA_ESTANDAR])
     header_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (0, 0), PDFStyles.PRIMARY_COLOR),
         ('TEXTCOLOR', (0, 0), (0, 0), colors.white),
         ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (0, 0), 11),
+        ('FONTSIZE', (0, 0), (0, 0), 10),  # Reducido para consistencia
         ('LEFTPADDING', (0, 0), (0, 0), 8),
-        ('TOPPADDING', (0, 0), (0, 0), 6),
-        ('BOTTOMPADDING', (0, 0), (0, 0), 6),
+        ('TOPPADDING', (0, 0), (0, 0), 5),
+        ('BOTTOMPADDING', (0, 0), (0, 0), 5),
     ]))
     
-    # Datos responsable
+    # Datos responsable - Usar Paragraph para renderizar HTML
     nombre_completo = f"{presupuesto.get('usuario_nombres', '')} {presupuesto.get('usuario_apellido', '')}".strip()
     
     resp_data = [[
-        f"<b>Nombre:</b>",
-        nombre_completo or 'N/A',
-        f"<b>Email:</b>",
-        presupuesto.get('usuario_email', 'N/A'),
-        f"<b>Teléfono:</b>",
-        presupuesto.get('usuario_celular', 'N/A'),
+        Paragraph("<b>Nombre:</b>", styles['normal']),
+        Paragraph(nombre_completo or 'N/A', styles['normal']),
+        Paragraph("<b>Email:</b>", styles['normal']),
+        Paragraph(presupuesto.get('usuario_email', 'N/A'), styles['normal']),
+        Paragraph("<b>Teléfono:</b>", styles['normal']),
+        Paragraph(presupuesto.get('usuario_celular', 'N/A'), styles['normal']),
     ]]
     
-    resp_table = Table(resp_data, colWidths=[0.85*inch, 1.95*inch, 0.85*inch, 1.95*inch, 0.85*inch, 1.95*inch])
+    # Anchos ajustados para usar ANCHO_TABLA_ESTANDAR (8.0") - igual que info_presupuesto
+    col_widths = [
+        0.8*inch,   # Etiqueta 1
+        1.86*inch,  # Valor 1
+        0.8*inch,   # Etiqueta 2
+        1.86*inch,  # Valor 2
+        0.8*inch,   # Etiqueta 3
+        1.88*inch   # Valor 3
+    ]  # Total = 8.0"
+    
+    resp_table = Table(resp_data, colWidths=col_widths)
     resp_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f5f5f5')),
         ('TEXTCOLOR', (0, 0), (0, -1), PDFStyles.PRIMARY_COLOR),
@@ -287,52 +317,68 @@ def crear_tabla_materiales(materiales, styles):
     if not materiales:
         return None, None
     
-    # Encabezado
+    # Encabezado - Usar ancho estándar para alineación perfecta
     header_data = [['DETALLE DE MATERIALES']]
-    header_table = Table(header_data, colWidths=[7.35*inch])
+    header_table = Table(header_data, colWidths=[ANCHO_TABLA_ESTANDAR])
     header_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (0, 0), PDFStyles.PRIMARY_COLOR),
         ('TEXTCOLOR', (0, 0), (0, 0), colors.white),
         ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (0, 0), 11),
+        ('FONTSIZE', (0, 0), (0, 0), 10),  # Reducido de 11 a 10
         ('LEFTPADDING', (0, 0), (0, 0), 8),
-        ('TOPPADDING', (0, 0), (0, 0), 6),
-        ('BOTTOMPADDING', (0, 0), (0, 0), 6),
+        ('TOPPADDING', (0, 0), (0, 0), 5),
+        ('BOTTOMPADDING', (0, 0), (0, 0), 5),
     ]))
     
-    # Tabla de materiales
+    # Tabla de materiales - Ajustada para usar todo el ancho (8.0")
     mat_data = [['#', 'Material', 'Categoría', 'Unidad', 'Cantidad', 'P. Unit.', 'Subtotal']]
     
+    # Estilo para textos largos con word wrap - Fuente más pequeña
+    text_style = ParagraphStyle(
+        'MaterialText',
+        parent=styles['normal'],
+        fontSize=7,      # Reducido de 8 a 7
+        leading=8.5,     # Ajustado el interlineado
+        alignment=0      # LEFT
+    )
+    
     for idx, material in enumerate(materiales, 1):
+        # Usar Paragraph para textos largos que necesitan word wrap
+        material_nombre = Paragraph(material.get('material_nombre', 'N/A'), text_style)
+        categoria_nombre = Paragraph(material.get('categoria', 'N/A'), text_style)
+        
         mat_data.append([
             str(idx),
-            material.get('material_nombre', 'N/A'),
-            material.get('categoria', 'N/A'),
+            material_nombre,  # Ahora puede hacer word wrap
+            categoria_nombre,  # Ahora puede hacer word wrap
             material.get('unidad_medida', 'und'),
             f"{material.get('cantidad', 0):.2f}",
             f"S/. {material.get('precio_unitario', 0):.2f}",
             f"S/. {material.get('subtotal', 0):.2f}",
         ])
     
-    mat_table = Table(mat_data, colWidths=[0.45*inch, 1.75*inch, 1.3*inch, 0.8*inch, 1.0*inch, 1.15*inch, 1.0*inch])
+    # Anchos optimizados para usar todo el ancho (8.0")
+    # #: 0.35" | Material: 2.75" | Categoría: 1.6" | Unidad: 0.7" | Cantidad: 0.9" | P.Unit: 1.0" | Subtotal: 0.7"
+    mat_table = Table(mat_data, colWidths=[0.35*inch, 2.75*inch, 1.6*inch, 0.7*inch, 0.9*inch, 1.0*inch, 0.7*inch])
     mat_table.setStyle(TableStyle([
         # Encabezado
         ('BACKGROUND', (0, 0), (-1, 0), PDFStyles.HEADER_DARK),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 9),
-        ('TOPPADDING', (0, 0), (-1, 0), 7),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 7),
+        ('FONTSIZE', (0, 0), (-1, 0), 8),  # Reducido de 9 a 8
+        ('TOPPADDING', (0, 0), (-1, 0), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
         
         # Filas de datos
         ('TEXTCOLOR', (0, 1), (-1, -1), PDFStyles.TEXT_DARK),
         ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
         ('FONTNAME', (1, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('FONTSIZE', (0, 1), (-1, -1), 7),  # Reducido de 8 a 7
         
         # Alineación
         ('ALIGN', (0, 1), (0, -1), 'CENTER'),
+        ('VALIGN', (0, 1), (-1, -1), 'TOP'),  # Alineación vertical superior
         ('ALIGN', (1, 1), (3, -1), 'LEFT'),
         ('ALIGN', (4, 1), (-1, -1), 'RIGHT'),
         
@@ -342,11 +388,11 @@ def crear_tabla_materiales(materiales, styles):
         # Bordes
         ('GRID', (0, 0), (-1, -1), 0.5, PDFStyles.BORDER_COLOR),
         
-        # Espaciado
-        ('TOPPADDING', (0, 1), (-1, -1), 5),
-        ('BOTTOMPADDING', (0, 1), (-1, -1), 5),
-        ('LEFTPADDING', (0, 0), (-1, -1), 5),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+        # Espaciado reducido para más profesional
+        ('TOPPADDING', (0, 1), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
     ]))
     
     return header_table, mat_table
@@ -370,50 +416,65 @@ def crear_tabla_servicios(servicios, styles):
     if not servicios:
         return None, None
     
-    # Encabezado
+    # Encabezado - Usar ancho estándar para alineación perfecta
     header_data = [['DETALLE DE SERVICIOS']]
-    header_table = Table(header_data, colWidths=[7.35*inch])
+    header_table = Table(header_data, colWidths=[ANCHO_TABLA_ESTANDAR])
     header_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (0, 0), PDFStyles.SECONDARY_COLOR),
         ('TEXTCOLOR', (0, 0), (0, 0), colors.white),
         ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (0, 0), 11),
+        ('FONTSIZE', (0, 0), (0, 0), 10),  # Reducido de 11 a 10
         ('LEFTPADDING', (0, 0), (0, 0), 8),
-        ('TOPPADDING', (0, 0), (0, 0), 6),
-        ('BOTTOMPADDING', (0, 0), (0, 0), 6),
+        ('TOPPADDING', (0, 0), (0, 0), 5),
+        ('BOTTOMPADDING', (0, 0), (0, 0), 5),
     ]))
     
-    # Tabla de servicios
+    # Tabla de servicios - Ajustada para usar todo el ancho (8.0")
     svc_data = [['#', 'Descripción', 'Cantidad', 'P. Unit.', 'Subtotal']]
     
+    # Estilo para descripciones largas con word wrap - Fuente más pequeña
+    text_style = ParagraphStyle(
+        'ServiceText',
+        parent=styles['normal'],
+        fontSize=7,      # Reducido de 8 a 7
+        leading=8.5,     # Ajustado el interlineado
+        alignment=0      # LEFT
+    )
+    
     for idx, servicio in enumerate(servicios, 1):
+        # Usar Paragraph para descripción larga que necesita word wrap
+        descripcion = Paragraph(servicio.get('servicio_nombre', 'N/A'), text_style)
+        
         svc_data.append([
             str(idx),
-            servicio.get('servicio_nombre', 'N/A'),
+            descripcion,  # Ahora puede hacer word wrap
             f"{servicio.get('cantidad', 0):.2f}",
             f"S/. {servicio.get('precio_unitario', 0):.2f}",
             f"S/. {servicio.get('subtotal', 0):.2f}",
         ])
     
-    svc_table = Table(svc_data, colWidths=[0.45*inch, 3.6*inch, 1.0*inch, 1.15*inch, 1.15*inch])
+    # Anchos optimizados para usar todo el ancho (8.0")
+    # #: 0.35" | Descripción: 5.2" | Cantidad: 0.95" | P.Unit: 0.8" | Subtotal: 0.7"
+    svc_table = Table(svc_data, colWidths=[0.35*inch, 5.2*inch, 0.95*inch, 0.8*inch, 0.7*inch])
     svc_table.setStyle(TableStyle([
         # Encabezado
         ('BACKGROUND', (0, 0), (-1, 0), PDFStyles.HEADER_DARK),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 9),
-        ('TOPPADDING', (0, 0), (-1, 0), 7),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 7),
+        ('FONTSIZE', (0, 0), (-1, 0), 8),  # Reducido de 9 a 8
+        ('TOPPADDING', (0, 0), (-1, 0), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
         
         # Filas de datos
         ('TEXTCOLOR', (0, 1), (-1, -1), PDFStyles.TEXT_DARK),
         ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
         ('FONTNAME', (1, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('FONTSIZE', (0, 1), (-1, -1), 7),  # Reducido de 8 a 7
         
         # Alineación
         ('ALIGN', (0, 1), (0, -1), 'CENTER'),
+        ('VALIGN', (0, 1), (-1, -1), 'TOP'),  # Alineación vertical superior
         ('ALIGN', (1, 1), (1, -1), 'LEFT'),
         ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
         
@@ -423,11 +484,11 @@ def crear_tabla_servicios(servicios, styles):
         # Bordes
         ('GRID', (0, 0), (-1, -1), 0.5, PDFStyles.BORDER_COLOR),
         
-        # Espaciado
-        ('TOPPADDING', (0, 1), (-1, -1), 5),
-        ('BOTTOMPADDING', (0, 1), (-1, -1), 5),
-        ('LEFTPADDING', (0, 0), (-1, -1), 5),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+        # Espaciado reducido para más profesional
+        ('TOPPADDING', (0, 1), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
     ]))
     
     return header_table, svc_table
@@ -476,15 +537,15 @@ def crear_desglose_financiero(presupuesto, materiales, servicios, styles):
     
     # ====== ENCABEZADO ======
     header_data = [['DESGLOSE FINANCIERO']]
-    header_table = Table(header_data, colWidths=[7.35*inch])
+    header_table = Table(header_data, colWidths=[ANCHO_TABLA_ESTANDAR])
     header_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (0, 0), PDFStyles.ACCENT_COLOR),
         ('TEXTCOLOR', (0, 0), (0, 0), colors.white),
         ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (0, 0), 11),
+        ('FONTSIZE', (0, 0), (0, 0), 10),  # Reducido para consistencia
         ('LEFTPADDING', (0, 0), (0, 0), 8),
-        ('TOPPADDING', (0, 0), (0, 0), 6),
-        ('BOTTOMPADDING', (0, 0), (0, 0), 6),
+        ('TOPPADDING', (0, 0), (0, 0), 5),
+        ('BOTTOMPADDING', (0, 0), (0, 0), 5),
     ]))
     
     # ====== TABLA DE DESGLOSE ======
@@ -506,7 +567,8 @@ def crear_desglose_financiero(presupuesto, materiales, servicios, styles):
         ['PRESUPUESTO DE EJECUCIÓN DE OBRA', '-', f"S/. {presupuesto_ejecucion:,.2f}"],
     ]
     
-    desglose_table = Table(desglose_data, colWidths=[3.5*inch, 1.5*inch, 2.35*inch])
+    # Anchos ajustados para usar 8.0" total
+    desglose_table = Table(desglose_data, colWidths=[4.2*inch, 1.6*inch, 2.2*inch])
     
     desglose_table.setStyle(TableStyle([
         # ====== ENCABEZADO DE TABLA ======
@@ -583,9 +645,9 @@ def crear_observaciones(presupuesto, styles):
     if not presupuesto.get('observaciones'):
         return None, None
     
-    # Encabezado
+    # Encabezado - Usar ancho estándar para alineación perfecta
     header_data = [['OBSERVACIONES']]
-    header_table = Table(header_data, colWidths=[7.35*inch])
+    header_table = Table(header_data, colWidths=[ANCHO_TABLA_ESTANDAR])
     header_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (0, 0), PDFStyles.PRIMARY_COLOR),
         ('TEXTCOLOR', (0, 0), (0, 0), colors.white),
@@ -600,7 +662,7 @@ def crear_observaciones(presupuesto, styles):
     obs_text = str(presupuesto['observaciones']).replace('\n', '<br/>')
     obs_paragraph = Paragraph(obs_text, styles['normal'])
     
-    obs_table = Table([[obs_paragraph]], colWidths=[7.35*inch])
+    obs_table = Table([[obs_paragraph]], colWidths=[ANCHO_TABLA_ESTANDAR])
     obs_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (0, 0), colors.HexColor('#f5f5f5')),
         ('LEFTPADDING', (0, 0), (0, 0), 8),

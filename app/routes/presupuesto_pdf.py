@@ -115,13 +115,13 @@ def descargar_presupuesto_pdf(id_presupuesto):
         cursor.close()
         connection.close()
         
-        # Generar PDF (márgenes mínimos para usar todo el ancho)
+        # Generar PDF con márgenes reducidos para aprovechar más espacio
         pdf_buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             pdf_buffer,
             pagesize=letter,
-            rightMargin=0.35*inch,
-            leftMargin=0.35*inch,
+            rightMargin=0.25*inch,  # Reducido de 0.35" a 0.25"
+            leftMargin=0.25*inch,   # Reducido de 0.35" a 0.25"
             topMargin=0.5*inch,
             bottomMargin=0.5*inch,
             title=f"Presupuesto {presupuesto['numero_presupuesto']}"
@@ -273,214 +273,49 @@ def descargar_presupuesto_pdf(id_presupuesto):
         story.append(sep_table)
         story.append(Spacer(1, 0.08*inch))
         
-        # 2. INFORMACIÓN DEL PRESUPUESTO - CONSERVANDO ESTRUCTURA ORIGINAL
-        # Tabla 1: NÚMERO, ESTADO, FECHA
-        info_data_1 = [
-            ['NÚMERO:', presupuesto['numero_presupuesto'], 'ESTADO:', presupuesto['estado'], 'FECHA:', presupuesto['fecha_creacion'].strftime('%d/%m/%Y') if presupuesto['fecha_creacion'] else 'N/A'],
-        ]
-        
-        info_table_1 = Table(info_data_1, colWidths=[0.85*inch, 1.95*inch, 0.85*inch, 1.95*inch, 0.85*inch, 1.95*inch])
-        info_table_1.setStyle(TableStyle([
-            # Etiquetas (columnas 0, 2, 4) - Verde Quska
-            ('TEXTCOLOR', (0, 0), (0, 0), QUSKA_DARK_GREEN),
-            ('TEXTCOLOR', (2, 0), (2, 0), QUSKA_DARK_GREEN),
-            ('TEXTCOLOR', (4, 0), (4, 0), QUSKA_DARK_GREEN),
-            ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (2, 0), (2, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (4, 0), (4, 0), 'Helvetica-Bold'),
-            
-            # Valores (columnas 1, 3, 5)
-            ('TEXTCOLOR', (1, 0), (1, 0), colors.HexColor('#333333')),
-            ('TEXTCOLOR', (3, 0), (3, 0), colors.HexColor('#333333')),
-            ('TEXTCOLOR', (5, 0), (5, 0), colors.HexColor('#333333')),
-            ('FONTNAME', (1, 0), (1, 0), 'Helvetica'),
-            ('FONTNAME', (3, 0), (3, 0), 'Helvetica'),
-            ('FONTNAME', (5, 0), (5, 0), 'Helvetica'),
-            
-            # Estilos generales
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f5f5f5')),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d0d0d0')),
-            ('ALIGNMENT', (0, 0), (-1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 6),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ]))
-        
-        story.append(info_table_1)
-        
-        # Tabla 2: PROYECTO, OBRA, MONEDA
-        info_data_2 = [
-            ['PROYECTO:', presupuesto['nombre_proyecto'], 'OBRA:', presupuesto['nombre_obra'], 'MONEDA:', 'S/. (Soles)'],
-        ]
-        
-        info_table_2 = Table(info_data_2, colWidths=[0.85*inch, 1.95*inch, 0.85*inch, 1.95*inch, 0.85*inch, 1.95*inch])
-        info_table_2.setStyle(TableStyle([
-            # Etiquetas (columnas 0, 2, 4) - Verde Quska
-            ('TEXTCOLOR', (0, 0), (0, 0), QUSKA_DARK_GREEN),
-            ('TEXTCOLOR', (2, 0), (2, 0), QUSKA_DARK_GREEN),
-            ('TEXTCOLOR', (4, 0), (4, 0), QUSKA_DARK_GREEN),
-            ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (2, 0), (2, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (4, 0), (4, 0), 'Helvetica-Bold'),
-            
-            # Valores (columnas 1, 3, 5)
-            ('TEXTCOLOR', (1, 0), (1, 0), colors.HexColor('#333333')),
-            ('TEXTCOLOR', (3, 0), (3, 0), colors.HexColor('#333333')),
-            ('TEXTCOLOR', (5, 0), (5, 0), colors.HexColor('#333333')),
-            ('FONTNAME', (1, 0), (1, 0), 'Helvetica'),
-            ('FONTNAME', (3, 0), (3, 0), 'Helvetica'),
-            ('FONTNAME', (5, 0), (5, 0), 'Helvetica'),
-            
-            # Estilos generales
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f5f5f5')),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d0d0d0')),
-            ('ALIGNMENT', (0, 0), (-1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 6),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ]))
-        
-        story.append(info_table_2)
-        
-        # Tabla 3: RESPONSABLE - con colores Quska pero estructura original
-        responsable_nombre = f"{presupuesto.get('usuario_nombres', '') or 'N/A'} {presupuesto.get('usuario_apellido', '') or ''}".strip()
-        responsable_email = presupuesto.get('usuario_email', 'N/A')
-        responsable_telefono = presupuesto.get('usuario_celular', 'N/A')
-        
-        info_data_3 = [
-            ['RESPONSABLE:', '', '', '', '', ''],
-            [responsable_nombre, '', responsable_email, '', responsable_telefono, ''],
-        ]
-        
-        info_table_3 = Table(info_data_3, colWidths=[0.85*inch, 1.95*inch, 0.85*inch, 1.95*inch, 0.85*inch, 1.95*inch])
-        info_table_3.setStyle(TableStyle([
-            # Fila 1: Label RESPONSABLE - Verde Quska
-            ('BACKGROUND', (0, 0), (-1, 0), QUSKA_GREEN),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('ALIGNMENT', (0, 0), (0, 0), 'LEFT'),
-            ('ALIGNMENT', (1, 0), (-1, 0), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, 0), 6),
-            ('RIGHTPADDING', (0, 0), (-1, 0), 6),
-            ('TOPPADDING', (0, 0), (-1, 0), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
-            
-            # Fila 2: Datos (nombre, email, teléfono)
-            ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#fffacd')),
-            ('TEXTCOLOR', (0, 1), (-1, 1), colors.HexColor('#333333')),
-            ('FONTNAME', (0, 1), (-1, 1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, 1), 9),
-            ('ALIGNMENT', (0, 1), (0, 1), 'LEFT'),
-            ('ALIGNMENT', (2, 1), (2, 1), 'LEFT'),
-            ('ALIGNMENT', (4, 1), (4, 1), 'LEFT'),
-            ('ALIGNMENT', (1, 1), (1, 1), 'LEFT'),
-            ('ALIGNMENT', (3, 1), (3, 1), 'LEFT'),
-            ('ALIGNMENT', (5, 1), (5, 1), 'LEFT'),
-            ('VALIGN', (0, 1), (-1, 1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 1), (-1, 1), 6),
-            ('RIGHTPADDING', (0, 1), (-1, 1), 6),
-            ('TOPPADDING', (0, 1), (-1, 1), 10),
-            ('BOTTOMPADDING', (0, 1), (-1, 1), 10),
-            
-            # Grid: Solo bordes externos, no internos en las columnas vacías
-            ('LINEABOVE', (0, 0), (0, 0), 0.5, colors.HexColor('#d0d0d0')),
-            ('LINEBELOW', (0, 1), (0, 1), 0.5, colors.HexColor('#d0d0d0')),
-            ('LINELEFT', (0, 0), (0, 1), 0.5, colors.HexColor('#d0d0d0')),
-            ('LINERIGHT', (-1, 0), (-1, 1), 0.5, colors.HexColor('#d0d0d0')),
-            ('LINEBELOW', (0, 0), (-1, 0), 0.5, colors.HexColor('#d0d0d0')),
-            ('LINEBELOW', (0, 1), (-1, 1), 0.5, colors.HexColor('#d0d0d0')),
-            ('LINERIGHT', (0, 1), (0, 1), 0.5, colors.HexColor('#d0d0d0')),
-            ('LINERIGHT', (2, 1), (2, 1), 0.5, colors.HexColor('#d0d0d0')),
-            ('LINERIGHT', (4, 1), (4, 1), 0.5, colors.HexColor('#d0d0d0')),
-        ]))
-        
-        story.append(info_table_3)
-        story.append(Spacer(1, 0.1*inch))
-        
-        # 4. TABLA DE MATERIALES - USAR FUNCIÓN HELPER PARA ESTRUCTURA CONSISTENTE
-        from .pdf_helpers import PDFStyles, crear_tabla_materiales, crear_tabla_servicios, crear_desglose_financiero, crear_observaciones
+        # 2. INFORMACIÓN DEL PRESUPUESTO Y RESPONSABLE - USAR FUNCIONES HELPER
+        from .pdf_helpers import PDFStyles, crear_info_presupuesto, crear_responsable, crear_tabla_materiales, crear_tabla_servicios, crear_desglose_financiero, crear_observaciones
         
         # Obtener estilos centralizados
         pdf_styles = PDFStyles.get_styles()
         
+        # Usar función helper para info del presupuesto (alineado con materiales)
+        info_table = crear_info_presupuesto(presupuesto, pdf_styles)
+        story.append(info_table)
+        story.append(Spacer(1, 0.1*inch))
+        
+        # Usar función helper para responsable (alineado con materiales)
+        header_resp, table_resp = crear_responsable(presupuesto, pdf_styles)
+        story.append(header_resp)
+        story.append(table_resp)
+        story.append(Spacer(1, 0.1*inch))
+        
+        # 3. TABLAS DE MATERIALES Y SERVICIOS
         # Crear tabla de materiales usando helper
         if materiales:
             header_mat, table_mat = crear_tabla_materiales(materiales, pdf_styles)
             if header_mat and table_mat:
-                # Personalizar colores Quska en el header
-                header_mat.setStyle(TableStyle([
-                    ('BACKGROUND', (0, 0), (0, 0), QUSKA_GREEN),
-                    ('TEXTCOLOR', (0, 0), (0, 0), colors.white),
-                    ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
-                    ('FONTSIZE', (0, 0), (0, 0), 12),
-                    ('LEFTPADDING', (0, 0), (0, 0), 8),
-                    ('TOPPADDING', (0, 0), (0, 0), 6),
-                    ('BOTTOMPADDING', (0, 0), (0, 0), 6),
-                ]))
-                
                 story.append(header_mat)
                 story.append(table_mat)
                 story.append(Spacer(1, 0.1*inch))
         
-        # 5. TABLA DE SERVICIOS - USAR FUNCIÓN HELPER
+        # Tabla de servicios
         if servicios:
             header_svc, table_svc = crear_tabla_servicios(servicios, pdf_styles)
             if header_svc and table_svc:
-                # Personalizar colores Quska en el header
-                header_svc.setStyle(TableStyle([
-                    ('BACKGROUND', (0, 0), (0, 0), QUSKA_DARK_GREEN),
-                    ('TEXTCOLOR', (0, 0), (0, 0), colors.white),
-                    ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
-                    ('FONTSIZE', (0, 0), (0, 0), 11),
-                    ('LEFTPADDING', (0, 0), (0, 0), 8),
-                    ('TOPPADDING', (0, 0), (0, 0), 6),
-                    ('BOTTOMPADDING', (0, 0), (0, 0), 6),
-                ]))
-                
                 story.append(header_svc)
                 story.append(table_svc)
-                story.append(Spacer(1, 0.08*inch))
+                story.append(Spacer(1, 0.1*inch))
         
-        # 6. DESGLOSE FINANCIERO - USAR FUNCIÓN HELPER CON COLORES QUSKA
+        # 4. DESGLOSE FINANCIERO
         header_desglose, table_desglose = crear_desglose_financiero(presupuesto, materiales, servicios, pdf_styles)
-        if header_desglose and table_desglose:
-            # Personalizar header del desglose con colores Quska
-            header_desglose.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (0, 0), QUSKA_ORANGE),
-                ('TEXTCOLOR', (0, 0), (0, 0), colors.white),
-                ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (0, 0), 12),
-                ('LEFTPADDING', (0, 0), (0, 0), 8),
-                ('TOPPADDING', (0, 0), (0, 0), 6),
-                ('BOTTOMPADDING', (0, 0), (0, 0), 6),
-            ]))
-            
-            story.append(header_desglose)
-            story.append(table_desglose)
-            story.append(Spacer(1, 0.08*inch))
+        story.append(header_desglose)
+        story.append(table_desglose)
+        story.append(Spacer(1, 0.1*inch))
         
-        # 7. OBSERVACIONES - USAR FUNCIÓN HELPER
+        # 5. OBSERVACIONES - USAR FUNCIÓN HELPER
         header_obs, table_obs = crear_observaciones(presupuesto, pdf_styles)
         if header_obs and table_obs:
-            # Personalizar header con colores Quska
-            header_obs.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (0, 0), QUSKA_DARK_GREEN),
-                ('TEXTCOLOR', (0, 0), (0, 0), colors.white),
-                ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (0, 0), 11),
-                ('LEFTPADDING', (0, 0), (0, 0), 8),
-                ('TOPPADDING', (0, 0), (0, 0), 6),
-                ('BOTTOMPADDING', (0, 0), (0, 0), 6),
-            ]))
-            
             story.append(header_obs)
             story.append(table_obs)
             story.append(Spacer(1, 0.1*inch))

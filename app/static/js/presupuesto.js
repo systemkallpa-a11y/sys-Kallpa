@@ -760,11 +760,13 @@ function actualizarTotales() {
         });
     }
     
-    // ⭐ IGV se calcula automáticamente sobre (subtotal + desglose)
-    const subtotal_con_desglose = subtotal_base + gastos_generales + utilidad + supervision_obra;
-    const igv = subtotal_con_desglose * 0.18;  // 18% sobre subtotal + desglose
+    // ⭐ CÁLCULO CORRECTO DEL SUB TOTAL: Costos Directos + GG + Utilidad (SIN supervisión)
+    const sub_total = subtotal_base + gastos_generales + utilidad;
     
-    // Calcular totales
+    // ⭐ IGV se calcula sobre el SUB TOTAL (18%)
+    const igv = sub_total * 0.18;
+    
+    // Calcular totales finales
     const total_desglose = gastos_generales + utilidad + supervision_obra + igv;
     const monto_total = subtotal_base + total_desglose;
     
@@ -777,6 +779,11 @@ function actualizarTotales() {
     document.getElementById('display-gastos').textContent = `S/. ${gastos_generales.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     document.getElementById('display-utilidad').textContent = `S/. ${utilidad.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     document.getElementById('display-supervision').textContent = `S/. ${supervision_obra.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    
+    // ⭐ MOSTRAR SUB TOTAL
+    document.getElementById('display-subtotal').textContent = `S/. ${sub_total.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    
+    // ⭐ MOSTRAR IGV
     document.getElementById('display-igv').textContent = `S/. ${igv.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     
     // Actualizar total desglose y total presupuesto
@@ -787,8 +794,9 @@ function actualizarTotales() {
         subtotal_base: subtotal_base.toFixed(2),
         gastos_generales: gastos_generales.toFixed(2),
         utilidad: utilidad.toFixed(2),
-        supervision_obra: supervision_obra.toFixed(2),
+        sub_total: sub_total.toFixed(2),
         igv: igv.toFixed(2),
+        supervision_obra: supervision_obra.toFixed(2),
         total_desglose: total_desglose.toFixed(2),
         monto_total: monto_total.toFixed(2),
         // ⭐ VERIFICAR QUE LOS ELEMENTOS EXISTAN
@@ -798,7 +806,9 @@ function actualizarTotales() {
             'supervision-obra': !!document.getElementById('supervision-obra'),
             'display-gastos': !!document.getElementById('display-gastos'),
             'display-utilidad': !!document.getElementById('display-utilidad'),
-            'display-supervision': !!document.getElementById('display-supervision')
+            'display-supervision': !!document.getElementById('display-supervision'),
+            'display-subtotal': !!document.getElementById('display-subtotal'),
+            'display-igv': !!document.getElementById('display-igv')
         }
     });
 }
