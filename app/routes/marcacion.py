@@ -1,12 +1,15 @@
 """
 Rutas para el sistema de marcación de asistencia
 """
-from flask import Blueprint, render_template, request, session, jsonify
+from flask import Blueprint, render_template, request, session, jsonify, send_file
 from functools import wraps
 from mysql.connector import Error
 from app.config import DatabaseConfig
 from datetime import datetime
 import mysql.connector
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from io import BytesIO
 
 # Crear blueprint para marcación
 marcacion_bp = Blueprint('marcacion', __name__)
@@ -513,3 +516,260 @@ def obtener_detalle_dia():
     except Exception as e:
         print(f"[DETALLE_DIA] ❌ Error general: {e}")
         return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+
+
+# ============================================================================
+# API: EXPORTAR MARCACIONES A EXCEL
+# ============================================================================
+
+@marcacion_bp.route('/api/marcacion/exportar-excel', methods=['GET'])
+@login_required
+def exportar_marcaciones_excel():
+    """Exportar marcaciones detalladas a Excel con turnos organizados"""
+    try:
+        # Obtener parámetros de filtro
+        fecha_desde = request.args.get('fecha_desde')
+        fecha_hasta = request.args.get('fecha_hasta')
+        
+        if not fecha_desde or not fecha_hasta:
+            return jsonify({'success': False, 'error': 'Fechas requeridas'}), 400
+        
+        print(f"[EXPORTAR_EXCEL] 🔄 Exportando marcaciones: {fecha_desde} a {fecha_hasta}")
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            # Llamar SP para obtener datos detallados
+            cursor.callproc('sp_ExportarMarcacionDetallada', (fecha_desde, fecha_hasta))
+            
+            # Obtener resultados
+            datos = []
+            for result in cursor.stored_results():
+                datos = result.fetchall()
+            
+            print(f"[EXPORTAR_EXCEL] ✅ {len(datos)} registros encontrados")
+            
+            cursor.close()
+            connection.close()
+            
+            if not datos:
+                return jsonify({'success': False, 'error': 'No hay datos para exportar'}), 404
+            
+            # ====================================================================
+            # CREAR ARCHIVO EXCEL
+            # ====================================================================
+            
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Marcaciones"
+            
+            # Estilos
+            header_fill = PatternFill(start_color="1F4788", end_color="1F4788", fill_type="solid")
+            header_font = Font(color="FFFFFF", bold=True, size=11)
+            header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            
+            cell_alignment = Alignment(horizontal="left", vertical="center")
+            cell_alignment_center = Alignment(horizontal="center", vertical="center")
+            
+            border_style = Border(
+                left=Side(style='thin', color='000000'),
+                right=Side(style='thin', color='000000'),
+                top=Side(style='thin', color='000000'),
+                bottom=Side(style='thin', color='000000')
+            )
+            
+            # ====================================================================
+            # ENCABEZADOS
+            # ====================================================================
+            
+            headers = [
+                'Número Documento',
+                'Nombres Completos',
+                'Fecha',
+                'Entrada 1',
+                'Salida 1',
+                'Entrada 2',
+                'Salida 2',
+                'Estado'
+            ]
+            
+            for col_num, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col_num)
+                cell.value = header
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = header_alignment
+                cell.border = border_style
+            
+            # ====================================================================
+            # DATOS
+            # ====================================================================
+            
+            row_num = 2
+            for registro in datos:
+                # Número Documento
+                cell = ws.cell(row=row_num, column=1)
+                cell.value = registro.get('Número Documento')
+                cell.alignment = cell_alignment_center
+                cell.border = border_style
+                
+                # Nombres Completos
+                cell = ws.cell(row=row_num, column=2)
+                cell.value = registro.get('Nombres Completos')
+                cell.alignment = cell_alignment
+                cell.border = border_style
+                
+                # Fecha
+                cell = ws.cell(row=row_num, column=3)
+                fecha_val = registro.get('Fecha')
+                if isinstance(fecha_val, datetime):
+                    cell.value = fecha_val.strftime('%Y-%m-%d')
+                elif hasattr(fecha_val, 'strftime'):
+                    cell.value = fecha_val.strftime('%Y-%m-%d')
+                else:
+                    cell.value = str(fecha_val) if fecha_val else ''
+                cell.alignment = cell_alignment_center
+                cell.border = border_style
+                
+                # Entrada 1
+                cell = ws.cell(row=row_num, column=4)
+                entrada1 = registro.get('Entrada 1')
+                if entrada1:
+                    if hasattr(entrada1, 'total_seconds'):  # timedelta
+                        total_seconds = int(entrada1.total_seconds())
+                        hours = total_seconds // 3600
+                        minutes = (total_seconds % 3600) // 60
+                        seconds = total_seconds % 60
+                        cell.value = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                    else:
+                        cell.value = str(entrada1)
+                else:
+                    cell.value = ''
+                cell.alignment = cell_alignment_center
+                cell.border = border_style
+                
+                # Salida 1
+                cell = ws.cell(row=row_num, column=5)
+                salida1 = registro.get('Salida 1')
+                if salida1:
+                    if hasattr(salida1, 'total_seconds'):
+                        total_seconds = int(salida1.total_seconds())
+                        hours = total_seconds // 3600
+                        minutes = (total_seconds % 3600) // 60
+                        seconds = total_seconds % 60
+                        cell.value = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                    else:
+                        cell.value = str(salida1)
+                else:
+                    cell.value = ''
+                cell.alignment = cell_alignment_center
+                cell.border = border_style
+                
+                # Entrada 2
+                cell = ws.cell(row=row_num, column=6)
+                entrada2 = registro.get('Entrada 2')
+                if entrada2:
+                    if hasattr(entrada2, 'total_seconds'):
+                        total_seconds = int(entrada2.total_seconds())
+                        hours = total_seconds // 3600
+                        minutes = (total_seconds % 3600) // 60
+                        seconds = total_seconds % 60
+                        cell.value = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                    else:
+                        cell.value = str(entrada2)
+                else:
+                    cell.value = ''
+                cell.alignment = cell_alignment_center
+                cell.border = border_style
+                
+                # Salida 2
+                cell = ws.cell(row=row_num, column=7)
+                salida2 = registro.get('Salida 2')
+                if salida2:
+                    if hasattr(salida2, 'total_seconds'):
+                        total_seconds = int(salida2.total_seconds())
+                        hours = total_seconds // 3600
+                        minutes = (total_seconds % 3600) // 60
+                        seconds = total_seconds % 60
+                        cell.value = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                    else:
+                        cell.value = str(salida2)
+                else:
+                    cell.value = ''
+                cell.alignment = cell_alignment_center
+                cell.border = border_style
+                
+                # Estado
+                cell = ws.cell(row=row_num, column=8)
+                estado = registro.get('Estado', 'SIN MARCA')
+                cell.value = estado
+                cell.alignment = cell_alignment_center
+                cell.border = border_style
+                
+                # Aplicar color según estado
+                if estado == 'ASISTIO':
+                    cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+                    cell.font = Font(color="006100", bold=True)
+                elif estado == 'TARDE':
+                    cell.fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
+                    cell.font = Font(color="9C6500", bold=True)
+                elif estado == 'ASISTIO +5':
+                    cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+                    cell.font = Font(color="9C0006", bold=True)
+                elif estado == 'SIN MARCA':
+                    cell.fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+                    cell.font = Font(color="7F7F7F", bold=True)
+                
+                row_num += 1
+            
+            # ====================================================================
+            # AJUSTAR ANCHO DE COLUMNAS
+            # ====================================================================
+            
+            ws.column_dimensions['A'].width = 18  # Número Documento
+            ws.column_dimensions['B'].width = 35  # Nombres Completos
+            ws.column_dimensions['C'].width = 12  # Fecha
+            ws.column_dimensions['D'].width = 12  # Entrada 1
+            ws.column_dimensions['E'].width = 12  # Salida 1
+            ws.column_dimensions['F'].width = 12  # Entrada 2
+            ws.column_dimensions['G'].width = 12  # Salida 2
+            ws.column_dimensions['H'].width = 15  # Estado
+            
+            # Fijar primera fila (encabezado)
+            ws.freeze_panes = 'A2'
+            
+            # ====================================================================
+            # GUARDAR EN MEMORIA Y ENVIAR
+            # ====================================================================
+            
+            output = BytesIO()
+            wb.save(output)
+            output.seek(0)
+            
+            # Nombre del archivo
+            from datetime import datetime as dt
+            timestamp = dt.now().strftime('%Y%m%d_%H%M%S')
+            filename = f'Marcaciones_{fecha_desde}_a_{fecha_hasta}_{timestamp}.xlsx'
+            
+            print(f"[EXPORTAR_EXCEL] ✅ Archivo generado: {filename}")
+            
+            return send_file(
+                output,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=filename
+            )
+        
+        except Error as e:
+            print(f"[EXPORTAR_EXCEL] ❌ Error SQL: {e}")
+            return jsonify({'success': False, 'error': f'Error en la base de datos: {str(e)}'}), 500
+    
+    except Exception as e:
+        print(f"[EXPORTAR_EXCEL] ❌ Error general: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': f'Error del servidor: {str(e)}'}), 500

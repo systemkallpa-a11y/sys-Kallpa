@@ -280,7 +280,59 @@ function aplicarFiltros() {
 // FUNCIÓN DE EXPORTAR
 // ============================================================================
 function exportarExcel() {
-    alert('Funcionalidad de exportación en desarrollo');
+    const mes = document.getElementById('mes_seleccionado').value;
+    const anio = document.getElementById('anio_seleccionado').value;
+    
+    if (!mes || !anio) {
+        alert('Por favor selecciona mes y año');
+        return;
+    }
+    
+    // Construir rango de fechas del mes seleccionado
+    const fechaDesde = `${anio}-${mes}-01`;
+    const ultimoDia = new Date(anio, mes, 0).getDate();
+    const fechaHasta = `${anio}-${mes}-${ultimoDia}`;
+    
+    // Mostrar mensaje de proceso
+    const btnExportar = document.getElementById('btn-exportar');
+    const textoOriginal = btnExportar.innerHTML;
+    btnExportar.disabled = true;
+    btnExportar.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generando Excel...';
+    
+    // Construir URL con parámetros
+    const url = `/api/marcacion/exportar-excel?fecha_desde=${fechaDesde}&fecha_hasta=${fechaHasta}`;
+    
+    // Descargar archivo
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error al generar el archivo');
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            // Crear enlace de descarga
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Marcaciones_${fechaDesde}_a_${fechaHasta}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            // Restaurar botón
+            btnExportar.disabled = false;
+            btnExportar.innerHTML = textoOriginal;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al exportar: ' + error.message);
+            
+            // Restaurar botón
+            btnExportar.disabled = false;
+            btnExportar.innerHTML = textoOriginal;
+        });
 }
 
 // ============================================================================
