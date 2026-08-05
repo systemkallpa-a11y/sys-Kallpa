@@ -144,7 +144,8 @@ class DatabaseConfig:
                         'charset': 'utf8mb4',
                         'collation': 'utf8mb4_unicode_ci',
                         'use_unicode': True,
-                        'connect_timeout': 10
+                        'connect_timeout': 10,
+                        'time_zone': '-05:00'  # Zona horaria de Perú (UTC-5)
                     }
                     logging.info(f"✅ [DB CONFIG] Usando túnel SSH en puerto local {tunnel.local_bind_port}")
                     return params
@@ -162,7 +163,8 @@ class DatabaseConfig:
             'charset': 'utf8mb4',
             'collation': 'utf8mb4_unicode_ci',
             'use_unicode': True,
-            'connect_timeout': 10
+            'connect_timeout': 10,
+            'time_zone': '-05:00'  # Zona horaria de Perú (UTC-5)
         }
         logging.warning(f"⚠️ [DB CONFIG] Conexión directa a {cls.HOST}:{cls.PORT} (túnel no disponible)")
         
@@ -187,6 +189,7 @@ class DatabaseConfigKallpa:
             'password': cls.PASSWORD,
             'database': cls.DATABASE,
             'ssl_disabled': True,
+            'time_zone': '-05:00'  # Zona horaria de Perú (UTC-5)
         }
         
         return params
