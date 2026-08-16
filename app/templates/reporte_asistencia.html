@@ -149,21 +149,23 @@
 
                         <tr>
 
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Usuario</th>
+                            <th class="px-3 py-3 text-center text-xs font-semibold text-gray-900 dark:text-gray-100">N° Documento</th>
 
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Email</th>
+                            <th class="px-3 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100">Usuario</th>
 
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Días Asistidos</th>
+                            <th class="px-3 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100">Email</th>
 
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Total Entradas</th>
+                            <th class="px-3 py-3 text-center text-xs font-semibold text-gray-900 dark:text-gray-100">Días Asistidos</th>
 
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Total Salidas</th>
+                            <th class="px-3 py-3 text-center text-xs font-semibold text-gray-900 dark:text-gray-100">Total Entradas</th>
 
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Primera Marcación</th>
+                            <th class="px-3 py-3 text-center text-xs font-semibold text-gray-900 dark:text-gray-100">Total Salidas</th>
 
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Última Marcación</th>
+                            <th class="px-3 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100">Última Marcación</th>
 
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Acciones</th>
+                            <th class="px-3 py-3 text-center text-xs font-semibold text-gray-900 dark:text-gray-100">Memos</th>
+
+                            <th class="px-3 py-3 text-center text-xs font-semibold text-gray-900 dark:text-gray-100">Acciones</th>
 
                         </tr>
 
@@ -173,7 +175,7 @@
 
                         <tr>
 
-                            <td colspan="8" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                            <td colspan="9" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
 
                                 <i class="fas fa-spinner fa-spin mr-2"></i>Cargando...
 
@@ -474,6 +476,80 @@
 
 
 
+<!-- Modal: Detalle de Memos del Empleado -->
+
+<div id="modal-detalle-memos" class="hidden fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
+
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
+
+        <!-- Header -->
+
+        <div class="bg-gradient-to-r from-purple-600 to-purple-800 text-white px-6 py-5 flex items-center justify-between">
+
+            <div class="flex items-center gap-3">
+
+                <div class="bg-purple-700 p-3 rounded-lg">
+
+                    <i class="fas fa-file-invoice text-2xl"></i>
+
+                </div>
+
+                <div>
+
+                    <h2 class="text-xl font-bold">Historial de Memorandos</h2>
+
+                    <p id="modal-detalle-memos-empleado" class="text-purple-100 text-sm mt-1"></p>
+
+                </div>
+
+            </div>
+
+            <button onclick="cerrarModalDetalleMemos()" class="text-white hover:text-gray-200 p-2">
+
+                <i class="fas fa-times text-xl"></i>
+
+            </button>
+
+        </div>
+
+
+
+        <!-- Contenido -->
+
+        <div class="flex-1 overflow-y-auto p-6">
+
+            <div id="lista-memos-container" class="space-y-4">
+
+                <div class="text-center py-8 text-gray-500">
+
+                    <i class="fas fa-spinner fa-spin mr-2"></i>Cargando memos...
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Footer -->
+
+        <div class="px-6 py-4 bg-gray-100 dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 flex justify-end">
+
+            <button onclick="cerrarModalDetalleMemos()" class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors">
+
+                <i class="fas fa-times mr-2"></i>Cerrar
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
 <script>
 
 // ============================================================================
@@ -638,7 +714,7 @@ function renderizarResumen(datos) {
 
     if (datos.length === 0) {
 
-        tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">No hay datos para mostrar</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">No hay datos para mostrar</td></tr>';
 
         return;
 
@@ -650,39 +726,57 @@ function renderizarResumen(datos) {
 
         <tr class="hover:bg-gray-50 dark:hover:bg-slate-800">
 
-            <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">${item.nombre_completo}</td>
+            <td class="px-3 py-2 text-xs text-center text-gray-900 dark:text-white font-mono">${item.documento_numero || item.num_documento}</td>
 
-            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${item.email || '-'}</td>
+            <td class="px-3 py-2 text-xs text-gray-900 dark:text-white">${item.nombre_completo}</td>
 
-            <td class="px-6 py-4 text-sm text-center text-gray-900 dark:text-white font-semibold">${item.dias_asistidos}</td>
+            <td class="px-3 py-2 text-xs text-gray-600 dark:text-gray-400">${item.email || '-'}</td>
 
-            <td class="px-6 py-4 text-sm text-center text-gray-900 dark:text-white">${item.total_entradas}</td>
+            <td class="px-3 py-2 text-xs text-center text-gray-900 dark:text-white font-semibold">${item.dias_asistidos}</td>
 
-            <td class="px-6 py-4 text-sm text-center text-gray-900 dark:text-white">${item.total_salidas}</td>
+            <td class="px-3 py-2 text-xs text-center text-gray-900 dark:text-white">${item.total_entradas}</td>
 
-            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${item.primera_marcacion ? new Date(item.primera_marcacion).toLocaleString() : '-'}</td>
+            <td class="px-3 py-2 text-xs text-center text-gray-900 dark:text-white">${item.total_salidas}</td>
 
-            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${item.ultima_marcacion ? new Date(item.ultima_marcacion).toLocaleString() : '-'}</td>
+            <td class="px-3 py-2 text-xs text-gray-600 dark:text-gray-400">${item.ultima_marcacion ? new Date(item.ultima_marcacion).toLocaleString() : '-'}</td>
 
-            <td class="px-6 py-4 text-center">
+            <td class="px-3 py-2 text-xs text-center">
 
-                <div class="flex gap-2 justify-center items-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${item.total_memos > 0 ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'}">
 
-                    <button onclick="abrirSelectorFecha('${item.num_documento}', '${item.nombre_completo}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors">
+                    ${item.total_memos || 0}
 
-                        <i class="fas fa-eye mr-1"></i>Ver Detalle
+                </span>
+
+            </td>
+
+            <td class="px-3 py-2 text-center">
+
+                <div class="flex gap-1 justify-center items-center flex-wrap">
+
+                    <button onclick="abrirSelectorFecha('${item.num_documento}', '${item.nombre_completo}')" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors whitespace-nowrap">
+
+                        <i class="fas fa-eye mr-1"></i>Detalle
 
                     </button>
 
                     
 
-                    <!-- Botón Memo -->
-
                     <button onclick="abrirModalMemo('${item.num_documento}', '${item.nombre_completo}', '${item.email || ''}', '${item.nombre_completo}')" 
 
-                            class="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded text-xs font-medium transition-colors">
+                            class="px-2 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded text-xs font-medium transition-colors whitespace-nowrap">
 
                         <i class="fas fa-file-alt mr-1"></i>Memo
+
+                    </button>
+
+                    
+
+                    <button onclick="abrirModalDetalleMemos('${item.num_documento}', '${item.nombre_completo}')" 
+
+                            class="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-medium transition-colors whitespace-nowrap">
+
+                        <i class="fas fa-list mr-1"></i>Memos
 
                     </button>
 
@@ -1969,6 +2063,266 @@ async function generarMemo(numDocumento, nombreCompleto, email, tipoMemo, fechaI
         }, 5000);
 
     }
+
+}
+
+
+
+// ============================================================================
+
+// FUNCIONES PARA MODAL DE DETALLE DE MEMOS
+
+// ============================================================================
+
+async function abrirModalDetalleMemos(numDocumento, nombreCompleto) {
+
+    try {
+
+        console.log(`[DETALLE_MEMOS] Abriendo modal para num_documento=${numDocumento}`);
+
+        
+
+        // Actualizar título del modal
+
+        document.getElementById('modal-detalle-memos-empleado').textContent = nombreCompleto;
+
+        
+
+        // Mostrar modal
+
+        document.getElementById('modal-detalle-memos').classList.remove('hidden');
+
+        
+
+        // Cargar lista de memos
+
+        await cargarListaMemos(numDocumento);
+
+        
+
+    } catch (error) {
+
+        console.error('[DETALLE_MEMOS] Error:', error);
+
+        alert('Error al abrir el detalle de memos');
+
+    }
+
+}
+
+
+
+function cerrarModalDetalleMemos() {
+
+    document.getElementById('modal-detalle-memos').classList.add('hidden');
+
+}
+
+
+
+async function cargarListaMemos(numDocumento) {
+
+    try {
+
+        console.log(`[DETALLE_MEMOS] Cargando memos para num_documento=${numDocumento}`);
+
+        
+
+        const response = await fetch(`/api/marcacion/memos-empleado?num_documento=${numDocumento}`);
+
+        const data = await response.json();
+
+        
+
+        if (!data.success) {
+
+            throw new Error(data.error || 'Error al cargar memos');
+
+        }
+
+        
+
+        console.log(`[DETALLE_MEMOS] ${data.memos.length} memos encontrados`);
+
+        
+
+        renderizarListaMemos(data.memos);
+
+        
+
+    } catch (error) {
+
+        console.error('[DETALLE_MEMOS] Error:', error);
+
+        document.getElementById('lista-memos-container').innerHTML = `
+
+            <div class="text-center py-8 text-red-600">
+
+                <i class="fas fa-exclamation-circle text-3xl mb-2"></i>
+
+                <p>Error al cargar los memos: ${error.message}</p>
+
+            </div>
+
+        `;
+
+    }
+
+}
+
+
+
+function renderizarListaMemos(memos) {
+
+    const container = document.getElementById('lista-memos-container');
+
+    
+
+    if (memos.length === 0) {
+
+        container.innerHTML = `
+
+            <div class="text-center py-12 text-gray-500 dark:text-gray-400">
+
+                <i class="fas fa-inbox text-5xl mb-4 opacity-50"></i>
+
+                <p class="text-lg font-medium">No hay memorandos registrados</p>
+
+                <p class="text-sm mt-2">Este empleado no tiene memos de amonestación</p>
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+    
+
+    container.innerHTML = memos.map(memo => {
+
+        const fechaGeneracion = new Date(memo.fecha_generacion).toLocaleString('es-PE');
+
+        const fechaIncidente = memo.fecha_incidente ? new Date(memo.fecha_incidente).toLocaleDateString('es-PE') : '-';
+
+        
+
+        // Color según tipo de memo
+
+        let colorClass = 'bg-gray-100 border-gray-300 text-gray-800';
+
+        let iconClass = 'fa-file-alt';
+
+        
+
+        if (memo.codigo === 'TARDANZA') {
+
+            colorClass = 'bg-yellow-50 border-yellow-300 text-yellow-900 dark:bg-yellow-900/20 dark:border-yellow-700 dark:text-yellow-200';
+
+            iconClass = 'fa-clock';
+
+        } else if (memo.codigo === 'INASISTENCIA') {
+
+            colorClass = 'bg-red-50 border-red-300 text-red-900 dark:bg-red-900/20 dark:border-red-700 dark:text-red-200';
+
+            iconClass = 'fa-user-times';
+
+        } else if (memo.codigo === 'UNIFORME') {
+
+            colorClass = 'bg-blue-50 border-blue-300 text-blue-900 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-200';
+
+            iconClass = 'fa-tshirt';
+
+        }
+
+        
+
+        return `
+
+            <div class="border-2 ${colorClass} rounded-lg p-4 hover:shadow-md transition-shadow">
+
+                <div class="flex items-start justify-between">
+
+                    <div class="flex items-start gap-3 flex-1">
+
+                        <div class="mt-1">
+
+                            <i class="fas ${iconClass} text-2xl"></i>
+
+                        </div>
+
+                        <div class="flex-1">
+
+                            <h3 class="font-bold text-base mb-1">${memo.tipo_memo}</h3>
+
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+
+                                <div>
+
+                                    <span class="font-semibold">Fecha Incidente:</span> ${fechaIncidente}
+
+                                </div>
+
+                                <div>
+
+                                    <span class="font-semibold">Fecha Generación:</span> ${fechaGeneracion}
+
+                                </div>
+
+                                <div>
+
+                                    <span class="font-semibold">Generado por:</span> ${memo.generado_por_nombre || 'Sistema'}
+
+                                </div>
+
+                                <div>
+
+                                    <span class="font-semibold">Estado:</span> 
+
+                                    ${memo.recibido ? 
+
+                                        '<span class="px-2 py-0.5 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded text-xs">Recibido</span>' : 
+
+                                        '<span class="px-2 py-0.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded text-xs">Pendiente</span>'
+
+                                    }
+
+                                </div>
+
+                            </div>
+
+                            ${memo.observaciones ? `
+
+                                <div class="mt-2 text-xs">
+
+                                    <span class="font-semibold">Observaciones:</span> ${memo.observaciones}
+
+                                </div>
+
+                            ` : ''}
+
+                        </div>
+
+                    </div>
+
+                    <div class="ml-3">
+
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white dark:bg-slate-800 text-sm font-bold">
+
+                            #${memo.id_memo}
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        `;
+
+    }).join('');
 
 }
 

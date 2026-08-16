@@ -773,3 +773,62 @@ def exportar_marcaciones_excel():
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': f'Error del servidor: {str(e)}'}), 500
+
+
+# ============================================================================
+# API: OBTENER MEMOS DE UN EMPLEADO
+# ============================================================================
+
+@marcacion_bp.route('/api/marcacion/memos-empleado', methods=['GET'])
+@login_required
+def obtener_memos_empleado():
+    """Obtener lista de memos de amonestación de un empleado"""
+    try:
+        num_documento = request.args.get('num_documento')
+        
+        if not num_documento:
+            return jsonify({'success': False, 'error': 'Falta el número de documento'}), 400
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            print(f"[MEMOS_EMPLEADO] 🔄 Obteniendo memos para num_documento={num_documento}")
+            
+            # Llamar SP para obtener memos del empleado
+            cursor.callproc('sp_ObtenerMemosEmpleado', (num_documento,))
+            
+            # Obtener resultados
+            memos = []
+            for result in cursor.stored_results():
+                memos = result.fetchall()
+            
+            print(f"[MEMOS_EMPLEADO] ✅ {len(memos)} memos encontrados")
+            
+            # Serializar datos
+            import datetime as dt_module
+            for memo in memos:
+                for key, value in memo.items():
+                    if isinstance(value, datetime):
+                        memo[key] = value.isoformat()
+                    elif isinstance(value, dt_module.date):
+                        memo[key] = value.strftime('%Y-%m-%d')
+            
+            cursor.close()
+            connection.close()
+            
+            return jsonify({
+                'success': True,
+                'memos': memos
+            }), 200
+        
+        except Error as e:
+            print(f"[MEMOS_EMPLEADO] ❌ Error SQL: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    except Exception as e:
+        print(f"[MEMOS_EMPLEADO] ❌ Error general: {e}")
+        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
