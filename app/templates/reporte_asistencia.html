@@ -1,1001 +1,2000 @@
-ï»¿{% extends "base.html" %}
-
-{% block title %}Kallpa - Reporte de Asistencia{% endblock %}
-
-{% block content %}
-<div class="flex flex-col h-screen bg-gray-50 dark:bg-slate-950">
-    <!-- Header -->
-    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
-        <div class="px-6 py-4">
-            <div class="flex items-center justify-between">
-                <div>
+{% extends "base.html" %}
+
+
+
+{% block title %}Kallpa - Reporte de Asistencia{% endblock %}
+
+
+
+{% block content %}
+
+<div class="flex flex-col h-screen bg-gray-50 dark:bg-slate-950">
+
+    <!-- Header -->
+
+    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
+
+        <div class="px-6 py-4">
+
+            <div class="flex items-center justify-between">
+
+                <div>
+
                     <h1 class="text-3xl font-bold text-gray-900 dark:text-white">📊 Reporte de Asistencia</h1>
-                    <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Control y seguimiento de asistencia de todos los usuarios</p>
-                </div>
-                <div class="flex gap-2">
-                    <button id="btn-exportar" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
-                        <i class="fas fa-file-excel mr-2"></i>Exportar a Excel
-                    </button>
-                    <button id="btn-actualizar" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
-                        <i class="fas fa-sync-alt mr-2"></i>Actualizar
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Filtros -->
-        <div class="px-6 py-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700">
-            <div class="flex items-end gap-4">
-                <div class="flex-1">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mes</label>
-                    <select id="mes_seleccionado" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
-                        <option value="01">Enero</option>
-                        <option value="02">Febrero</option>
-                        <option value="03">Marzo</option>
-                        <option value="04">Abril</option>
-                        <option value="05">Mayo</option>
-                        <option value="06">Junio</option>
-                        <option value="07">Julio</option>
-                        <option value="08">Agosto</option>
-                        <option value="09">Septiembre</option>
-                        <option value="10">Octubre</option>
-                        <option value="11">Noviembre</option>
-                        <option value="12">Diciembre</option>
-                    </select>
-                </div>
-                <div class="flex-1">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">AÃ±o</label>
-                    <select id="anio_seleccionado" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
-                        <!-- Se llenarÃ¡ dinÃ¡micamente con JavaScript -->
-                    </select>
-                </div>
-                <div>
-                    <button onclick="aplicarFiltros()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
-                        <i class="fas fa-search mr-2"></i>Buscar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- TÃ­tulo de secciÃ³n -->
-    <div class="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
-        <div class="px-6 py-3">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-                <i class="fas fa-users mr-2 text-blue-600"></i>Resumen de Asistencia por Usuario
-            </h2>
-        </div>
-    </div>
-
-    <!-- Contenido Principal -->
-    <div class="flex-1 overflow-auto p-6">
-        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
-                        <tr>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Usuario</th>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Email</th>
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">DÃ­as Asistidos</th>
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Total Entradas</th>
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Total Salidas</th>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Primera MarcaciÃ³n</th>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">ÃÅ¡ltima MarcaciÃ³n</th>
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-resumen" class="divide-y divide-gray-200 dark:divide-slate-700">
-                        <tr>
-                            <td colspan="8" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                                <i class="fas fa-spinner fa-spin mr-2"></i>Cargando...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal: Detalle del DÃ­a -->
-<div id="modal-detalle-dia" class="hidden fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
-        <!-- Header -->
-        <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white px-6 py-4 flex items-center justify-between">
-            <div>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Control y seguimiento de asistencia de todos los usuarios</p>
+
+                </div>
+
+                <div class="flex gap-2">
+
+                    <button id="btn-exportar" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
+
+                        <i class="fas fa-file-excel mr-2"></i>Exportar a Excel
+
+                    </button>
+
+                    <button id="btn-actualizar" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+
+                        <i class="fas fa-sync-alt mr-2"></i>Actualizar
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Filtros -->
+
+        <div class="px-6 py-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700">
+
+            <div class="flex items-end gap-4">
+
+                <div class="flex-1">
+
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mes</label>
+
+                    <select id="mes_seleccionado" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
+
+                        <option value="01">Enero</option>
+
+                        <option value="02">Febrero</option>
+
+                        <option value="03">Marzo</option>
+
+                        <option value="04">Abril</option>
+
+                        <option value="05">Mayo</option>
+
+                        <option value="06">Junio</option>
+
+                        <option value="07">Julio</option>
+
+                        <option value="08">Agosto</option>
+
+                        <option value="09">Septiembre</option>
+
+                        <option value="10">Octubre</option>
+
+                        <option value="11">Noviembre</option>
+
+                        <option value="12">Diciembre</option>
+
+                    </select>
+
+                </div>
+
+                <div class="flex-1">
+
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Año</label>
+
+                    <select id="anio_seleccionado" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
+
+                        <!-- Se llenará dinámicamente con JavaScript -->
+
+                    </select>
+
+                </div>
+
+                <div>
+
+                    <button onclick="aplicarFiltros()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+
+                        <i class="fas fa-search mr-2"></i>Buscar
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- Título de sección -->
+
+    <div class="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
+
+        <div class="px-6 py-3">
+
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+
+                <i class="fas fa-users mr-2 text-blue-600"></i>Resumen de Asistencia por Usuario
+
+            </h2>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- Contenido Principal -->
+
+    <div class="flex-1 overflow-auto p-6">
+
+        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
+
+            <div class="overflow-x-auto">
+
+                <table class="w-full">
+
+                    <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+
+                        <tr>
+
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Usuario</th>
+
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Email</th>
+
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Días Asistidos</th>
+
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Total Entradas</th>
+
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Total Salidas</th>
+
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Primera Marcación</th>
+
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Última Marcación</th>
+
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Acciones</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody id="tabla-resumen" class="divide-y divide-gray-200 dark:divide-slate-700">
+
+                        <tr>
+
+                            <td colspan="8" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Cargando...
+
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- Modal: Detalle del Día -->
+
+<div id="modal-detalle-dia" class="hidden fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
+
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
+
+        <!-- Header -->
+
+        <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white px-6 py-4 flex items-center justify-between">
+
+            <div>
+
                 <h2 class="text-xl font-bold">📋 Detalle de Marcaciones del Día</h2>
-                <p id="modal-info-usuario" class="text-blue-100 text-sm mt-1"></p>
-            </div>
-            <button onclick="cerrarModalDetalle()" class="text-white hover:text-gray-200 p-2">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-
-        <!-- Contenido con scroll -->
-        <div class="flex-1 overflow-y-auto p-6 space-y-6">
-            <!-- Mapa de Google Maps -->
-            <div class="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                    <i class="fas fa-map-marked-alt text-blue-600 mr-2"></i>Mapa de Ubicaciones
-                </h3>
-                <div id="mapa-marcaciones" class="w-full h-96 rounded-lg border-2 border-gray-300 dark:border-slate-600"></div>
-            </div>
-
-            <!-- Grid de Fotos -->
-            <div class="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                    <i class="fas fa-images text-blue-600 mr-2"></i>Fotos de las Marcaciones
-                </h3>
-                <div id="grid-fotos" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <!-- Las fotos se insertarÃ¡n aquÃ­ dinÃ¡micamente -->
-                </div>
-            </div>
-
-            <!-- Tabla de Marcaciones Detalladas -->
-            <div class="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                    <i class="fas fa-list text-blue-600 mr-2"></i>Detalle de Marcaciones
-                </h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-200 dark:bg-slate-700">
-                            <tr>
-                                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Hora</th>
-                                <th class="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">Tipo</th>
-                                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Coordenadas</th>
-                                <th class="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">PrecisiÃ³n</th>
-                                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Dispositivo</th>
-                                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">ObservaciÃ³n</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabla-detalle-marcaciones" class="divide-y divide-gray-200 dark:divide-slate-600">
-                            <!-- Las filas se insertarÃ¡n aquÃ­ -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="px-6 py-4 bg-gray-100 dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 flex justify-end">
-            <button onclick="cerrarModalDetalle()" class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors">
-                Cerrar
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Modal: Generar Memo de AmonestaciÃ³n -->
-<div id="modal-memo" class="hidden fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col">
-        <!-- Header -->
-        <div class="bg-gradient-to-r from-orange-600 to-orange-800 text-white px-6 py-5 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="bg-orange-700 p-3 rounded-lg">
-                    <i class="fas fa-file-alt text-2xl"></i>
-                </div>
-                <div>
-                    <h2 class="text-xl font-bold">Generar Memorando de AmonestaciÃ³n</h2>
-                    <p id="modal-memo-empleado" class="text-orange-100 text-sm mt-1"></p>
-                </div>
-            </div>
-            <button onclick="cerrarModalMemo()" class="text-white hover:text-gray-200 p-2">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-
-        <!-- Contenido -->
-        <div class="flex-1 overflow-y-auto p-6">
-            <!-- InstrucciÃ³n -->
-            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-6">
-                <div class="flex items-start gap-3">
-                    <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 text-xl mt-1"></i>
-                    <div>
-                        <p class="text-sm text-blue-900 dark:text-blue-200 font-semibold mb-1">Â¿QuÃ© es un memorando?</p>
-                        <p class="text-sm text-blue-800 dark:text-blue-300">
-                            Es un documento formal de amonestaciÃ³n que se emite cuando un empleado incurre en una falta laboral. 
-                            Selecciona el tipo de falta cometida y la fecha del incidente para generar el documento correspondiente.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Fecha del Incidente -->
-            <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-                    <i class="fas fa-calendar-alt text-orange-600 mr-2"></i>Fecha del Incidente
-                </label>
-                <input type="date" id="fecha_incidente" 
-                       class="w-full px-4 py-2 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:border-orange-500 focus:outline-none"
-                       required>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Fecha en que ocurriÃ³ la falta</p>
-            </div>
-
-            <!-- Opciones de Tipo de Memo -->
-            <div class="space-y-3">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Selecciona el tipo de amonestaciÃ³n:</h3>
-                
-                <!-- Se cargarÃ¡n dinÃ¡micamente -->
-                <div id="tipos-memo-container">
-                    <div class="text-center py-4 text-gray-500">
-                        <i class="fas fa-spinner fa-spin mr-2"></i>Cargando tipos de memo...
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="px-6 py-4 bg-gray-100 dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3">
-            <button onclick="cerrarModalMemo()" class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors">
-                <i class="fas fa-times mr-2"></i>Cancelar
-            </button>
-            <button id="btn-generar-memo" onclick="confirmarGenerarMemo()" disabled
-                    class="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                <i class="fas fa-file-pdf mr-2"></i>Generar Memo
-            </button>
-        </div>
-    </div>
-</div>
-
-<script>
-// ============================================================================
-// VARIABLES GLOBALES
-// ============================================================================
-let datosResumen = [];
-
-// ============================================================================
-// INICIALIZACIÃâN
-// ============================================================================
-document.addEventListener('DOMContentLoaded', function() {
-    // Llenar selector de aÃ±os (Ãºltimos 5 aÃ±os y prÃ³ximos 2)
-    const anioActual = new Date().getFullYear();
-    const selectAnio = document.getElementById('anio_seleccionado');
-    
-    for (let i = anioActual - 5; i <= anioActual + 2; i++) {
-        const option = document.createElement('option');
-        option.value = i;
-        option.textContent = i;
-        if (i === anioActual) {
-            option.selected = true;
-        }
-        selectAnio.appendChild(option);
-    }
-    
-    // Establecer mes actual por defecto
-    const mesActual = String(new Date().getMonth() + 1).padStart(2, '0');
-    document.getElementById('mes_seleccionado').value = mesActual;
-    
-    // Cargar datos iniciales
-    cargarResumen();
-    
-    // Evento de actualizar
-    document.getElementById('btn-actualizar').addEventListener('click', function() {
-        cargarResumen();
-    });
-    
-    // Evento de exportar
-    document.getElementById('btn-exportar').addEventListener('click', exportarExcel);
-});
-
-// ============================================================================
-// FUNCIONES DE CARGA DE DATOS
-// ============================================================================
-async function cargarResumen() {
-    try {
-        const mes = document.getElementById('mes_seleccionado').value;
-        const anio = document.getElementById('anio_seleccionado').value;
-        
-        const params = new URLSearchParams();
-        
-        // Construir rango de fechas del mes seleccionado
-        if (mes && anio) {
-            const fechaDesde = `${anio}-${mes}-01`;
-            const ultimoDia = new Date(anio, mes, 0).getDate();
-            const fechaHasta = `${anio}-${mes}-${ultimoDia}`;
-            
-            params.append('fecha_desde', fechaDesde);
-            params.append('fecha_hasta', fechaHasta);
-        }
-        
-        const response = await fetch(`/api/marcacion/resumen-usuarios?${params}`);
-        const data = await response.json();
-        
-        if (data.success) {
-            datosResumen = data.data;
-            renderizarResumen(datosResumen);
-        } else {
-            alert('Error al cargar resumen: ' + data.error);
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error al cargar resumen');
-    }
-}
-
-// ============================================================================
-// FUNCIONES DE RENDERIZADO
-// ============================================================================
-function renderizarResumen(datos) {
-    const tbody = document.getElementById('tabla-resumen');
-    
-    if (datos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">No hay datos para mostrar</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = datos.map(item => `
-        <tr class="hover:bg-gray-50 dark:hover:bg-slate-800">
-            <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">${item.nombre_completo}</td>
-            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${item.email || '-'}</td>
-            <td class="px-6 py-4 text-sm text-center text-gray-900 dark:text-white font-semibold">${item.dias_asistidos}</td>
-            <td class="px-6 py-4 text-sm text-center text-gray-900 dark:text-white">${item.total_entradas}</td>
-            <td class="px-6 py-4 text-sm text-center text-gray-900 dark:text-white">${item.total_salidas}</td>
-            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${item.primera_marcacion ? new Date(item.primera_marcacion).toLocaleString() : '-'}</td>
-            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${item.ultima_marcacion ? new Date(item.ultima_marcacion).toLocaleString() : '-'}</td>
-            <td class="px-6 py-4 text-center">
-                <div class="flex gap-2 justify-center items-center">
-                    <button onclick="abrirSelectorFecha('${item.num_documento}', '${item.nombre_completo}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors">
-                        <i class="fas fa-eye mr-1"></i>Ver Detalle
-                    </button>
-                    
-                    <!-- BotÃ³n Memo -->
-                    <button onclick="abrirModalMemo('${item.num_documento}', '${item.nombre_completo}', '${item.email || ''}', '${item.nombre_completo}')" 
-                            class="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded text-xs font-medium transition-colors">
-                        <i class="fas fa-file-alt mr-1"></i>Memo
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
-}
-
-// ============================================================================
-// FUNCIÃâN DE FILTRADO
-// ============================================================================
-function aplicarFiltros() {
-    cargarResumen();
-}
-
-// ============================================================================
-// FUNCIÃâN DE EXPORTAR
-// ============================================================================
-function exportarExcel() {
-    const mes = document.getElementById('mes_seleccionado').value;
-    const anio = document.getElementById('anio_seleccionado').value;
-    
-    if (!mes || !anio) {
-        alert('Por favor selecciona mes y aÃ±o');
-        return;
-    }
-    
-    // Construir rango de fechas del mes seleccionado
-    const fechaDesde = `${anio}-${mes}-01`;
-    const ultimoDia = new Date(anio, mes, 0).getDate();
-    const fechaHasta = `${anio}-${mes}-${ultimoDia}`;
-    
-    // Mostrar mensaje de proceso
-    const btnExportar = document.getElementById('btn-exportar');
-    const textoOriginal = btnExportar.innerHTML;
-    btnExportar.disabled = true;
-    btnExportar.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generando Excel...';
-    
-    // Construir URL con parÃ¡metros
-    const url = `/api/marcacion/exportar-excel?fecha_desde=${fechaDesde}&fecha_hasta=${fechaHasta}`;
-    
-    // Descargar archivo
-    fetch(url)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Error al generar el archivo');
-            }
-            return response.blob();
-        })
-        .then(blob => {
-            // Crear enlace de descarga
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Marcaciones_${fechaDesde}_a_${fechaHasta}.xlsx`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            
-            // Restaurar botÃ³n
-            btnExportar.disabled = false;
-            btnExportar.innerHTML = textoOriginal;
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error al exportar: ' + error.message);
-            
-            // Restaurar botÃ³n
-            btnExportar.disabled = false;
-            btnExportar.innerHTML = textoOriginal;
-        });
-}
-
-// ============================================================================
-// FUNCIÃâN PARA ABRIR SELECTOR DE FECHA
-// ============================================================================
-function abrirSelectorFecha(numDocumento, nombreCompleto) {
-    const mes = document.getElementById('mes_seleccionado').value;
-    const anio = document.getElementById('anio_seleccionado').value;
-    
-    // Construir fechas mÃ­nima y mÃ¡xima del mes seleccionado
-    const minFecha = `${anio}-${mes}-01`;
-    const ultimoDia = new Date(anio, mes, 0).getDate();
-    const maxFecha = `${anio}-${mes}-${ultimoDia}`;
-    
-    // Obtener fecha actual en zona horaria de PerÃº (UTC-5)
-    const fechaActualPeru = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
-    const diaActual = String(fechaActualPeru.getDate()).padStart(2, '0');
-    const mesActual = String(fechaActualPeru.getMonth() + 1).padStart(2, '0');
-    const anioActual = fechaActualPeru.getFullYear();
-    const fechaHoy = `${anioActual}-${mesActual}-${diaActual}`;
-    
-    // Determinar fecha por defecto:
-    // - Si la fecha de hoy estÃ¡ dentro del rango del mes seleccionado, usar hoy
-    // - Si no, usar el Ãºltimo dÃ­a del mes seleccionado
-    let fechaDefault = maxFecha;
-    if (fechaHoy >= minFecha && fechaHoy <= maxFecha) {
-        fechaDefault = fechaHoy;
-    }
-    
-    // Crear modal de selecciÃ³n de fecha
-    const modalHTML = `
-        <div id="modal-selector-fecha" class="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md">
-                <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white px-6 py-4 flex items-center justify-between rounded-t-xl">
-                    <div>
-                        <h2 class="text-xl font-bold">Seleccionar Fecha</h2>
-                        <p class="text-blue-100 text-sm mt-1">${nombreCompleto}</p>
-                    </div>
-                    <button onclick="cerrarSelectorFecha()" class="text-white hover:text-gray-200 p-2">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-                <div class="p-6">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Selecciona una fecha para ver el detalle:
-                    </label>
-                    <input type="date" id="fecha-seleccionada" 
-                           min="${minFecha}"
-                           max="${maxFecha}"
-                           value="${fechaDefault}"
-                           class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
-                    <input type="hidden" id="num-documento-seleccionado" value="${numDocumento}">
-                    <input type="hidden" id="nombre-completo-seleccionado" value="${nombreCompleto}">
-                </div>
-                <div class="px-6 py-4 bg-gray-100 dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3 rounded-b-xl">
-                    <button onclick="cerrarSelectorFecha()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors">
-                        Cancelar
-                    </button>
-                    <button onclick="verDetalleConFecha()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
-                        <i class="fas fa-eye mr-2"></i>Ver Detalle
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-}
-
-function cerrarSelectorFecha() {
-    const modal = document.getElementById('modal-selector-fecha');
-    if (modal) modal.remove();
-}
-
-function verDetalleConFecha() {
-    const fechaSeleccionada = document.getElementById('fecha-seleccionada').value;
-    const numDocumento = document.getElementById('num-documento-seleccionado').value;
-    const nombreCompleto = document.getElementById('nombre-completo-seleccionado').value;
-    
-    if (!fechaSeleccionada) {
-        alert('Por favor selecciona una fecha');
-        return;
-    }
-    
-    cerrarSelectorFecha();
-    verDetalleDia(numDocumento, fechaSeleccionada, nombreCompleto);
-}
-
-// ============================================================================
-// FUNCIÃâN PARA VER DETALLE DEL DÃÂA
-// ============================================================================
-let mapaGlobal = null;
-let marcadoresGlobales = [];
-
-async function verDetalleDia(numDocumento, fecha, nombreCompleto) {
-    try {
-        console.log(`[DETALLE] Abriendo detalle para documento=${numDocumento}, fecha=${fecha}`);
-        
-        const response = await fetch(`/api/marcacion/detalle-dia?num_documento=${numDocumento}&fecha=${fecha}`);
-        const data = await response.json();
-        
-        if (!data.success) {
-            alert('Error al cargar detalle: ' + data.error);
-            return;
-        }
-        
-        console.log('[DETALLE] Datos recibidos:', data);
-        
-        if (data.marcaciones.length === 0) {
-            alert(`No hay marcaciones registradas para ${nombreCompleto} en la fecha ${fecha}`);
-            return;
-        }
-        
-        // Actualizar informaciÃ³n del usuario
-        document.getElementById('modal-info-usuario').textContent = 
-            `${nombreCompleto || data.usuario.nombre_completo} - ${fecha} (${data.marcaciones.length} marcaciones)`;
-        
-        // Renderizar fotos
-        renderizarFotos(data.marcaciones);
-        
-        // Renderizar tabla de marcaciones
-        renderizarTablaDetalle(data.marcaciones);
-        
-        // Mostrar modal
-        document.getElementById('modal-detalle-dia').classList.remove('hidden');
-        
-        // Inicializar mapa despuÃ©s de mostrar el modal
-        setTimeout(() => {
-            inicializarMapa(data.marcaciones);
-        }, 300);
-        
-    } catch (error) {
-        console.error('[DETALLE] Error:', error);
-        alert('Error al cargar el detalle');
-    }
-}
-
-function cerrarModalDetalle() {
-    document.getElementById('modal-detalle-dia').classList.add('hidden');
-    
-    // Limpiar mapa
-    if (mapaGlobal) {
-        marcadoresGlobales.forEach(marker => marker.setMap(null));
-        marcadoresGlobales = [];
-    }
-}
-
-function renderizarFotos(marcaciones) {
-    const gridFotos = document.getElementById('grid-fotos');
-    
-    const fotosHTML = marcaciones.map((m, index) => {
-        if (m.foto_base64) {
-            const tipoColor = m.tipo_marcacion === 'ENTRADA' ? 'green' : 'red';
-            return `
-                <div class="relative group">
-                    <img src="data:image/jpeg;base64,${m.foto_base64}" 
-                         alt="${m.tipo_marcacion}" 
-                         class="w-full h-48 object-cover rounded-lg shadow-md cursor-pointer hover:opacity-90 transition-opacity"
-                         onclick="verFotoGrande('data:image/jpeg;base64,${m.foto_base64}')">
-                    <div class="absolute top-2 left-2 px-2 py-1 bg-${tipoColor}-600 text-white text-xs font-bold rounded">
-                        ${m.tipo_marcacion}
-                    </div>
-                    <div class="absolute bottom-2 left-2 px-2 py-1 bg-black/70 text-white text-xs rounded">
-                        ${m.hora}
-                    </div>
-                </div>
-            `;
-        } else {
-            return `
-                <div class="w-full h-48 bg-gray-200 dark:bg-slate-700 rounded-lg flex items-center justify-center">
-                    <div class="text-center text-gray-500 dark:text-gray-400">
-                        <i class="fas fa-camera-slash text-3xl mb-2"></i>
-                        <p class="text-xs">Sin foto</p>
-                        <p class="text-xs font-bold">${m.tipo_marcacion}</p>
-                        <p class="text-xs">${m.hora}</p>
-                    </div>
-                </div>
-            `;
-        }
-    }).join('');
-    
-    gridFotos.innerHTML = fotosHTML || '<p class="text-center text-gray-500 dark:text-gray-400">No hay fotos disponibles</p>';
-}
-
-function verFotoGrande(src) {
-    // Crear modal temporal para ver foto grande
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/90 z-[99999] flex items-center justify-center p-4';
-    modal.onclick = () => modal.remove();
-    modal.innerHTML = `
-        <img src="${src}" class="max-w-full max-h-full rounded-lg shadow-2xl">
-        <button onclick="this.parentElement.remove()" class="absolute top-4 right-4 text-white text-2xl">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-    document.body.appendChild(modal);
-}
-
-function renderizarTablaDetalle(marcaciones) {
-    const tbody = document.getElementById('tabla-detalle-marcaciones');
-    
-    tbody.innerHTML = marcaciones.map(m => `
-        <tr class="bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800">
-            <td class="px-4 py-3 text-sm text-gray-900 dark:text-white">${m.hora}</td>
-            <td class="px-4 py-3 text-center">
-                <span class="px-2 py-1 text-xs font-medium rounded-full ${m.tipo_marcacion === 'ENTRADA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                    ${m.tipo_marcacion}
-                </span>
-            </td>
-            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                ${m.latitud && m.longitud ? `${parseFloat(m.latitud).toFixed(6)}, ${parseFloat(m.longitud).toFixed(6)}` : '-'}
-            </td>
-            <td class="px-4 py-3 text-center text-sm text-gray-600 dark:text-gray-400">
-                ${m.precision ? `ÃÂ±${m.precision}m` : '-'}
-            </td>
-            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">${m.dispositivo || '-'}</td>
-            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">${m.observacion || '-'}</td>
-        </tr>
-    `).join('');
-}
-
-function inicializarMapa(marcaciones) {
-    const contenedorMapa = document.getElementById('mapa-marcaciones');
-    
-    // Filtrar solo marcaciones con coordenadas
-    const marcacionesConGPS = marcaciones.filter(m => m.latitud && m.longitud);
-    
-    if (marcacionesConGPS.length === 0) {
-        contenedorMapa.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400"><i class="fas fa-map-marked-slash text-4xl mr-3"></i><span>No hay ubicaciones GPS disponibles</span></div>';
-        return;
-    }
-    
-    // Calcular centro del mapa (promedio de todas las coordenadas)
-    const latPromedio = marcacionesConGPS.reduce((sum, m) => sum + parseFloat(m.latitud), 0) / marcacionesConGPS.length;
-    const lngPromedio = marcacionesConGPS.reduce((sum, m) => sum + parseFloat(m.longitud), 0) / marcacionesConGPS.length;
-    
-    // Crear mapa
-    mapaGlobal = new google.maps.Map(contenedorMapa, {
-        center: { lat: latPromedio, lng: lngPromedio },
-        zoom: 15,
-        mapTypeId: 'roadmap'
-    });
-    
-    // Agregar marcadores
-    marcacionesConGPS.forEach((m, index) => {
-        const color = m.tipo_marcacion === 'ENTRADA' ? 'green' : 'red';
-        const marker = new google.maps.Marker({
-            position: { lat: parseFloat(m.latitud), lng: parseFloat(m.longitud) },
-            map: mapaGlobal,
-            title: `${m.tipo_marcacion} - ${m.hora}`,
-            label: {
-                text: (index + 1).toString(),
-                color: 'white',
-                fontSize: '12px',
-                fontWeight: 'bold'
-            },
-            icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 12,
-                fillColor: color,
-                fillOpacity: 1,
-                strokeColor: 'white',
-                strokeWeight: 2
-            }
-        });
-        
-        // Info window
-        const infoWindow = new google.maps.InfoWindow({
-            content: `
-                <div style="padding: 8px;">
-                    <h4 style="font-weight: bold; margin-bottom: 4px;">${m.tipo_marcacion}</h4>
-                    <p style="margin: 2px 0;">Hora: ${m.hora}</p>
-                    <p style="margin: 2px 0;">PrecisiÃ³n: ÃÂ±${m.precision}m</p>
-                    ${m.dispositivo ? `<p style="margin: 2px 0;">Dispositivo: ${m.dispositivo}</p>` : ''}
-                </div>
-            `
-        });
-        
-        marker.addListener('click', () => {
-            infoWindow.open(mapaGlobal, marker);
-        });
-        
-        marcadoresGlobales.push(marker);
-    });
-    
-    // Ajustar vista para mostrar todos los marcadores
-    if (marcacionesConGPS.length > 1) {
-        const bounds = new google.maps.LatLngBounds();
-        marcacionesConGPS.forEach(m => {
-            bounds.extend({ lat: parseFloat(m.latitud), lng: parseFloat(m.longitud) });
-        });
-        mapaGlobal.fitBounds(bounds);
-    }
-}
-
-// ============================================================================
-// FUNCIONES PARA MEMO (AMONESTACIONES)
-// ============================================================================
-
-// Variables globales para el modal de memo
-let datosMemoActual = {
-    numDocumento: null,
-    nombreCompleto: null,
-    email: null,
-    tipoMemo: null,
-    fechaIncidente: null
-};
-
-let tiposMemoDisponibles = []; // Cache de tipos de memo
-
-// Cargar tipos de memo desde la BD
-async function cargarTiposMemo() {
-    try {
-        const response = await fetch('/api/marcacion/tipos-memo');
-        const data = await response.json();
-        
-        if (data.success) {
-            tiposMemoDisponibles = data.data;
-            renderizarTiposMemo();
-        } else {
-            console.error('[MEMO] Error al cargar tipos:', data.error);
-            document.getElementById('tipos-memo-container').innerHTML = 
-                '<div class="text-center py-4 text-red-600">Error al cargar tipos de memo</div>';
-        }
-    } catch (error) {
-        console.error('[MEMO] Error:', error);
-        document.getElementById('tipos-memo-container').innerHTML = 
-            '<div class="text-center py-4 text-red-600">Error al cargar tipos de memo</div>';
-    }
-}
-
-// Renderizar tipos de memo dinÃ¡micamente
-function renderizarTiposMemo() {
-    const container = document.getElementById('tipos-memo-container');
-    
-    if (tiposMemoDisponibles.length === 0) {
-        container.innerHTML = '<div class="text-center py-4 text-gray-500">No hay tipos de memo disponibles</div>';
-        return;
-    }
-    
-    // Mapeo de cÃ³digos a colores e iconos
-    const estilos = {
-        'TARDANZA': { color: 'yellow', icon: 'fa-clock' },
-        'INASISTENCIA': { color: 'red', icon: 'fa-times-circle' },
-        'FALTA': { color: 'red', icon: 'fa-times-circle' },
-        'UNIFORME': { color: 'blue', icon: 'fa-tshirt' }
-    };
-    
-    const html = tiposMemoDisponibles.map(tipo => {
-        const estilo = estilos[tipo.codigo] || { color: 'gray', icon: 'fa-file-alt' };
-        const color = estilo.color;
-        
-        // Extraer descripciÃ³n corta (primera oraciÃ³n del campo descripcion)
-        const descripcionCorta = tipo.descripcion.split('.')[0] + '.';
-        
-        return `
-            <div class="border-2 border-gray-200 dark:border-slate-700 rounded-lg p-4 hover:border-${color}-500 dark:hover:border-${color}-500 transition-all cursor-pointer bg-white dark:bg-slate-800"
-                 onclick="seleccionarTipoMemo('${tipo.codigo}', this)">
-                <div class="flex items-start gap-4">
-                    <div class="flex-shrink-0 w-12 h-12 bg-${color}-100 dark:bg-${color}-900/30 rounded-full flex items-center justify-center">
-                        <i class="fas ${estilo.icon} text-${color}-600 dark:text-${color}-400 text-xl"></i>
-                    </div>
-                    <div class="flex-1">
-                        <h4 class="font-bold text-gray-900 dark:text-white mb-1">${tipo.nombre}</h4>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">
-                            ${descripcionCorta}
-                        </p>
-                    </div>
-                    <input type="radio" name="tipo_memo" value="${tipo.codigo}" class="w-5 h-5 text-${color}-600">
-                </div>
-            </div>
-        `;
-    }).join('');
-    
-    container.innerHTML = html;
-}
-
-// Abrir modal de memo
-async function abrirModalMemo(numDocumento, nombreCompleto, email, nombre) {
-    datosMemoActual = {
-        numDocumento: numDocumento,
-        nombreCompleto: nombreCompleto,
-        email: email || '',
-        tipoMemo: null,
-        fechaIncidente: null
-    };
-    
-    // Actualizar informaciÃ³n del empleado en el modal
-    document.getElementById('modal-memo-empleado').textContent = `Empleado: ${nombreCompleto}`;
-    
-    // Establecer fecha de hoy por defecto
-    const hoy = new Date().toISOString().split('T')[0];
-    document.getElementById('fecha_incidente').value = hoy;
-    
-    // Cargar tipos de memo si no estÃ¡n cargados
-    if (tiposMemoDisponibles.length === 0) {
-        await cargarTiposMemo();
-    }
-    
-    // Limpiar selecciÃ³n previa
-    document.querySelectorAll('input[name="tipo_memo"]').forEach(radio => {
-        radio.checked = false;
-    });
-    
-    // Deshabilitar botÃ³n de generar
-    document.getElementById('btn-generar-memo').disabled = true;
-    
-    // Remover estilos de selecciÃ³n previos
-    document.querySelectorAll('[onclick*="seleccionarTipoMemo"]').forEach(div => {
-        div.classList.remove('border-yellow-500', 'border-red-500', 'border-blue-500', 'bg-yellow-50', 'bg-red-50', 'bg-blue-50');
-        div.classList.add('border-gray-200');
-    });
-    
-    // Mostrar modal
-    document.getElementById('modal-memo').classList.remove('hidden');
-}
-
-// Cerrar modal de memo
-function cerrarModalMemo() {
-    document.getElementById('modal-memo').classList.add('hidden');
-    datosMemoActual = {
-        numDocumento: null,
-        nombreCompleto: null,
-        email: null,
-        tipoMemo: null,
-        fechaIncidente: null
-    };
-}
-
-// Seleccionar tipo de memo
-function seleccionarTipoMemo(tipo, elemento) {
-    // Remover estilos de todos los elementos
-    document.querySelectorAll('[onclick*="seleccionarTipoMemo"]').forEach(div => {
-        div.classList.remove('border-yellow-500', 'border-red-500', 'border-blue-500', 'bg-yellow-50', 'bg-red-50', 'bg-blue-50', 'dark:bg-yellow-900/20', 'dark:bg-red-900/20', 'dark:bg-blue-900/20');
-        div.classList.add('border-gray-200', 'dark:border-slate-700');
-    });
-    
-    // Aplicar estilo al elemento seleccionado
-    if (tipo === 'TARDANZA') {
-        elemento.classList.remove('border-gray-200', 'dark:border-slate-700');
-        elemento.classList.add('border-yellow-500', 'bg-yellow-50', 'dark:bg-yellow-900/20');
-    } else if (tipo === 'FALTA') {
-        elemento.classList.remove('border-gray-200', 'dark:border-slate-700');
-        elemento.classList.add('border-red-500', 'bg-red-50', 'dark:bg-red-900/20');
-    } else if (tipo === 'UNIFORME') {
-        elemento.classList.remove('border-gray-200', 'dark:border-slate-700');
-        elemento.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
-    }
-    
-    // Marcar el radio button
-    const radio = elemento.querySelector('input[type="radio"]');
-    if (radio) {
-        radio.checked = true;
-    }
-    
-    // Guardar tipo seleccionado
-    datosMemoActual.tipoMemo = tipo;
-    
-    // Habilitar botÃ³n de generar
-    document.getElementById('btn-generar-memo').disabled = false;
-}
-
-// Confirmar y generar memo
-async function confirmarGenerarMemo() {
-    if (!datosMemoActual.tipoMemo) {
-        alert('Por favor selecciona un tipo de memo');
-        return;
-    }
-    
-    // Obtener y validar fecha
-    const fechaIncidente = document.getElementById('fecha_incidente').value;
-    if (!fechaIncidente) {
-        alert('Por favor selecciona la fecha del incidente');
-        return;
-    }
-    
-    // Guardar datos antes de cerrar modal
-    const datosParaMemo = {
-        numDocumento: datosMemoActual.numDocumento,
-        nombreCompleto: datosMemoActual.nombreCompleto,
-        email: datosMemoActual.email,
-        tipoMemo: datosMemoActual.tipoMemo,
-        fechaIncidente: fechaIncidente
-    };
-    
-    // Cerrar modal
-    cerrarModalMemo();
-    
-    // Generar memo con los datos guardados
-    await generarMemo(
-        datosParaMemo.numDocumento,
-        datosParaMemo.nombreCompleto,
-        datosParaMemo.email,
-        datosParaMemo.tipoMemo,
-        datosParaMemo.fechaIncidente
-    );
-}
-
-// Generar Memo (Documento de AmonestaciÃ³n en PDF)
-async function generarMemo(numDocumento, nombreCompleto, email, tipoMemo, fechaIncidente) {
-    try {
-        // Mostrar mensaje de generaciÃ³n
-        const loadingMsg = document.createElement('div');
-        loadingMsg.className = 'fixed top-4 right-4 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg z-[9999] animate-fade-in';
-        loadingMsg.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generando memo...';
-        document.body.appendChild(loadingMsg);
-        
-        console.log(`[MEMO] Generando memo: ${tipoMemo} para ${nombreCompleto} (${numDocumento}) - Fecha: ${fechaIncidente}`);
-        
-        // Llamar al endpoint para generar PDF
-        const response = await fetch(`/api/marcacion/generar-memo`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                num_documento: numDocumento,
-                nombre_completo: nombreCompleto,
-                email: email,
-                tipo_memo: tipoMemo,
-                fecha_incidente: fechaIncidente
-            })
-        });
-        
-        if (!response.ok) {
-            // Intentar leer el mensaje de error del servidor
-            let errorMsg = 'Error al generar el memo';
-            try {
-                const errorData = await response.json();
-                errorMsg = errorData.error || errorData.message || errorMsg;
-            } catch {
-                errorMsg = `Error ${response.status}: ${response.statusText}`;
-            }
-            throw new Error(errorMsg);
-        }
-        
-        // Descargar el PDF
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Memo_${tipoMemo}_${nombreCompleto.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        // Mostrar mensaje de Ã©xito
-        loadingMsg.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-[9999]';
-        loadingMsg.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Memo generado exitosamente';
-        
-        setTimeout(() => {
-            loadingMsg.remove();
-        }, 3000);
-        
-    } catch (error) {
-        console.error('[MEMO] Error:', error);
-        
-        // Remover loading si existe
-        const loadingMsg = document.querySelector('.bg-blue-600');
-        if (loadingMsg) loadingMsg.remove();
-        
-        // Mostrar mensaje de error con detalles
-        const errorMsg = document.createElement('div');
-        errorMsg.className = 'fixed top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-[9999] max-w-md';
-        errorMsg.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i>${error.message || 'Error al generar memo'}`;
-        document.body.appendChild(errorMsg);
-        
-        setTimeout(() => {
-            errorMsg.remove();
-        }, 5000);
-    }
-}
-
-</script>
-
-<!-- Google Maps API -->
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAL3YZoZV352Pi89gF8Hjc-avNIqDighaI"></script>
-
-<style>
-.tab-button.active {
-    border-bottom-width: 2px;
-}
-</style>
-
-{% endblock %}
+                <p id="modal-info-usuario" class="text-blue-100 text-sm mt-1"></p>
+
+            </div>
+
+            <button onclick="cerrarModalDetalle()" class="text-white hover:text-gray-200 p-2">
+
+                <i class="fas fa-times text-xl"></i>
+
+            </button>
+
+        </div>
+
+
+
+        <!-- Contenido con scroll -->
+
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+
+            <!-- Mapa de Google Maps -->
+
+            <div class="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
+
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+
+                    <i class="fas fa-map-marked-alt text-blue-600 mr-2"></i>Mapa de Ubicaciones
+
+                </h3>
+
+                <div id="mapa-marcaciones" class="w-full h-96 rounded-lg border-2 border-gray-300 dark:border-slate-600"></div>
+
+            </div>
+
+
+
+            <!-- Grid de Fotos -->
+
+            <div class="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
+
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+
+                    <i class="fas fa-images text-blue-600 mr-2"></i>Fotos de las Marcaciones
+
+                </h3>
+
+                <div id="grid-fotos" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+                    <!-- Las fotos se insertarán aquí dinámicamente -->
+
+                </div>
+
+            </div>
+
+
+
+            <!-- Tabla de Marcaciones Detalladas -->
+
+            <div class="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
+
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+
+                    <i class="fas fa-list text-blue-600 mr-2"></i>Detalle de Marcaciones
+
+                </h3>
+
+                <div class="overflow-x-auto">
+
+                    <table class="w-full">
+
+                        <thead class="bg-gray-200 dark:bg-slate-700">
+
+                            <tr>
+
+                                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Hora</th>
+
+                                <th class="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">Tipo</th>
+
+                                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Coordenadas</th>
+
+                                <th class="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">Precisión</th>
+
+                                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Dispositivo</th>
+
+                                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Observación</th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="tabla-detalle-marcaciones" class="divide-y divide-gray-200 dark:divide-slate-600">
+
+                            <!-- Las filas se insertarán aquí -->
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Footer -->
+
+        <div class="px-6 py-4 bg-gray-100 dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 flex justify-end">
+
+            <button onclick="cerrarModalDetalle()" class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors">
+
+                Cerrar
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- Modal: Generar Memo de Amonestación -->
+
+<div id="modal-memo" class="hidden fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
+
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col">
+
+        <!-- Header -->
+
+        <div class="bg-gradient-to-r from-orange-600 to-orange-800 text-white px-6 py-5 flex items-center justify-between">
+
+            <div class="flex items-center gap-3">
+
+                <div class="bg-orange-700 p-3 rounded-lg">
+
+                    <i class="fas fa-file-alt text-2xl"></i>
+
+                </div>
+
+                <div>
+
+                    <h2 class="text-xl font-bold">Generar Memorando de Amonestación</h2>
+
+                    <p id="modal-memo-empleado" class="text-orange-100 text-sm mt-1"></p>
+
+                </div>
+
+            </div>
+
+            <button onclick="cerrarModalMemo()" class="text-white hover:text-gray-200 p-2">
+
+                <i class="fas fa-times text-xl"></i>
+
+            </button>
+
+        </div>
+
+
+
+        <!-- Contenido -->
+
+        <div class="flex-1 overflow-y-auto p-6">
+
+            <!-- Instrucción -->
+
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-6">
+
+                <div class="flex items-start gap-3">
+
+                    <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 text-xl mt-1"></i>
+
+                    <div>
+
+                        <p class="text-sm text-blue-900 dark:text-blue-200 font-semibold mb-1">¿Qué es un memorando?</p>
+
+                        <p class="text-sm text-blue-800 dark:text-blue-300">
+
+                            Es un documento formal de amonestación que se emite cuando un empleado incurre en una falta laboral. 
+
+                            Selecciona el tipo de falta cometida y la fecha del incidente para generar el documento correspondiente.
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- Fecha del Incidente -->
+
+            <div class="mb-6">
+
+                <label class="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+
+                    <i class="fas fa-calendar-alt text-orange-600 mr-2"></i>Fecha del Incidente
+
+                </label>
+
+                <input type="date" id="fecha_incidente" 
+
+                       class="w-full px-4 py-2 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:border-orange-500 focus:outline-none"
+
+                       required>
+
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Fecha en que ocurrió la falta</p>
+
+            </div>
+
+
+
+            <!-- Opciones de Tipo de Memo -->
+
+            <div class="space-y-3">
+
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Selecciona el tipo de amonestación:</h3>
+
+                
+
+                <!-- Se cargarán dinámicamente -->
+
+                <div id="tipos-memo-container">
+
+                    <div class="text-center py-4 text-gray-500">
+
+                        <i class="fas fa-spinner fa-spin mr-2"></i>Cargando tipos de memo...
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Footer -->
+
+        <div class="px-6 py-4 bg-gray-100 dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3">
+
+            <button onclick="cerrarModalMemo()" class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors">
+
+                <i class="fas fa-times mr-2"></i>Cancelar
+
+            </button>
+
+            <button id="btn-generar-memo" onclick="confirmarGenerarMemo()" disabled
+
+                    class="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+
+                <i class="fas fa-file-pdf mr-2"></i>Generar Memo
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<script>
+
+// ============================================================================
+
+// VARIABLES GLOBALES
+
+// ============================================================================
+
+let datosResumen = [];
+
+
+
+// ============================================================================
+
+// INICIALIZACIÓN
+
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', function() {
+
+    // Llenar selector de años (últimos 5 años y próximos 2)
+
+    const anioActual = new Date().getFullYear();
+
+    const selectAnio = document.getElementById('anio_seleccionado');
+
+    
+
+    for (let i = anioActual - 5; i <= anioActual + 2; i++) {
+
+        const option = document.createElement('option');
+
+        option.value = i;
+
+        option.textContent = i;
+
+        if (i === anioActual) {
+
+            option.selected = true;
+
+        }
+
+        selectAnio.appendChild(option);
+
+    }
+
+    
+
+    // Establecer mes actual por defecto
+
+    const mesActual = String(new Date().getMonth() + 1).padStart(2, '0');
+
+    document.getElementById('mes_seleccionado').value = mesActual;
+
+    
+
+    // Cargar datos iniciales
+
+    cargarResumen();
+
+    
+
+    // Evento de actualizar
+
+    document.getElementById('btn-actualizar').addEventListener('click', function() {
+
+        cargarResumen();
+
+    });
+
+    
+
+    // Evento de exportar
+
+    document.getElementById('btn-exportar').addEventListener('click', exportarExcel);
+
+});
+
+
+
+// ============================================================================
+
+// FUNCIONES DE CARGA DE DATOS
+
+// ============================================================================
+
+async function cargarResumen() {
+
+    try {
+
+        const mes = document.getElementById('mes_seleccionado').value;
+
+        const anio = document.getElementById('anio_seleccionado').value;
+
+        
+
+        const params = new URLSearchParams();
+
+        
+
+        // Construir rango de fechas del mes seleccionado
+
+        if (mes && anio) {
+
+            const fechaDesde = `${anio}-${mes}-01`;
+
+            const ultimoDia = new Date(anio, mes, 0).getDate();
+
+            const fechaHasta = `${anio}-${mes}-${ultimoDia}`;
+
+            
+
+            params.append('fecha_desde', fechaDesde);
+
+            params.append('fecha_hasta', fechaHasta);
+
+        }
+
+        
+
+        const response = await fetch(`/api/marcacion/resumen-usuarios?${params}`);
+
+        const data = await response.json();
+
+        
+
+        if (data.success) {
+
+            datosResumen = data.data;
+
+            renderizarResumen(datosResumen);
+
+        } else {
+
+            alert('Error al cargar resumen: ' + data.error);
+
+        }
+
+    } catch (error) {
+
+        console.error('Error:', error);
+
+        alert('Error al cargar resumen');
+
+    }
+
+}
+
+
+
+// ============================================================================
+
+// FUNCIONES DE RENDERIZADO
+
+// ============================================================================
+
+function renderizarResumen(datos) {
+
+    const tbody = document.getElementById('tabla-resumen');
+
+    
+
+    if (datos.length === 0) {
+
+        tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">No hay datos para mostrar</td></tr>';
+
+        return;
+
+    }
+
+    
+
+    tbody.innerHTML = datos.map(item => `
+
+        <tr class="hover:bg-gray-50 dark:hover:bg-slate-800">
+
+            <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">${item.nombre_completo}</td>
+
+            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${item.email || '-'}</td>
+
+            <td class="px-6 py-4 text-sm text-center text-gray-900 dark:text-white font-semibold">${item.dias_asistidos}</td>
+
+            <td class="px-6 py-4 text-sm text-center text-gray-900 dark:text-white">${item.total_entradas}</td>
+
+            <td class="px-6 py-4 text-sm text-center text-gray-900 dark:text-white">${item.total_salidas}</td>
+
+            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${item.primera_marcacion ? new Date(item.primera_marcacion).toLocaleString() : '-'}</td>
+
+            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${item.ultima_marcacion ? new Date(item.ultima_marcacion).toLocaleString() : '-'}</td>
+
+            <td class="px-6 py-4 text-center">
+
+                <div class="flex gap-2 justify-center items-center">
+
+                    <button onclick="abrirSelectorFecha('${item.num_documento}', '${item.nombre_completo}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors">
+
+                        <i class="fas fa-eye mr-1"></i>Ver Detalle
+
+                    </button>
+
+                    
+
+                    <!-- Botón Memo -->
+
+                    <button onclick="abrirModalMemo('${item.num_documento}', '${item.nombre_completo}', '${item.email || ''}', '${item.nombre_completo}')" 
+
+                            class="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded text-xs font-medium transition-colors">
+
+                        <i class="fas fa-file-alt mr-1"></i>Memo
+
+                    </button>
+
+                </div>
+
+            </td>
+
+        </tr>
+
+    `).join('');
+
+}
+
+
+
+// ============================================================================
+
+// FUNCIÓN DE FILTRADO
+
+// ============================================================================
+
+function aplicarFiltros() {
+
+    cargarResumen();
+
+}
+
+
+
+// ============================================================================
+
+// FUNCIÓN DE EXPORTAR
+
+// ============================================================================
+
+function exportarExcel() {
+
+    const mes = document.getElementById('mes_seleccionado').value;
+
+    const anio = document.getElementById('anio_seleccionado').value;
+
+    
+
+    if (!mes || !anio) {
+
+        alert('Por favor selecciona mes y año');
+
+        return;
+
+    }
+
+    
+
+    // Construir rango de fechas del mes seleccionado
+
+    const fechaDesde = `${anio}-${mes}-01`;
+
+    const ultimoDia = new Date(anio, mes, 0).getDate();
+
+    const fechaHasta = `${anio}-${mes}-${ultimoDia}`;
+
+    
+
+    // Mostrar mensaje de proceso
+
+    const btnExportar = document.getElementById('btn-exportar');
+
+    const textoOriginal = btnExportar.innerHTML;
+
+    btnExportar.disabled = true;
+
+    btnExportar.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generando Excel...';
+
+    
+
+    // Construir URL con parámetros
+
+    const url = `/api/marcacion/exportar-excel?fecha_desde=${fechaDesde}&fecha_hasta=${fechaHasta}`;
+
+    
+
+    // Descargar archivo
+
+    fetch(url)
+
+        .then(response => {
+
+            if (!response.ok) {
+
+                throw new Error('Error al generar el archivo');
+
+            }
+
+            return response.blob();
+
+        })
+
+        .then(blob => {
+
+            // Crear enlace de descarga
+
+            const url = window.URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+
+            a.href = url;
+
+            a.download = `Marcaciones_${fechaDesde}_a_${fechaHasta}.xlsx`;
+
+            document.body.appendChild(a);
+
+            a.click();
+
+            window.URL.revokeObjectURL(url);
+
+            document.body.removeChild(a);
+
+            
+
+            // Restaurar botón
+
+            btnExportar.disabled = false;
+
+            btnExportar.innerHTML = textoOriginal;
+
+        })
+
+        .catch(error => {
+
+            console.error('Error:', error);
+
+            alert('Error al exportar: ' + error.message);
+
+            
+
+            // Restaurar botón
+
+            btnExportar.disabled = false;
+
+            btnExportar.innerHTML = textoOriginal;
+
+        });
+
+}
+
+
+
+// ============================================================================
+
+// FUNCIÓN PARA ABRIR SELECTOR DE FECHA
+
+// ============================================================================
+
+function abrirSelectorFecha(numDocumento, nombreCompleto) {
+
+    const mes = document.getElementById('mes_seleccionado').value;
+
+    const anio = document.getElementById('anio_seleccionado').value;
+
+    
+
+    // Construir fechas mínima y máxima del mes seleccionado
+
+    const minFecha = `${anio}-${mes}-01`;
+
+    const ultimoDia = new Date(anio, mes, 0).getDate();
+
+    const maxFecha = `${anio}-${mes}-${ultimoDia}`;
+
+    
+
+    // Obtener fecha actual en zona horaria de Perú (UTC-5)
+
+    const fechaActualPeru = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
+
+    const diaActual = String(fechaActualPeru.getDate()).padStart(2, '0');
+
+    const mesActual = String(fechaActualPeru.getMonth() + 1).padStart(2, '0');
+
+    const anioActual = fechaActualPeru.getFullYear();
+
+    const fechaHoy = `${anioActual}-${mesActual}-${diaActual}`;
+
+    
+
+    // Determinar fecha por defecto:
+
+    // - Si la fecha de hoy está dentro del rango del mes seleccionado, usar hoy
+
+    // - Si no, usar el último día del mes seleccionado
+
+    let fechaDefault = maxFecha;
+
+    if (fechaHoy >= minFecha && fechaHoy <= maxFecha) {
+
+        fechaDefault = fechaHoy;
+
+    }
+
+    
+
+    // Crear modal de selección de fecha
+
+    const modalHTML = `
+
+        <div id="modal-selector-fecha" class="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
+
+            <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md">
+
+                <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white px-6 py-4 flex items-center justify-between rounded-t-xl">
+
+                    <div>
+
+                        <h2 class="text-xl font-bold">Seleccionar Fecha</h2>
+
+                        <p class="text-blue-100 text-sm mt-1">${nombreCompleto}</p>
+
+                    </div>
+
+                    <button onclick="cerrarSelectorFecha()" class="text-white hover:text-gray-200 p-2">
+
+                        <i class="fas fa-times text-xl"></i>
+
+                    </button>
+
+                </div>
+
+                <div class="p-6">
+
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+
+                        Selecciona una fecha para ver el detalle:
+
+                    </label>
+
+                    <input type="date" id="fecha-seleccionada" 
+
+                           min="${minFecha}"
+
+                           max="${maxFecha}"
+
+                           value="${fechaDefault}"
+
+                           class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
+
+                    <input type="hidden" id="num-documento-seleccionado" value="${numDocumento}">
+
+                    <input type="hidden" id="nombre-completo-seleccionado" value="${nombreCompleto}">
+
+                </div>
+
+                <div class="px-6 py-4 bg-gray-100 dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3 rounded-b-xl">
+
+                    <button onclick="cerrarSelectorFecha()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors">
+
+                        Cancelar
+
+                    </button>
+
+                    <button onclick="verDetalleConFecha()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+
+                        <i class="fas fa-eye mr-2"></i>Ver Detalle
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    `;
+
+    
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+}
+
+
+
+function cerrarSelectorFecha() {
+
+    const modal = document.getElementById('modal-selector-fecha');
+
+    if (modal) modal.remove();
+
+}
+
+
+
+function verDetalleConFecha() {
+
+    const fechaSeleccionada = document.getElementById('fecha-seleccionada').value;
+
+    const numDocumento = document.getElementById('num-documento-seleccionado').value;
+
+    const nombreCompleto = document.getElementById('nombre-completo-seleccionado').value;
+
+    
+
+    if (!fechaSeleccionada) {
+
+        alert('Por favor selecciona una fecha');
+
+        return;
+
+    }
+
+    
+
+    cerrarSelectorFecha();
+
+    verDetalleDia(numDocumento, fechaSeleccionada, nombreCompleto);
+
+}
+
+
+
+// ============================================================================
+
+// FUNCIÓN PARA VER DETALLE DEL DÍA
+
+// ============================================================================
+
+let mapaGlobal = null;
+
+let marcadoresGlobales = [];
+
+
+
+async function verDetalleDia(numDocumento, fecha, nombreCompleto) {
+
+    try {
+
+        console.log(`[DETALLE] Abriendo detalle para documento=${numDocumento}, fecha=${fecha}`);
+
+        
+
+        const response = await fetch(`/api/marcacion/detalle-dia?num_documento=${numDocumento}&fecha=${fecha}`);
+
+        const data = await response.json();
+
+        
+
+        if (!data.success) {
+
+            alert('Error al cargar detalle: ' + data.error);
+
+            return;
+
+        }
+
+        
+
+        console.log('[DETALLE] Datos recibidos:', data);
+
+        
+
+        if (data.marcaciones.length === 0) {
+
+            alert(`No hay marcaciones registradas para ${nombreCompleto} en la fecha ${fecha}`);
+
+            return;
+
+        }
+
+        
+
+        // Actualizar información del usuario
+
+        document.getElementById('modal-info-usuario').textContent = 
+
+            `${nombreCompleto || data.usuario.nombre_completo} - ${fecha} (${data.marcaciones.length} marcaciones)`;
+
+        
+
+        // Renderizar fotos
+
+        renderizarFotos(data.marcaciones);
+
+        
+
+        // Renderizar tabla de marcaciones
+
+        renderizarTablaDetalle(data.marcaciones);
+
+        
+
+        // Mostrar modal
+
+        document.getElementById('modal-detalle-dia').classList.remove('hidden');
+
+        
+
+        // Inicializar mapa después de mostrar el modal
+
+        setTimeout(() => {
+
+            inicializarMapa(data.marcaciones);
+
+        }, 300);
+
+        
+
+    } catch (error) {
+
+        console.error('[DETALLE] Error:', error);
+
+        alert('Error al cargar el detalle');
+
+    }
+
+}
+
+
+
+function cerrarModalDetalle() {
+
+    document.getElementById('modal-detalle-dia').classList.add('hidden');
+
+    
+
+    // Limpiar mapa
+
+    if (mapaGlobal) {
+
+        marcadoresGlobales.forEach(marker => marker.setMap(null));
+
+        marcadoresGlobales = [];
+
+    }
+
+}
+
+
+
+function renderizarFotos(marcaciones) {
+
+    const gridFotos = document.getElementById('grid-fotos');
+
+    
+
+    const fotosHTML = marcaciones.map((m, index) => {
+
+        if (m.foto_base64) {
+
+            const tipoColor = m.tipo_marcacion === 'ENTRADA' ? 'green' : 'red';
+
+            return `
+
+                <div class="relative group">
+
+                    <img src="data:image/jpeg;base64,${m.foto_base64}" 
+
+                         alt="${m.tipo_marcacion}" 
+
+                         class="w-full h-48 object-cover rounded-lg shadow-md cursor-pointer hover:opacity-90 transition-opacity"
+
+                         onclick="verFotoGrande('data:image/jpeg;base64,${m.foto_base64}')">
+
+                    <div class="absolute top-2 left-2 px-2 py-1 bg-${tipoColor}-600 text-white text-xs font-bold rounded">
+
+                        ${m.tipo_marcacion}
+
+                    </div>
+
+                    <div class="absolute bottom-2 left-2 px-2 py-1 bg-black/70 text-white text-xs rounded">
+
+                        ${m.hora}
+
+                    </div>
+
+                </div>
+
+            `;
+
+        } else {
+
+            return `
+
+                <div class="w-full h-48 bg-gray-200 dark:bg-slate-700 rounded-lg flex items-center justify-center">
+
+                    <div class="text-center text-gray-500 dark:text-gray-400">
+
+                        <i class="fas fa-camera-slash text-3xl mb-2"></i>
+
+                        <p class="text-xs">Sin foto</p>
+
+                        <p class="text-xs font-bold">${m.tipo_marcacion}</p>
+
+                        <p class="text-xs">${m.hora}</p>
+
+                    </div>
+
+                </div>
+
+            `;
+
+        }
+
+    }).join('');
+
+    
+
+    gridFotos.innerHTML = fotosHTML || '<p class="text-center text-gray-500 dark:text-gray-400">No hay fotos disponibles</p>';
+
+}
+
+
+
+function verFotoGrande(src) {
+
+    // Crear modal temporal para ver foto grande
+
+    const modal = document.createElement('div');
+
+    modal.className = 'fixed inset-0 bg-black/90 z-[99999] flex items-center justify-center p-4';
+
+    modal.onclick = () => modal.remove();
+
+    modal.innerHTML = `
+
+        <img src="${src}" class="max-w-full max-h-full rounded-lg shadow-2xl">
+
+        <button onclick="this.parentElement.remove()" class="absolute top-4 right-4 text-white text-2xl">
+
+            <i class="fas fa-times"></i>
+
+        </button>
+
+    `;
+
+    document.body.appendChild(modal);
+
+}
+
+
+
+function renderizarTablaDetalle(marcaciones) {
+
+    const tbody = document.getElementById('tabla-detalle-marcaciones');
+
+    
+
+    tbody.innerHTML = marcaciones.map(m => `
+
+        <tr class="bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800">
+
+            <td class="px-4 py-3 text-sm text-gray-900 dark:text-white">${m.hora}</td>
+
+            <td class="px-4 py-3 text-center">
+
+                <span class="px-2 py-1 text-xs font-medium rounded-full ${m.tipo_marcacion === 'ENTRADA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+
+                    ${m.tipo_marcacion}
+
+                </span>
+
+            </td>
+
+            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+
+                ${m.latitud && m.longitud ? `${parseFloat(m.latitud).toFixed(6)}, ${parseFloat(m.longitud).toFixed(6)}` : '-'}
+
+            </td>
+
+            <td class="px-4 py-3 text-center text-sm text-gray-600 dark:text-gray-400">
+
+                ${m.precision ? `ÍÂ±${m.precision}m` : '-'}
+
+            </td>
+
+            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">${m.dispositivo || '-'}</td>
+
+            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">${m.observacion || '-'}</td>
+
+        </tr>
+
+    `).join('');
+
+}
+
+
+
+function inicializarMapa(marcaciones) {
+
+    const contenedorMapa = document.getElementById('mapa-marcaciones');
+
+    
+
+    // Filtrar solo marcaciones con coordenadas
+
+    const marcacionesConGPS = marcaciones.filter(m => m.latitud && m.longitud);
+
+    
+
+    if (marcacionesConGPS.length === 0) {
+
+        contenedorMapa.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400"><i class="fas fa-map-marked-slash text-4xl mr-3"></i><span>No hay ubicaciones GPS disponibles</span></div>';
+
+        return;
+
+    }
+
+    
+
+    // Calcular centro del mapa (promedio de todas las coordenadas)
+
+    const latPromedio = marcacionesConGPS.reduce((sum, m) => sum + parseFloat(m.latitud), 0) / marcacionesConGPS.length;
+
+    const lngPromedio = marcacionesConGPS.reduce((sum, m) => sum + parseFloat(m.longitud), 0) / marcacionesConGPS.length;
+
+    
+
+    // Crear mapa
+
+    mapaGlobal = new google.maps.Map(contenedorMapa, {
+
+        center: { lat: latPromedio, lng: lngPromedio },
+
+        zoom: 15,
+
+        mapTypeId: 'roadmap'
+
+    });
+
+    
+
+    // Agregar marcadores
+
+    marcacionesConGPS.forEach((m, index) => {
+
+        const color = m.tipo_marcacion === 'ENTRADA' ? 'green' : 'red';
+
+        const marker = new google.maps.Marker({
+
+            position: { lat: parseFloat(m.latitud), lng: parseFloat(m.longitud) },
+
+            map: mapaGlobal,
+
+            title: `${m.tipo_marcacion} - ${m.hora}`,
+
+            label: {
+
+                text: (index + 1).toString(),
+
+                color: 'white',
+
+                fontSize: '12px',
+
+                fontWeight: 'bold'
+
+            },
+
+            icon: {
+
+                path: google.maps.SymbolPath.CIRCLE,
+
+                scale: 12,
+
+                fillColor: color,
+
+                fillOpacity: 1,
+
+                strokeColor: 'white',
+
+                strokeWeight: 2
+
+            }
+
+        });
+
+        
+
+        // Info window
+
+        const infoWindow = new google.maps.InfoWindow({
+
+            content: `
+
+                <div style="padding: 8px;">
+
+                    <h4 style="font-weight: bold; margin-bottom: 4px;">${m.tipo_marcacion}</h4>
+
+                    <p style="margin: 2px 0;">Hora: ${m.hora}</p>
+
+                    <p style="margin: 2px 0;">Precisión: ÍÂ±${m.precision}m</p>
+
+                    ${m.dispositivo ? `<p style="margin: 2px 0;">Dispositivo: ${m.dispositivo}</p>` : ''}
+
+                </div>
+
+            `
+
+        });
+
+        
+
+        marker.addListener('click', () => {
+
+            infoWindow.open(mapaGlobal, marker);
+
+        });
+
+        
+
+        marcadoresGlobales.push(marker);
+
+    });
+
+    
+
+    // Ajustar vista para mostrar todos los marcadores
+
+    if (marcacionesConGPS.length > 1) {
+
+        const bounds = new google.maps.LatLngBounds();
+
+        marcacionesConGPS.forEach(m => {
+
+            bounds.extend({ lat: parseFloat(m.latitud), lng: parseFloat(m.longitud) });
+
+        });
+
+        mapaGlobal.fitBounds(bounds);
+
+    }
+
+}
+
+
+
+// ============================================================================
+
+// FUNCIONES PARA MEMO (AMONESTACIONES)
+
+// ============================================================================
+
+
+
+// Variables globales para el modal de memo
+
+let datosMemoActual = {
+
+    numDocumento: null,
+
+    nombreCompleto: null,
+
+    email: null,
+
+    tipoMemo: null,
+
+    fechaIncidente: null
+
+};
+
+
+
+let tiposMemoDisponibles = []; // Cache de tipos de memo
+
+
+
+// Cargar tipos de memo desde la BD
+
+async function cargarTiposMemo() {
+
+    try {
+
+        const response = await fetch('/api/marcacion/tipos-memo');
+
+        const data = await response.json();
+
+        
+
+        if (data.success) {
+
+            tiposMemoDisponibles = data.data;
+
+            renderizarTiposMemo();
+
+        } else {
+
+            console.error('[MEMO] Error al cargar tipos:', data.error);
+
+            document.getElementById('tipos-memo-container').innerHTML = 
+
+                '<div class="text-center py-4 text-red-600">Error al cargar tipos de memo</div>';
+
+        }
+
+    } catch (error) {
+
+        console.error('[MEMO] Error:', error);
+
+        document.getElementById('tipos-memo-container').innerHTML = 
+
+            '<div class="text-center py-4 text-red-600">Error al cargar tipos de memo</div>';
+
+    }
+
+}
+
+
+
+// Renderizar tipos de memo dinámicamente
+
+function renderizarTiposMemo() {
+
+    const container = document.getElementById('tipos-memo-container');
+
+    
+
+    if (tiposMemoDisponibles.length === 0) {
+
+        container.innerHTML = '<div class="text-center py-4 text-gray-500">No hay tipos de memo disponibles</div>';
+
+        return;
+
+    }
+
+    
+
+    // Mapeo de códigos a colores e iconos
+
+    const estilos = {
+
+        'TARDANZA': { color: 'yellow', icon: 'fa-clock' },
+
+        'INASISTENCIA': { color: 'red', icon: 'fa-times-circle' },
+
+        'FALTA': { color: 'red', icon: 'fa-times-circle' },
+
+        'UNIFORME': { color: 'blue', icon: 'fa-tshirt' }
+
+    };
+
+    
+
+    const html = tiposMemoDisponibles.map(tipo => {
+
+        const estilo = estilos[tipo.codigo] || { color: 'gray', icon: 'fa-file-alt' };
+
+        const color = estilo.color;
+
+        
+
+        // Extraer descripción corta (primera oración del campo descripcion)
+
+        const descripcionCorta = tipo.descripcion.split('.')[0] + '.';
+
+        
+
+        return `
+
+            <div class="border-2 border-gray-200 dark:border-slate-700 rounded-lg p-4 hover:border-${color}-500 dark:hover:border-${color}-500 transition-all cursor-pointer bg-white dark:bg-slate-800"
+
+                 onclick="seleccionarTipoMemo('${tipo.codigo}', this)">
+
+                <div class="flex items-start gap-4">
+
+                    <div class="flex-shrink-0 w-12 h-12 bg-${color}-100 dark:bg-${color}-900/30 rounded-full flex items-center justify-center">
+
+                        <i class="fas ${estilo.icon} text-${color}-600 dark:text-${color}-400 text-xl"></i>
+
+                    </div>
+
+                    <div class="flex-1">
+
+                        <h4 class="font-bold text-gray-900 dark:text-white mb-1">${tipo.nombre}</h4>
+
+                        <p class="text-sm text-gray-600 dark:text-gray-400">
+
+                            ${descripcionCorta}
+
+                        </p>
+
+                    </div>
+
+                    <input type="radio" name="tipo_memo" value="${tipo.codigo}" class="w-5 h-5 text-${color}-600">
+
+                </div>
+
+            </div>
+
+        `;
+
+    }).join('');
+
+    
+
+    container.innerHTML = html;
+
+}
+
+
+
+// Abrir modal de memo
+
+async function abrirModalMemo(numDocumento, nombreCompleto, email, nombre) {
+
+    datosMemoActual = {
+
+        numDocumento: numDocumento,
+
+        nombreCompleto: nombreCompleto,
+
+        email: email || '',
+
+        tipoMemo: null,
+
+        fechaIncidente: null
+
+    };
+
+    
+
+    // Actualizar información del empleado en el modal
+
+    document.getElementById('modal-memo-empleado').textContent = `Empleado: ${nombreCompleto}`;
+
+    
+
+    // Establecer fecha de hoy por defecto
+
+    const hoy = new Date().toISOString().split('T')[0];
+
+    document.getElementById('fecha_incidente').value = hoy;
+
+    
+
+    // Cargar tipos de memo si no están cargados
+
+    if (tiposMemoDisponibles.length === 0) {
+
+        await cargarTiposMemo();
+
+    }
+
+    
+
+    // Limpiar selección previa
+
+    document.querySelectorAll('input[name="tipo_memo"]').forEach(radio => {
+
+        radio.checked = false;
+
+    });
+
+    
+
+    // Deshabilitar botón de generar
+
+    document.getElementById('btn-generar-memo').disabled = true;
+
+    
+
+    // Remover estilos de selección previos
+
+    document.querySelectorAll('[onclick*="seleccionarTipoMemo"]').forEach(div => {
+
+        div.classList.remove('border-yellow-500', 'border-red-500', 'border-blue-500', 'bg-yellow-50', 'bg-red-50', 'bg-blue-50');
+
+        div.classList.add('border-gray-200');
+
+    });
+
+    
+
+    // Mostrar modal
+
+    document.getElementById('modal-memo').classList.remove('hidden');
+
+}
+
+
+
+// Cerrar modal de memo
+
+function cerrarModalMemo() {
+
+    document.getElementById('modal-memo').classList.add('hidden');
+
+    datosMemoActual = {
+
+        numDocumento: null,
+
+        nombreCompleto: null,
+
+        email: null,
+
+        tipoMemo: null,
+
+        fechaIncidente: null
+
+    };
+
+}
+
+
+
+// Seleccionar tipo de memo
+
+function seleccionarTipoMemo(tipo, elemento) {
+
+    // Remover estilos de todos los elementos
+
+    document.querySelectorAll('[onclick*="seleccionarTipoMemo"]').forEach(div => {
+
+        div.classList.remove('border-yellow-500', 'border-red-500', 'border-blue-500', 'bg-yellow-50', 'bg-red-50', 'bg-blue-50', 'dark:bg-yellow-900/20', 'dark:bg-red-900/20', 'dark:bg-blue-900/20');
+
+        div.classList.add('border-gray-200', 'dark:border-slate-700');
+
+    });
+
+    
+
+    // Aplicar estilo al elemento seleccionado
+
+    if (tipo === 'TARDANZA') {
+
+        elemento.classList.remove('border-gray-200', 'dark:border-slate-700');
+
+        elemento.classList.add('border-yellow-500', 'bg-yellow-50', 'dark:bg-yellow-900/20');
+
+    } else if (tipo === 'FALTA') {
+
+        elemento.classList.remove('border-gray-200', 'dark:border-slate-700');
+
+        elemento.classList.add('border-red-500', 'bg-red-50', 'dark:bg-red-900/20');
+
+    } else if (tipo === 'UNIFORME') {
+
+        elemento.classList.remove('border-gray-200', 'dark:border-slate-700');
+
+        elemento.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
+
+    }
+
+    
+
+    // Marcar el radio button
+
+    const radio = elemento.querySelector('input[type="radio"]');
+
+    if (radio) {
+
+        radio.checked = true;
+
+    }
+
+    
+
+    // Guardar tipo seleccionado
+
+    datosMemoActual.tipoMemo = tipo;
+
+    
+
+    // Habilitar botón de generar
+
+    document.getElementById('btn-generar-memo').disabled = false;
+
+}
+
+
+
+// Confirmar y generar memo
+
+async function confirmarGenerarMemo() {
+
+    if (!datosMemoActual.tipoMemo) {
+
+        alert('Por favor selecciona un tipo de memo');
+
+        return;
+
+    }
+
+    
+
+    // Obtener y validar fecha
+
+    const fechaIncidente = document.getElementById('fecha_incidente').value;
+
+    if (!fechaIncidente) {
+
+        alert('Por favor selecciona la fecha del incidente');
+
+        return;
+
+    }
+
+    
+
+    // Guardar datos antes de cerrar modal
+
+    const datosParaMemo = {
+
+        numDocumento: datosMemoActual.numDocumento,
+
+        nombreCompleto: datosMemoActual.nombreCompleto,
+
+        email: datosMemoActual.email,
+
+        tipoMemo: datosMemoActual.tipoMemo,
+
+        fechaIncidente: fechaIncidente
+
+    };
+
+    
+
+    // Cerrar modal
+
+    cerrarModalMemo();
+
+    
+
+    // Generar memo con los datos guardados
+
+    await generarMemo(
+
+        datosParaMemo.numDocumento,
+
+        datosParaMemo.nombreCompleto,
+
+        datosParaMemo.email,
+
+        datosParaMemo.tipoMemo,
+
+        datosParaMemo.fechaIncidente
+
+    );
+
+}
+
+
+
+// Generar Memo (Documento de Amonestación en PDF)
+
+async function generarMemo(numDocumento, nombreCompleto, email, tipoMemo, fechaIncidente) {
+
+    try {
+
+        // Mostrar mensaje de generación
+
+        const loadingMsg = document.createElement('div');
+
+        loadingMsg.className = 'fixed top-4 right-4 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg z-[9999] animate-fade-in';
+
+        loadingMsg.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generando memo...';
+
+        document.body.appendChild(loadingMsg);
+
+        
+
+        console.log(`[MEMO] Generando memo: ${tipoMemo} para ${nombreCompleto} (${numDocumento}) - Fecha: ${fechaIncidente}`);
+
+        
+
+        // Llamar al endpoint para generar PDF
+
+        const response = await fetch(`/api/marcacion/generar-memo`, {
+
+            method: 'POST',
+
+            headers: {
+
+                'Content-Type': 'application/json'
+
+            },
+
+            body: JSON.stringify({
+
+                num_documento: numDocumento,
+
+                nombre_completo: nombreCompleto,
+
+                email: email,
+
+                tipo_memo: tipoMemo,
+
+                fecha_incidente: fechaIncidente
+
+            })
+
+        });
+
+        
+
+        if (!response.ok) {
+
+            // Intentar leer el mensaje de error del servidor
+
+            let errorMsg = 'Error al generar el memo';
+
+            try {
+
+                const errorData = await response.json();
+
+                errorMsg = errorData.error || errorData.message || errorMsg;
+
+            } catch {
+
+                errorMsg = `Error ${response.status}: ${response.statusText}`;
+
+            }
+
+            throw new Error(errorMsg);
+
+        }
+
+        
+
+        // Descargar el PDF
+
+        const blob = await response.blob();
+
+        const url = window.URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+
+        a.href = url;
+
+        a.download = `Memo_${tipoMemo}_${nombreCompleto.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+        document.body.appendChild(a);
+
+        a.click();
+
+        window.URL.revokeObjectURL(url);
+
+        document.body.removeChild(a);
+
+        
+
+        // Mostrar mensaje de éxito
+
+        loadingMsg.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-[9999]';
+
+        loadingMsg.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Memo generado exitosamente';
+
+        
+
+        setTimeout(() => {
+
+            loadingMsg.remove();
+
+        }, 3000);
+
+        
+
+    } catch (error) {
+
+        console.error('[MEMO] Error:', error);
+
+        
+
+        // Remover loading si existe
+
+        const loadingMsg = document.querySelector('.bg-blue-600');
+
+        if (loadingMsg) loadingMsg.remove();
+
+        
+
+        // Mostrar mensaje de error con detalles
+
+        const errorMsg = document.createElement('div');
+
+        errorMsg.className = 'fixed top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-[9999] max-w-md';
+
+        errorMsg.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i>${error.message || 'Error al generar memo'}`;
+
+        document.body.appendChild(errorMsg);
+
+        
+
+        setTimeout(() => {
+
+            errorMsg.remove();
+
+        }, 5000);
+
+    }
+
+}
+
+
+
+</script>
+
+
+
+<!-- Google Maps API -->
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAL3YZoZV352Pi89gF8Hjc-avNIqDighaI"></script>
+
+
+
+<style>
+
+.tab-button.active {
+
+    border-bottom-width: 2px;
+
+}
+
+</style>
+
+
+
+{% endblock %}
+
