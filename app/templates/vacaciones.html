@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
+    <!-- Topbar -->
+    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
+        <div class="px-6 py-4 flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Gestión de Vacaciones</h1>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Administra las solicitudes y periodos de vacaciones del personal</p>
+            </div>
+            <button id="btn-solicitar-vacaciones" class="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg">
+                <i class="fas fa-calendar-plus"></i>
+                <span>Solicitar Vacaciones</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="px-6 py-4 bg-gray-100 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800">
+        <div class="flex items-center gap-3">
+            <input type="text" id="filtro-empleado" placeholder="Buscar empleado..." 
+                   class="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 w-64">
+            
+            <select id="filtro-estado" class="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <option value="">Todos los estados</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="APROBADO">Aprobado</option>
+                <option value="RECHAZADO">Rechazado</option>
+                <option value="EN_CURSO">En curso</option>
+                <option value="FINALIZADO">Finalizado</option>
+            </select>
+
+            <select id="filtro-anio" class="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <option value="">Todos los años</option>
+                <option value="2026" selected>2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+            </select>
+
+            <button onclick="aplicarFiltros()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+                <i class="fas fa-search mr-2"></i>Buscar
+            </button>
+
+            <button onclick="limpiarFiltros()" class="px-4 py-2 bg-gray-400 hover:bg-gray-500 text-white rounded-lg text-sm font-medium transition-colors">
+                <i class="fas fa-redo mr-2"></i>Limpiar
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="p-6">
+        <!-- Estadísticas rápidas -->
+        <div class="grid grid-cols-4 gap-4 mb-6">
+            <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md p-4 border-l-4 border-blue-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 uppercase">Días Disponibles</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1" id="stat-dias-disponibles">30</p>
+                    </div>
+                    <div class="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg">
+                        <i class="fas fa-calendar-check text-blue-600 dark:text-blue-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md p-4 border-l-4 border-green-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 uppercase">Días Usados</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1" id="stat-dias-usados">0</p>
+                    </div>
+                    <div class="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg">
+                        <i class="fas fa-umbrella-beach text-green-600 dark:text-green-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md p-4 border-l-4 border-yellow-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 uppercase">Solicitudes Pendientes</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1" id="stat-pendientes">0</p>
+                    </div>
+                    <div class="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-lg">
+                        <i class="fas fa-clock text-yellow-600 dark:text-yellow-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md p-4 border-l-4 border-purple-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 uppercase">Total Solicitudes</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1" id="stat-total">0</p>
+                    </div>
+                    <div class="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-lg">
+                        <i class="fas fa-list-check text-purple-600 dark:text-purple-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Solicitudes -->
+        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table id="tabla-vacaciones" class="w-full">
+                    <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">#</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">Empleado</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">Área</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">Fecha Inicio</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">Fecha Fin</th>
+                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">Días</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">Tipo</th>
+                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">Estado</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">Solicitado</th>
+                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vacaciones-lista" class="divide-y divide-gray-200 dark:divide-slate-700">
+                        <tr>
+                            <td colspan="10" class="px-4 py-6 text-center text-xs text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Cargando solicitudes...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Solicitar/Editar Vacaciones -->
+<div id="modal-vacaciones" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 flex items-center justify-between border-b border-blue-800">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-500 p-2 rounded-lg">
+                    <i class="fas fa-calendar-alt text-lg"></i>
+                </div>
+                <div>
+                    <h2 id="modal-titulo" class="text-lg font-semibold">Solicitar Vacaciones</h2>
+                    <p class="text-blue-200 text-xs mt-0.5">Completa el formulario de solicitud</p>
+                </div>
+            </div>
+            <button onclick="cerrarModal()" class="text-blue-200 hover:text-white p-2 hover:bg-blue-700/50 rounded-lg transition-colors">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Contenido -->
+        <div class="flex-1 overflow-y-auto p-6">
+            <form id="form-vacaciones">
+                <div class="space-y-4">
+                    <!-- Empleado -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Empleado *
+                        </label>
+                        <select id="num_documento" required 
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                            <option value="">Seleccionar empleado...</option>
+                        </select>
+                    </div>
+
+                    <!-- Fechas -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Fecha Inicio *
+                            </label>
+                            <input type="date" id="fecha_inicio" required 
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Fecha Fin *
+                            </label>
+                            <input type="date" id="fecha_fin" required 
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <!-- Días calculados -->
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Días solicitados:</span>
+                            <span class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="dias-calculados">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Tipo de vacaciones -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Tipo de Vacaciones *
+                        </label>
+                        <select id="tipo_vacaciones" required 
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                            <option value="">Seleccionar tipo...</option>
+                            <option value="PROGRAMADAS">Programadas</option>
+                            <option value="ADELANTADAS">Adelantadas</option>
+                            <option value="TRUNCAS">Truncas</option>
+                        </select>
+                    </div>
+
+                    <!-- Motivo/Observaciones -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Motivo / Observaciones
+                        </label>
+                        <textarea id="observaciones" rows="3" 
+                                  class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                                  placeholder="Agrega información adicional sobre la solicitud..."></textarea>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex gap-3 justify-end p-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">
+            <button type="button" onclick="cerrarModal()" 
+                    class="px-5 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-900 dark:text-white rounded-lg font-medium text-sm transition-colors">
+                Cancelar
+            </button>
+            <button type="submit" form="form-vacaciones" 
+                    class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors">
+                <i class="fas fa-paper-plane mr-2"></i>Enviar Solicitud
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================================================
+// VARIABLES GLOBALES
+// ============================================================================
+let solicitudes = [];
+
+// ============================================================================
+// INICIALIZACIÓN
+// ============================================================================
+document.addEventListener('DOMContentLoaded', function() {
+    cargarEmpleados();
+    cargarSolicitudes();
+    
+    // Event listeners
+    document.getElementById('btn-solicitar-vacaciones').addEventListener('click', abrirModal);
+    document.getElementById('form-vacaciones').addEventListener('submit', guardarSolicitud);
+    document.getElementById('fecha_inicio').addEventListener('change', calcularDias);
+    document.getElementById('fecha_fin').addEventListener('change', calcularDias);
+});
+
+// ============================================================================
+// FUNCIONES DE CARGA
+// ============================================================================
+async function cargarEmpleados() {
+    try {
+        // Aquí iría la llamada a la API para obtener empleados
+        // Por ahora, datos de ejemplo
+        const select = document.getElementById('num_documento');
+        select.innerHTML = '<option value="">Seleccionar empleado...</option>';
+        
+        // Ejemplo de datos
+        const empleados = [
+            { num_documento: '12345678', nombre: 'Juan Pérez García' },
+            { num_documento: '87654321', nombre: 'María López Silva' }
+        ];
+        
+        empleados.forEach(emp => {
+            select.innerHTML += `<option value="${emp.num_documento}">${emp.nombre}</option>`;
+        });
+    } catch (error) {
+        console.error('Error al cargar empleados:', error);
+    }
+}
+
+async function cargarSolicitudes() {
+    try {
+        const tbody = document.getElementById('vacaciones-lista');
+        
+        // Aquí iría la llamada a la API
+        // Por ahora, datos de ejemplo
+        const datos = [
+            {
+                id: 1,
+                empleado: 'Juan Pérez García',
+                area: 'Desarrollo',
+                fecha_inicio: '2026-08-15',
+                fecha_fin: '2026-08-29',
+                dias: 15,
+                tipo: 'PROGRAMADAS',
+                estado: 'PENDIENTE',
+                fecha_solicitud: '2026-08-01 14:30'
+            }
+        ];
+        
+        if (datos.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="10" class="px-4 py-6 text-center text-xs text-gray-500">
+                        <i class="fas fa-inbox mr-2"></i>No hay solicitudes de vacaciones
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        tbody.innerHTML = datos.map(v => {
+            const estadoColors = {
+                'PENDIENTE': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+                'APROBADO': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+                'RECHAZADO': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+                'EN_CURSO': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+                'FINALIZADO': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+            };
+            
+            return `
+                <tr class="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+                    <td class="px-4 py-3 text-xs text-gray-900 dark:text-white font-medium">${v.id}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${v.empleado}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${v.area}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${formatearFecha(v.fecha_inicio)}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${formatearFecha(v.fecha_fin)}</td>
+                    <td class="px-4 py-3 text-xs text-center font-semibold text-blue-600 dark:text-blue-400">${v.dias}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${v.tipo}</td>
+                    <td class="px-4 py-3 text-xs text-center">
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${estadoColors[v.estado] || estadoColors['PENDIENTE']}">
+                            ${v.estado}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${v.fecha_solicitud}</td>
+                    <td class="px-4 py-3 text-xs text-center">
+                        <div class="flex gap-1 justify-center">
+                            <button onclick="verDetalle(${v.id})" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition" title="Ver detalle">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            ${v.estado === 'PENDIENTE' ? `
+                                <button onclick="aprobar(${v.id})" class="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs transition" title="Aprobar">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button onclick="rechazar(${v.id})" class="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs transition" title="Rechazar">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        
+        // Actualizar estadísticas
+        actualizarEstadisticas(datos);
+    } catch (error) {
+        console.error('Error al cargar solicitudes:', error);
+    }
+}
+
+// ============================================================================
+// FUNCIONES DE MODAL
+// ============================================================================
+function abrirModal() {
+    document.getElementById('modal-vacaciones').classList.remove('hidden');
+    document.getElementById('form-vacaciones').reset();
+    document.getElementById('dias-calculados').textContent = '0';
+}
+
+function cerrarModal() {
+    document.getElementById('modal-vacaciones').classList.add('hidden');
+}
+
+// ============================================================================
+// FUNCIONES DE CÁLCULO
+// ============================================================================
+function calcularDias() {
+    const fechaInicio = document.getElementById('fecha_inicio').value;
+    const fechaFin = document.getElementById('fecha_fin').value;
+    
+    if (fechaInicio && fechaFin) {
+        const inicio = new Date(fechaInicio);
+        const fin = new Date(fechaFin);
+        const diffTime = Math.abs(fin - inicio);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        
+        document.getElementById('dias-calculados').textContent = diffDays;
+    }
+}
+
+// ============================================================================
+// FUNCIONES DE GUARDADO
+// ============================================================================
+async function guardarSolicitud(e) {
+    e.preventDefault();
+    
+    const datos = {
+        num_documento: document.getElementById('num_documento').value,
+        fecha_inicio: document.getElementById('fecha_inicio').value,
+        fecha_fin: document.getElementById('fecha_fin').value,
+        tipo_vacaciones: document.getElementById('tipo_vacaciones').value,
+        observaciones: document.getElementById('observaciones').value
+    };
+    
+    console.log('Guardando solicitud:', datos);
+    
+    // Aquí iría la llamada a la API
+    alert('Funcionalidad en desarrollo');
+    cerrarModal();
+}
+
+// ============================================================================
+// FUNCIONES DE ACCIONES
+// ============================================================================
+function verDetalle(id) {
+    console.log('Ver detalle:', id);
+    alert('Funcionalidad en desarrollo');
+}
+
+function aprobar(id) {
+    if (confirm('¿Aprobar esta solicitud de vacaciones?')) {
+        console.log('Aprobar:', id);
+        alert('Funcionalidad en desarrollo');
+    }
+}
+
+function rechazar(id) {
+    const motivo = prompt('Motivo del rechazo:');
+    if (motivo) {
+        console.log('Rechazar:', id, motivo);
+        alert('Funcionalidad en desarrollo');
+    }
+}
+
+// ============================================================================
+// FUNCIONES DE FILTROS
+// ============================================================================
+function aplicarFiltros() {
+    console.log('Aplicando filtros...');
+    cargarSolicitudes();
+}
+
+function limpiarFiltros() {
+    document.getElementById('filtro-empleado').value = '';
+    document.getElementById('filtro-estado').value = '';
+    document.getElementById('filtro-anio').value = '2026';
+    cargarSolicitudes();
+}
+
+// ============================================================================
+// FUNCIONES AUXILIARES
+// ============================================================================
+function formatearFecha(fecha) {
+    const f = new Date(fecha);
+    return f.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function actualizarEstadisticas(datos) {
+    document.getElementById('stat-total').textContent = datos.length;
+    document.getElementById('stat-pendientes').textContent = datos.filter(d => d.estado === 'PENDIENTE').length;
+    document.getElementById('stat-dias-usados').textContent = datos.filter(d => d.estado === 'APROBADO' || d.estado === 'FINALIZADO').reduce((sum, d) => sum + d.dias, 0);
+}
+</script>
+{% endblock %}

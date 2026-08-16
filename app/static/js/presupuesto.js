@@ -10,6 +10,14 @@ let id_contador_servicio = 0;
 let materiales_disponibles = [];
 let desglose_editado_manualmente = false; // ⭐ Detecta si usuario editó campos manualmente
 
+// Porcentajes extraídos del PDF (valores por defecto si no se extraen)
+let porcentajes_pdf = {
+    gastos_generales: 10,  // Default 10%
+    utilidad: 15,          // Default 15%
+    supervision: 5,        // Default 5% (no está en PDF)
+    igv: 18                // Default 18%
+};
+
 // Inicializar cuando carga la página
 document.addEventListener('DOMContentLoaded', function() {
     // ⭐ CONFIGURAR EVENT LISTENERS PARA BÚSQUEDA DE MATERIALES INMEDIATAMENTE
@@ -725,10 +733,14 @@ function actualizarTotales() {
     let gastos_generales, utilidad, supervision_obra;
     
     if (debe_recalcular) {
-        // ⭐ RECALCULAR AUTOMÁTICAMENTE 
-        gastos_generales = Math.round(subtotal_base * 0.10 * 100) / 100;  // 10%
-        utilidad = Math.round(subtotal_base * 0.15 * 100) / 100;          // 15%
-        supervision_obra = Math.round(subtotal_base * 0.05 * 100) / 100;  // 5%
+        // ⭐ RECALCULAR AUTOMÁTICAMENTE con porcentajes del PDF
+        const pct_gg = porcentajes_pdf.gastos_generales / 100;
+        const pct_util = porcentajes_pdf.utilidad / 100;
+        const pct_superv = porcentajes_pdf.supervision / 100;
+        
+        gastos_generales = Math.round(subtotal_base * pct_gg * 100) / 100;
+        utilidad = Math.round(subtotal_base * pct_util * 100) / 100;
+        supervision_obra = Math.round(subtotal_base * pct_superv * 100) / 100;
         
         // Actualizar los inputs con los nuevos valores
         document.getElementById('gastos-generales').value = gastos_generales.toFixed(2);
@@ -763,8 +775,9 @@ function actualizarTotales() {
     // ⭐ CÁLCULO CORRECTO DEL SUB TOTAL: Costos Directos + GG + Utilidad (SIN supervisión)
     const sub_total = subtotal_base + gastos_generales + utilidad;
     
-    // ⭐ IGV se calcula sobre el SUB TOTAL (18%)
-    const igv = sub_total * 0.18;
+    // ⭐ IGV se calcula sobre el SUB TOTAL con porcentaje del PDF
+    const pct_igv = porcentajes_pdf.igv / 100;
+    const igv = sub_total * pct_igv;
     
     // Calcular totales finales
     const total_desglose = gastos_generales + utilidad + supervision_obra + igv;
@@ -832,10 +845,14 @@ function calcularPorcentajesAutomaticos() {
     desglose_editado_manualmente = false;
     console.log('[CALCULAR_AUTO] Bandera reseteada → desglose_editado_manualmente = false');
     
-    // Calcular porcentajes automáticos
-    const gastos_generales = subtotal_base * 0.10;  // 10%
-    const utilidad = subtotal_base * 0.15;          // 15%
-    const supervision_obra = subtotal_base * 0.05;  // 5%
+    // Calcular porcentajes automáticos usando porcentajes del PDF
+    const pct_gg = porcentajes_pdf.gastos_generales / 100;
+    const pct_util = porcentajes_pdf.utilidad / 100;
+    const pct_superv = porcentajes_pdf.supervision / 100;
+    
+    const gastos_generales = subtotal_base * pct_gg;
+    const utilidad = subtotal_base * pct_util;
+    const supervision_obra = subtotal_base * pct_superv;
     
     // Actualizar campos
     document.getElementById('gastos-generales').value = gastos_generales.toFixed(2);
@@ -845,7 +862,7 @@ function calcularPorcentajesAutomaticos() {
     // Recalcular totales
     actualizarTotales();
     
-    mostrarExito(`Porcentajes aplicados: Gastos Generales (10%), Utilidad (15%), Supervisión (5%)`);
+    mostrarExito(`Porcentajes aplicados: Gastos Generales (${porcentajes_pdf.gastos_generales}%), Utilidad (${porcentajes_pdf.utilidad}%), Supervisión (${porcentajes_pdf.supervision}%)`);
 }
 
 function limpiarDesglose() {
@@ -866,7 +883,8 @@ function limpiarDesglose() {
     const subtotal_base = total_materiales + total_servicios;
     
     // IGV sobre el subtotal base solamente (sin desglose)
-    const igv = subtotal_base * 0.18;
+    const pct_igv = porcentajes_pdf.igv / 100;
+    const igv = subtotal_base * pct_igv;
     
     // Totales con desglose en 0
     const total_desglose = 0 + 0 + 0 + igv; // gastos + utilidad + supervision + igv
@@ -909,6 +927,14 @@ function limpiarForm() {
     
     // ⭐ RESETEAR BANDERA DE EDICIÓN MANUAL
     desglose_editado_manualmente = false;
+    
+    // ⭐ RESETEAR PORCENTAJES A VALORES POR DEFECTO
+    porcentajes_pdf = {
+        gastos_generales: 10,
+        utilidad: 15,
+        supervision: 5,
+        igv: 18
+    };
     
     // ⭐ 1. LIMPIAR FORMULARIO BASE
     const form = document.getElementById('form-presupuesto');
@@ -1217,7 +1243,7 @@ async function cargarPresupuestos() {
         if (!data.data || data.data.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="10" class="px-6 py-8 text-center text-gray-500">
+                    <td colspan="10" class="px-4 py-6 text-center text-xs text-gray-500">
                         <i class="fas fa-inbox mr-2"></i>Sin presupuestos
                     </td>
                 </tr>
@@ -1254,25 +1280,28 @@ async function cargarPresupuestos() {
             
             return `
                 <tr class="hover:bg-gray-50 dark:hover:bg-slate-800">
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${fechaFormateada}</td>
-                    <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">${p.numero_presupuesto}</td>
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${p.nombre_proyecto || '-'}</td>
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${p.nombre_obra || '-'}</td>
-                    <td class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">S/. ${parseFloat(p.monto).toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    <td class="px-6 py-4 text-sm">
-                        <span class="px-3 py-1 rounded-full text-xs font-semibold ${estadoColor[p.estado] || 'bg-gray-100 text-gray-800 dark:bg-slate-700 dark:text-gray-300'}">
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${fechaFormateada}</td>
+                    <td class="px-4 py-3 text-xs font-medium text-gray-900 dark:text-white">${p.numero_presupuesto}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${p.nombre_proyecto || '-'}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${p.nombre_obra || '-'}</td>
+                    <td class="px-4 py-3 text-xs font-semibold text-gray-900 dark:text-white">S/. ${parseFloat(p.monto).toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="px-4 py-3 text-xs">
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${estadoColor[p.estado] || 'bg-gray-100 text-gray-800 dark:bg-slate-700 dark:text-gray-300'}">
                             ${p.estado}
                         </span>
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${p.creado_por || '-'}</td>
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${p.aprobado_rechazado_por || '-'}</td>
-                    <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">${p.comentario_rechazo || '-'}</td>
-                    <td class="px-6 py-4 text-sm">
-                        <div class="flex gap-2">
-                            <button onclick="abrirModalEditar(${p.id_presupuesto})" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition">
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${p.creado_por || '-'}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${p.aprobado_rechazado_por || '-'}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${p.comentario_rechazo || '-'}</td>
+                    <td class="px-4 py-3 text-xs">
+                        <div class="flex gap-1">
+                            <button onclick="descargarPresupuestoPDF(${p.id_presupuesto})" class="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs transition" title="Descargar PDF">
+                                <i class="fas fa-file-pdf"></i>
+                            </button>
+                            <button onclick="abrirModalEditar(${p.id_presupuesto})" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button onclick="abrirModalEliminar(${p.id_presupuesto}, '${p.numero_presupuesto}')" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs transition">
+                            <button onclick="abrirModalEliminar(${p.id_presupuesto}, '${p.numero_presupuesto}')" class="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs transition">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -1718,5 +1747,130 @@ async function guardarNuevoMaterial() {
     } catch (error) {
         console.error('[NUEVO_MATERIAL] Error de conexión:', error);
         mostrarError('Error de conexión');
+    }
+}
+
+// ============================================================================
+// IMPORTAR PDF - Extraer materiales y servicios desde un documento
+// ============================================================================
+
+async function importarPDF(input) {
+    const archivo = input.files[0];
+    if (!archivo) return;
+    
+    if (!archivo.name.toLowerCase().endsWith('.pdf')) {
+        mostrarError('El archivo debe ser un PDF');
+        input.value = '';
+        return;
+    }
+    
+    console.log('[IMPORTAR_PDF] Procesando:', archivo.name);
+    
+    // Mostrar indicador de carga
+    const btnLabel = document.querySelector('label[for="input-pdf-importar"]');
+    const iconoOriginal = btnLabel ? btnLabel.innerHTML : '';
+    if (btnLabel) {
+        btnLabel.innerHTML = '<i class="fas fa-spinner fa-spin text-lg"></i>';
+        btnLabel.style.pointerEvents = 'none';
+    }
+    
+    try {
+        const formData = new FormData();
+        formData.append('archivo', archivo);
+        
+        const response = await fetch('/api/presupuestos/importar-pdf', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            mostrarError(result.error || 'Error al procesar el PDF');
+            return;
+        }
+        
+        console.log('[IMPORTAR_PDF] Resultado:', result);
+        
+        // Agregar materiales al array global
+        if (result.materiales && result.materiales.length > 0) {
+            result.materiales.forEach(m => {
+                id_contador_material++;
+                materiales_agregados.push({
+                    id_temporal: id_contador_material,
+                    id_material: m.id_material || null,
+                    nombre: m.nombre,
+                    codigo: '',
+                    categoria: '',
+                    unidad: m.unidad || 'Unidad',
+                    cantidad: m.cantidad || 1,
+                    precio_unitario: m.precio_unitario || 0,
+                    subtotal: (m.cantidad || 1) * (m.precio_unitario || 0)
+                });
+            });
+            renderizarMateriales();
+        }
+        
+        // Agregar servicios al array global
+        if (result.servicios && result.servicios.length > 0) {
+            result.servicios.forEach(s => {
+                id_contador_servicio++;
+                servicios_agregados.push({
+                    id_temporal: id_contador_servicio,
+                    descripcion: s.descripcion,
+                    cantidad: s.cantidad || 1,
+                    precio_unitario: s.precio_unitario || 0,
+                    subtotal: (s.cantidad || 1) * (s.precio_unitario || 0)
+                });
+            });
+            renderizarServicios();
+        }
+        
+        // Actualizar porcentajes desde el PDF
+        if (result.porcentajes) {
+            porcentajes_pdf.gastos_generales = result.porcentajes.gastos_generales || 10;
+            porcentajes_pdf.utilidad = result.porcentajes.utilidad || 15;
+            porcentajes_pdf.igv = result.porcentajes.igv || 18;
+            // Supervisión no viene del PDF, mantener 0 si no está
+            porcentajes_pdf.supervision = 0;
+            
+            // Resetear el flag para que recalcule con los nuevos porcentajes
+            desglose_editado_manualmente = false;
+            
+            console.log('[IMPORTAR_PDF] Porcentajes del PDF:', porcentajes_pdf);
+            
+            // Actualizar inputs con los porcentajes del PDF
+            document.getElementById('gastos-generales').value = '0.00';
+            document.getElementById('utilidad').value = '0.00';
+            document.getElementById('supervision-obra').value = '0.00';
+        }
+        
+        // Recalcular totales con los porcentajes del PDF
+        actualizarTotales();
+        
+        const totalMat = result.materiales ? result.materiales.length : 0;
+        const totalServ = result.servicios ? result.servicios.length : 0;
+        const nuevos = result.materiales_nuevos ? result.materiales_nuevos.length : 0;
+        const existentes = result.materiales_existentes ? result.materiales_existentes.length : 0;
+        
+        // Construir mensaje detallado
+        let mensaje = `PDF importado: ${totalMat} materiales y ${totalServ} servicios`;
+        if (nuevos > 0 || existentes > 0) {
+            mensaje += ` (${nuevos} nuevos, ${existentes} existentes)`;
+        }
+        
+        mostrarExito(mensaje);
+        console.log(`[IMPORTAR_PDF] ✅ completado: ${totalMat} materiales (${nuevos} nuevos, ${existentes} existentes), ${totalServ} servicios`);
+        
+    } catch (error) {
+        console.error('[IMPORTAR_PDF] Error:', error);
+        mostrarError('Error al conectar con el servidor: ' + error.message);
+    } finally {
+        // Restaurar botón
+        if (btnLabel) {
+            btnLabel.innerHTML = iconoOriginal;
+            btnLabel.style.pointerEvents = '';
+        }
+        input.value = '';
     }
 }

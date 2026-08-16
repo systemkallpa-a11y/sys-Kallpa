@@ -80,7 +80,7 @@ class PDFStyles:
             ),
             'normal': ParagraphStyle(
                 'Normal',
-                fontSize=9,
+                fontSize=7,  # Reducido de 8 a 7
                 textColor=PDFStyles.TEXT_DARK,
                 fontName='Helvetica'
             ),
@@ -214,15 +214,15 @@ def crear_info_presupuesto(presupuesto, styles):
         ('TEXTCOLOR', (5, 0), (5, -1), PDFStyles.TEXT_DARK),
         
         # Estilos generales
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('FONTSIZE', (0, 0), (-1, -1), 7),  # Reducido de 8 a 7
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f5f5f5')),
         ('GRID', (0, 0), (-1, -1), 0.5, PDFStyles.BORDER_COLOR),
         ('ALIGNMENT', (0, 0), (-1, -1), 'LEFT'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),   # Reducido de 6 a 5
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),  # Reducido de 6 a 5
+        ('TOPPADDING', (0, 0), (-1, -1), 3),    # Reducido de 4 a 3
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3), # Reducido de 4 a 3
     ]))
     
     return info_table
@@ -288,12 +288,12 @@ def crear_responsable(presupuesto, styles):
         ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
         ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
         ('FONTNAME', (4, 0), (4, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('FONTSIZE', (0, 0), (-1, -1), 7),  # Reducido de 8 a 7
         ('GRID', (0, 0), (-1, -1), 0.5, PDFStyles.BORDER_COLOR),
-        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),   # Reducido de 6 a 5
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),  # Reducido de 6 a 5
+        ('TOPPADDING', (0, 0), (-1, -1), 3),    # Reducido de 4 a 3
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3), # Reducido de 4 a 3
     ]))
     
     return header_table, resp_table
@@ -377,10 +377,12 @@ def crear_tabla_materiales(materiales, styles):
         ('FONTSIZE', (0, 1), (-1, -1), 7),  # Reducido de 8 a 7
         
         # Alineación
-        ('ALIGN', (0, 1), (0, -1), 'CENTER'),
-        ('VALIGN', (0, 1), (-1, -1), 'TOP'),  # Alineación vertical superior
-        ('ALIGN', (1, 1), (3, -1), 'LEFT'),
-        ('ALIGN', (4, 1), (-1, -1), 'RIGHT'),
+        ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # # (índice)
+        ('VALIGN', (0, 1), (-1, -1), 'TOP'),   # Alineación vertical superior
+        ('ALIGN', (1, 1), (3, -1), 'LEFT'),    # Material, Categoría, Unidad
+        ('ALIGN', (4, 1), (4, -1), 'CENTER'),  # Cantidad - CENTRADO
+        ('ALIGN', (5, 1), (5, -1), 'CENTER'),  # P. Unit. - CENTRADO
+        ('ALIGN', (6, 1), (6, -1), 'CENTER'),  # Subtotal - CENTRADO
         
         # Filas alternas (Zebra striping)
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9f9f9')]),
@@ -473,10 +475,12 @@ def crear_tabla_servicios(servicios, styles):
         ('FONTSIZE', (0, 1), (-1, -1), 7),  # Reducido de 8 a 7
         
         # Alineación
-        ('ALIGN', (0, 1), (0, -1), 'CENTER'),
-        ('VALIGN', (0, 1), (-1, -1), 'TOP'),  # Alineación vertical superior
-        ('ALIGN', (1, 1), (1, -1), 'LEFT'),
-        ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
+        ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # # (índice)
+        ('VALIGN', (0, 1), (-1, -1), 'TOP'),   # Alineación vertical superior
+        ('ALIGN', (1, 1), (1, -1), 'LEFT'),    # Descripción
+        ('ALIGN', (2, 1), (2, -1), 'CENTER'),  # Cantidad - CENTRADO
+        ('ALIGN', (3, 1), (3, -1), 'CENTER'),  # P. Unit. - CENTRADO
+        ('ALIGN', (4, 1), (4, -1), 'CENTER'),  # Subtotal - CENTRADO
         
         # Filas alternas
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9f9f9')]),

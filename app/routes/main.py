@@ -243,3 +243,21 @@ def obtener_mi_acceso():
     except Error as e:
         print(f"[MI_ACCESO] Error SQL: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# RUTA: VACACIONES
+# ============================================================================
+
+@main_bp.route('/vacaciones')
+@login_required
+def vacaciones():
+    """Vista de gestión de vacaciones"""
+    num_documento = session.get('user_documento')
+    
+    # Validar acceso (Menú RR.HH = 1, asumiendo que Vacaciones será el siguiente submenu)
+    # if not validar_acceso_usuario(num_documento, 1, None):  # Ajustar id_submenu cuando se cree en BD
+    #     flash('No tienes acceso a este módulo', 'error')
+    #     return redirect(url_for('main.dashboard'))
+    
+    return render_template('vacaciones.html')

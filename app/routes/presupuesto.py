@@ -98,6 +98,7 @@ def obtener_presupuestos():
                     pr.numero_presupuesto,
                     pr.estado,
                     pr.monto,
+                    pr.fecha_actualizacion,
                     o.nombre as nombre_obra,
                     p.nombre as nombre_proyecto,
                     CONCAT(
@@ -129,7 +130,7 @@ def obtener_presupuestos():
                     AND ra.estado_aprobacion = 'APROBADO'
                 LEFT JOIN TblPersona per_aprobador ON ra.num_documento_aprobador = per_aprobador.num_documento
                 WHERE pr.estado != 'ELIMINADO'
-                GROUP BY pr.id_presupuesto
+                GROUP BY pr.id_presupuesto, pr.numero_presupuesto, pr.estado, pr.monto, pr.fecha_actualizacion, o.nombre, p.nombre, per.nombres, per.apellido_paterno, per.apellido_materno
                 ORDER BY pr.fecha_creacion DESC
             ''')
             presupuestos = cursor.fetchall()
@@ -2206,3 +2207,370 @@ def crear_obra():
         print(f"[CREAR_OBRA] ❌ Error general: {e}")
         print(f"{'='*80}\n")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# ENDPOINT: IMPORTAR PDF - Extraer materiales y servicios
+# ============================================================================
+import os
+import tempfile
+import pdfplumber
+import re
+
+# Unidades de tiempo = SERVICIOS
+UNIDADES_SERVICIO = [
+    'mes', 'meses', 'dia', 'dias', 'día', 'días',
+    'semana', 'semanas', 'hr', 'hora', 'horas', 'h',
+    'min', 'minuto', 'minutos', 'año', 'años',
+    'quincena', 'bimestre', 'trimestre', 'semestre'
+]
+
+# Palabras clave que indican fila de resumen/totales (NO son items)
+FILAS_RESUMEN = [
+    'costo directo', 'costo total', 'gastos generales', 'utilidad',
+    'sub total', 'subtotal', 'igv', 'presupuesto total',
+    'total de ejecucion', 'total general', 'suma total',
+    'gravamen', 'impuesto'
+]
+
+
+def clasificar_unidad(unidad_texto):
+    """Clasifica una unidad como MATERIAL o SERVICIO"""
+    if not unidad_texto:
+        return 'MATERIAL'
+    u = unidad_texto.strip().lower()
+    for serv in UNIDADES_SERVICIO:
+        if u == serv:
+            return 'SERVICIO'
+    return 'MATERIAL'
+
+
+def es_fila_item(codigo):
+    """Verifica si el código tiene formato de item (01.01.01)"""
+    return bool(re.match(r'^\d{2}\.\d{2}\.\d{2}', codigo))
+
+
+def extraer_items_del_pdf(filepath):
+    """
+    Extrae items del PDF usando texto plano (más confiable que tablas para este formato).
+    Formato esperado: 01.01.01 DESCRIPCION unidad cantidad precio subtotal
+    
+    Versión mejorada: maneja descripciones en múltiples líneas y extrae porcentajes.
+    """
+    items = []
+    porcentajes = {
+        'gastos_generales': 0,
+        'utilidad': 0,
+        'igv': 18  # Default IGV
+    }
+    lineas_procesadas = 0
+    lineas_descartadas = 0
+    
+    print(f"[EXTRAER_PDF] Iniciando extracción de: {filepath}")
+    
+    with pdfplumber.open(filepath) as pdf:
+        print(f"[EXTRAER_PDF] PDF tiene {len(pdf.pages)} páginas")
+        
+        for num_pagina, pagina in enumerate(pdf.pages):
+            texto = pagina.extract_text()
+            if not texto:
+                print(f"[EXTRAER_PDF] Página {num_pagina + 1}: sin texto")
+                continue
+            
+            lineas = texto.split('\n')
+            print(f"[EXTRAER_PDF] Página {num_pagina + 1}: {len(lineas)} líneas")
+            
+            # Extraer porcentajes del PDF
+            for linea in lineas:
+                linea_lower = linea.lower().strip()
+                
+                # Buscar GASTOS GENERALES (X%)
+                match_gg = re.search(r'gastos generales\s*\(\s*(\d+(?:\.\d+)?)\s*%\s*\)', linea_lower)
+                if match_gg:
+                    porcentajes['gastos_generales'] = float(match_gg.group(1))
+                    print(f"[EXTRAER_PDF] Porcentaje Gastos Generales: {porcentajes['gastos_generales']}%")
+                
+                # Buscar UTILIDAD (X%)
+                match_util = re.search(r'utilidad\s*\(\s*(\d+(?:\.\d+)?)\s*%\s*\)', linea_lower)
+                if match_util:
+                    porcentajes['utilidad'] = float(match_util.group(1))
+                    print(f"[EXTRAER_PDF] Porcentaje Utilidad: {porcentajes['utilidad']}%")
+                
+                # Buscar IGV (X%)
+                match_igv = re.search(r'igv\s*\(\s*(\d+(?:\.\d+)?)\s*%\s*\)', linea_lower)
+                if match_igv:
+                    porcentajes['igv'] = float(match_igv.group(1))
+                    print(f"[EXTRAER_PDF] Porcentaje IGV: {porcentajes['igv']}%")
+            
+            # Primera pasada: identificar qué líneas son items y cuáles son descripción
+            lineas_items = []  # Guarda (indice_linea, codigo, resto)
+            lineas_texto_previo = []  # Líneas de texto puro (sin código)
+            
+            for idx, linea in enumerate(lineas):
+                linea_stripped = linea.strip()
+                
+                # Verificar si empieza con código XX.XX.XX
+                match = re.match(r'^(\d{2}\.\d{2}\.\d{2})\s+(.*)', linea_stripped)
+                
+                if match:
+                    codigo = match.group(1)
+                    resto = match.group(2).strip()
+                    lineas_items.append((idx, codigo, resto))
+                else:
+                    # Es línea de texto (posible descripción)
+                    # Solo si tiene contenido significativo (no es título/subtítulo de grupo)
+                    if linea_stripped and not re.match(r'^\d{2}\s', linea_stripped):
+                        lineas_texto_previo.append((idx, linea_stripped))
+            
+            # Segunda pasada: procesar cada item
+            for idx_item, (num_linea, codigo, resto) in enumerate(lineas_items):
+                lineas_procesadas += 1
+                
+                # Intentar extraer números del resto de la línea
+                match_numeros = re.search(
+                    r'(.+?)\s+'                            # descripción
+                    r'([a-zA-Záéíóúñ]+[\d]*)\s+'           # unidad
+                    r'([\d,.]+)\s+'                         # cantidad
+                    r'([\d,.]+)\s+'                         # precio
+                    r'([\d,.]+)\s*$',                       # subtotal
+                    resto
+                )
+                
+                if match_numeros:
+                    # Caso normal: descripción + unidad + números en la misma línea
+                    descripcion = match_numeros.group(1).strip()
+                    unidad = match_numeros.group(2).strip()
+                    cantidad = float(match_numeros.group(3).replace(',', ''))
+                    precio = float(match_numeros.group(4).replace(',', ''))
+                    subtotal = float(match_numeros.group(5).replace(',', ''))
+                else:
+                    # Caso especial: la descripción está en líneas anteriores
+                    # Buscar las líneas de texto justo antes de esta línea de item
+                    descripcion_parts = []
+                    
+                    # Buscar líneas de texto antes de esta línea del item
+                    for idx_texto, texto_linea in reversed(lineas_texto_previo):
+                        if idx_texto < num_linea:
+                            # Verificar si es línea de continuación (no es código ni título)
+                            if not re.match(r'^\d{2}\.\d{2}', texto_linea):
+                                descripcion_parts.insert(0, texto_linea)
+                            else:
+                                break
+                    
+                    # Si encontramos descripción en líneas anteriores, intentar extraer números
+                    if descripcion_parts:
+                        descripcion_completa = ' '.join(descripcion_parts) + ' ' + resto
+                        
+                        match_numeros_extendido = re.search(
+                            r'(.+?)\s+'
+                            r'([a-zA-Záéíóúñ]+[\d]*)\s+'
+                            r'([\d,.]+)\s+'
+                            r'([\d,.]+)\s+'
+                            r'([\d,.]+)\s*$',
+                            descripcion_completa
+                        )
+                        
+                        if match_numeros_extendido:
+                            descripcion = match_numeros_extendido.group(1).strip()
+                            unidad = match_numeros_extendido.group(2).strip()
+                            cantidad = float(match_numeros_extendido.group(3).replace(',', ''))
+                            precio = float(match_numeros_extendido.group(4).replace(',', ''))
+                            subtotal = float(match_numeros_extendido.group(5).replace(',', ''))
+                        else:
+                            print(f"[EXTRAER_PDF] Descartado (no se pudieron extraer números): {codigo} - {resto[:60]}")
+                            lineas_descartadas += 1
+                            continue
+                    else:
+                        print(f"[EXTRAER_PDF] Descartado (sin descripción): {codigo} - {resto[:60]}")
+                        lineas_descartadas += 1
+                        continue
+                
+                # Filtrar filas de resumen/totales
+                desc_lower = descripcion.lower()
+                if any(p in desc_lower for p in FILAS_RESUMEN):
+                    print(f"[EXTRAER_PDF] Descartado (resumen): {codigo} - {descripcion}")
+                    lineas_descartadas += 1
+                    continue
+                
+                # Saltar si la cantidad o precio son 0
+                if cantidad <= 0:
+                    print(f"[EXTRAER_PDF] Descartado (cantidad=0): {codigo} - {descripcion}")
+                    lineas_descartadas += 1
+                    continue
+                
+                tipo = clasificar_unidad(unidad)
+                
+                items.append({
+                    'codigo': codigo,
+                    'descripcion': descripcion,
+                    'cantidad': cantidad,
+                    'precio_unitario': precio,
+                    'subtotal': subtotal,
+                    'unidad': unidad,
+                    'tipo': tipo
+                })
+                
+                print(f"[EXTRAER_PDF] ✓ Item: {codigo} - {descripcion[:50]}... | {unidad} | {cantidad} | {precio} | {subtotal}")
+    
+    print(f"[EXTRAER_PDF] Total: {len(items)} items extraídos, {lineas_procesadas} líneas procesadas, {lineas_descartadas} descartadas")
+    print(f"[EXTRAER_PDF] Porcentajes extraídos: GG={porcentajes['gastos_generales']}%, Util={porcentajes['utilidad']}%, IGV={porcentajes['igv']}%")
+    return items, porcentajes
+
+
+@main_bp.route('/api/presupuestos/importar-pdf', methods=['POST'])
+def importar_presupuesto_pdf():
+    """
+    Recibe un PDF, extrae items, clasifica materiales/servicios.
+    Crea automáticamente los materiales que no existen en TblMateriales.
+    """
+    try:
+        if 'archivo' not in request.files:
+            return jsonify({'success': False, 'error': 'No se proporcionó ningún archivo'}), 400
+        
+        archivo = request.files['archivo']
+        
+        if not archivo.filename:
+            return jsonify({'success': False, 'error': 'Nombre de archivo vacío'}), 400
+        
+        if not archivo.filename.lower().endswith('.pdf'):
+            return jsonify({'success': False, 'error': 'El archivo debe ser un PDF'}), 400
+        
+        # Guardar temporalmente
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+            archivo.save(tmp.name)
+            tmp_path = tmp.name
+        
+        try:
+            # Extraer items del PDF y porcentajes
+            items, porcentajes_pdf = extraer_items_del_pdf(tmp_path)
+            
+            if not items:
+                return jsonify({
+                    'success': False, 
+                    'error': 'No se encontraron items en el PDF. Verifica que el documento contenga líneas con formato: código descripción unidad cantidad precio subtotal.'
+                }), 400
+            
+            # Conexión a BD para buscar/crear materiales
+            connection = get_db_connection()
+            if not connection:
+                return jsonify({'success': False, 'error': 'Error de conexión a la base de datos'}), 500
+            
+            try:
+                cursor = connection.cursor(dictionary=True)
+                
+                # Separar materiales y servicios
+                materiales = []
+                servicios = []
+                materiales_nuevos = []
+                materiales_existentes = []
+                materiales_error = []
+                
+                print(f"[IMPORTAR_PDF] Procesando {len(items)} items extraídos del PDF")
+                
+                for idx, item in enumerate(items):
+                    print(f"[IMPORTAR_PDF] Item {idx + 1}/{len(items)}: {item['descripcion'][:40]}... tipo={item['tipo']}")
+                    
+                    if item['tipo'] == 'SERVICIO':
+                        servicios.append({
+                            'descripcion': item['descripcion'],
+                            'cantidad': item['cantidad'],
+                            'precio_unitario': item['precio_unitario'],
+                            'unidad': item['unidad']
+                        })
+                        print(f"[IMPORTAR_PDF]   → Servicio agregado")
+                    else:
+                        nombre_material = item['descripcion']
+                        id_material = None
+                        
+                        # 1. Buscar si el material ya existe (nombre exacto)
+                        cursor.execute(
+                            "SELECT id_material FROM TblMateriales WHERE nombre = %s AND estado = 'ACTIVO' LIMIT 1",
+                            (nombre_material,)
+                        )
+                        existente = cursor.fetchone()
+                        
+                        if existente:
+                            # Ya existe - usar su ID
+                            id_material = existente['id_material']
+                            materiales_existentes.append(nombre_material)
+                            print(f"[IMPORTAR_PDF]   → Material ya existe: ID={id_material}")
+                        else:
+                            # 2. No existe - buscar id_unidad por abreviatura
+                            unidad_pdf = item['unidad']
+                            id_unidad = None
+                            
+                            cursor.execute(
+                                """SELECT id_unidad FROM TblUnidadMedida 
+                                   WHERE (abreviatura = %s OR nombre = %s OR nombre LIKE %s OR abreviatura LIKE %s)
+                                   AND estado = 'ACTIVO' LIMIT 1""",
+                                (unidad_pdf, unidad_pdf, f'%{unidad_pdf}%', f'%{unidad_pdf}%')
+                            )
+                            unidad_result = cursor.fetchone()
+                            
+                            if unidad_result:
+                                id_unidad = unidad_result['id_unidad']
+                                print(f"[IMPORTAR_PDF]   → Unidad encontrada: {unidad_pdf} → id_unidad={id_unidad}")
+                            else:
+                                # Si no encuentra unidad, usar unidad por defecto (UND = 1)
+                                id_unidad = 1
+                                print(f"[IMPORTAR_PDF]   → Unidad '{unidad_pdf}' no encontrada, usando UND=1")
+                            
+                            # 3. Crear material usando SP
+                            cursor.execute("SET @p_id = NULL, @p_codigo = NULL, @p_result = 0")
+                            cursor.execute(
+                                """CALL sp_CrearMaterialConCodigoAuto(
+                                    %s, %s, NULL, %s, NULL,
+                                    @p_id, @p_codigo, @p_result
+                                )""",
+                                (nombre_material, item.get('descripcion', nombre_material), id_unidad)
+                            )
+                            cursor.execute("SELECT @p_id as id, @p_codigo as codigo, @p_result as resultado")
+                            sp_result = cursor.fetchone()
+                            
+                            if sp_result and sp_result['resultado'] == 1:
+                                id_material = sp_result['id']
+                                materiales_nuevos.append(nombre_material)
+                                print(f"[IMPORTAR_PDF]   → Material CREADO: {sp_result['codigo']} (ID={id_material})")
+                            else:
+                                materiales_error.append(nombre_material)
+                                print(f"[IMPORTAR_PDF]   → ERROR creando material: resultado={sp_result}")
+                        
+                        materiales.append({
+                            'id_material': id_material,
+                            'nombre': nombre_material,
+                            'cantidad': item['cantidad'],
+                            'precio_unitario': item['precio_unitario'],
+                            'unidad': item['unidad'],
+                            'es_nuevo': id_material is not None and nombre_material in materiales_nuevos
+                        })
+                
+                print(f"[IMPORTAR_PDF] ✅ PDF procesado: {len(materiales)} materiales ({len(materiales_nuevos)} nuevos, {len(materiales_existentes)} existentes, {len(materiales_error)} errores), {len(servicios)} servicios")
+                
+                return jsonify({
+                    'success': True,
+                    'materiales': materiales,
+                    'servicios': servicios,
+                    'total_items': len(items),
+                    'materiales_nuevos': materiales_nuevos,
+                    'materiales_existentes': materiales_existentes,
+                    'materiales_error': materiales_error,
+                    'porcentajes': porcentajes_pdf,
+                    'mensaje': f'Se extrajeron {len(materiales)} materiales ({len(materiales_nuevos)} nuevos, {len(materiales_existentes)} existentes) y {len(servicios)} servicios'
+                })
+                
+            finally:
+                cursor.close()
+                connection.close()
+            
+        finally:
+            # Limpiar archivo temporal
+            try:
+                os.unlink(tmp_path)
+            except:
+                pass
+    
+    except Exception as e:
+        print(f"[IMPORTAR_PDF] ❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': f'Error al procesar el PDF: {str(e)}'}), 500
