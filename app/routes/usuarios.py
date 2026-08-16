@@ -12,6 +12,9 @@ def get_db_connection():
     try:
         params = DatabaseConfig.get_connection_params()
         connection = mysql.connector.connect(**params)
+        cursor = connection.cursor()
+        cursor.execute("SET NAMES utf8mb4")
+        cursor.close()
         return connection
     except Error as e:
         print(f"Error de conexión: {e}")
@@ -131,15 +134,11 @@ def obtener_usuarios():
     try:
         cursor = connection.cursor(dictionary=True)
         
-        # Ejecutar el SP
-        cursor.execute('CALL sp_ObtenerUsuarios()')
-        
-        # Obtener los resultados (el SP retorna SELECT)
-        usuarios = cursor.fetchall()
-        
-        # Consumir los resultados restantes si los hay
-        while cursor.nextset():
-            pass
+        # Ejecutar SP con callproc + stored_results
+        cursor.callproc('sp_ObtenerUsuarios')
+        usuarios = []
+        for result in cursor.stored_results():
+            usuarios = result.fetchall()
         
         cursor.close()
         connection.close()
@@ -165,11 +164,14 @@ def obtener_usuario(id_usuario):
         print(f"[SP_OBTENER_USUARIO_COMPLETO] Iniciando para usuario ID: {id_usuario}")
         print(f"{'='*80}")
         
-        # Llamar SP que retorna dos result sets: usuario + horarios
-        cursor.execute('CALL sp_ObtenerUsuarioCompleto(%s)', (id_usuario,))
+        # Llamar SP con callproc + stored_results (retorna dos result sets: usuario + horarios)
+        cursor.callproc('sp_ObtenerUsuarioCompleto', (id_usuario,))
+        
+        # Obtener todos los result sets
+        result_sets = list(cursor.stored_results())
         
         # RESULT SET 1: Datos del usuario
-        usuario = cursor.fetchone()
+        usuario = result_sets[0].fetchone() if len(result_sets) > 0 else None
         
         print(f"\n[SP_OBTENER_USUARIO_COMPLETO] SP ejecutado correctamente")
         
@@ -188,15 +190,8 @@ def obtener_usuario(id_usuario):
         else:
             print(f"[SP_OBTENER_USUARIO_COMPLETO] [WARN] El SP retorno NULL (usuario no encontrado)")
         
-        # Pasar al siguiente result set (horarios)
-        cursor.nextset()
-        
         # RESULT SET 2: Horarios de trabajo
-        horarios = cursor.fetchall()
-        
-        # Consumir resultados restantes
-        while cursor.nextset():
-            pass
+        horarios = result_sets[1].fetchall() if len(result_sets) > 1 else []
         
         cursor.close()
         connection.close()
@@ -485,12 +480,10 @@ def obtener_cargos():
     
     try:
         cursor = connection.cursor(dictionary=True)
-        cursor.execute('CALL sp_ObtenerAreas()')
-        cargos = cursor.fetchall()
-        
-        # Consumir resultados restantes
-        while cursor.nextset():
-            pass
+        cursor.callproc('sp_ObtenerAreas')
+        cargos = []
+        for result in cursor.stored_results():
+            cargos = result.fetchall()
         
         cursor.close()
         connection.close()
@@ -514,17 +507,15 @@ def obtener_areas():
         
         print("[BACKEND] [INIT] obtener_areas() iniciado")
         
-        cursor.execute('CALL sp_ObtenerAreas()')
-        areas = cursor.fetchall()
+        cursor.callproc('sp_ObtenerAreas')
+        areas = []
+        for result in cursor.stored_results():
+            areas = result.fetchall()
         
         print(f"[BACKEND] [OK] Áreas obtenidas: {len(areas)} registros")
         if areas:
             for a in areas[:3]:
                 print(f"[BACKEND]   - {a}")
-        
-        # Consumir resultados restantes
-        while cursor.nextset():
-            pass
         
         cursor.close()
         connection.close()
@@ -549,17 +540,15 @@ def obtener_cargos_por_area(id_area):
         
         print(f"[BACKEND] [INIT] obtener_cargos_por_area({id_area}) iniciado")
         
-        cursor.execute('CALL sp_ObtenerCargosPorArea(%s)', (id_area,))
-        cargos = cursor.fetchall()
+        cursor.callproc('sp_ObtenerCargosPorArea', (id_area,))
+        cargos = []
+        for result in cursor.stored_results():
+            cargos = result.fetchall()
         
         print(f"[BACKEND] [OK] Cargos obtenidos: {len(cargos)} registros para área {id_area}")
         if cargos:
             for c in cargos[:3]:
                 print(f"[BACKEND]   - {c}")
-        
-        # Consumir resultados restantes
-        while cursor.nextset():
-            pass
         
         cursor.close()
         connection.close()
@@ -584,20 +573,16 @@ def obtener_empresas_modal():
         
         print("[BACKEND] [INIT] obtener_empresas_modal() iniciado")
         
-        # Ejecutar SP que retorna solo nombres
-        cursor.execute('CALL sp_ObtenerEmpresas()')
-        
-        # Obtener los resultados
-        empresas = cursor.fetchall()
+        # Ejecutar SP con callproc + stored_results
+        cursor.callproc('sp_ObtenerEmpresas')
+        empresas = []
+        for result in cursor.stored_results():
+            empresas = result.fetchall()
         
         print(f"[BACKEND] [OK] Empresas obtenidas: {len(empresas)} registros")
         if empresas:
-            for e in empresas[:3]:  # Mostrar primeras 3
+            for e in empresas[:3]:
                 print(f"[BACKEND]   - {e}")
-        
-        # Consumir resultados restantes
-        while cursor.nextset():
-            pass
         
         cursor.close()
         connection.close()

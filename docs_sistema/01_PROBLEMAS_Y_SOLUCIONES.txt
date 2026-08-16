@@ -1,0 +1,75 @@
+================================================================================
+KALLPA - PROBLEMAS Y SOLUCIONES
+Fecha creación: 13/08/2026
+================================================================================
+
+================================================================================
+PROBLEMA #1: ERROR 500 EN /api/presupuestos/obtener
+================================================================================
+
+SÍNTOMA:
+  - Al abrir la página de presupuestos, no carga la lista
+  - Consola muestra: "Failed to load resource: 500 INTERNAL SERVER ERROR"
+  - Endpoint: GET /api/presupuestos/obtener
+
+CAUSA RAÍZ:
+  El Stored Procedure sp_ReportePresupuestos retorna múltiples result sets
+  (3 tablas: presupuestos, materiales, servicios), pero el código Python
+  lo ejecuta sin el parámetro multi=True.
+
+  Flujo del error:
+  1. cursor.execute('CALL sp_ReportePresupuestos()') → FALLA
+     Error: "Use multi=True when executing multiple statements"
+  2. El cursor queda en estado inválido
+  3. El fallback query (SELECT directo) también falla
+     Error: "Unread result found"
+  4. Exception no controlada → retorna 500
+
+ARCHIVO AFECTADO:
+  app/routes/presupuesto.py
+  Línea 85: cursor.execute('CALL sp_ReportePresupuestos()')
+
+SOLUCIÓN:
+  Cambiar la línea 85 de:
+    cursor.execute('CALL sp_ReportePresupuestos()')
+
+  A:
+    cursor.execute('CALL sp_ReportePresupuestos()', multi=True)
+
+  Y consumir todos los result sets después de la llamada:
+    for result in cursor.stored_results():
+        result.fetchall()
+
+  Si el SP falla, crear un cursor nuevo para el fallback:
+    cursor.close()
+    cursor = connection.cursor(dictionary=True)
+
+ARCHIVOS A MODIFICAR:
+  - app/routes/presupuesto.py (líneas 84-95)
+
+================================================================================
+PROBLEMA #2: SELECTS DE "INFORMACIÓN GENERAL" SIN DATOS
+================================================================================
+
+SÍNTOMA:
+  - Al abrir modal "Crear Presupuesto", los selects muestran solo
+    "Seleccionar..." sin opciones
+
+CAUSA PROBABLE:
+  Posiblemente relacionado con Problema #1. Si la sesión no está
+  activa o hay problemas de autenticación, los endpoints de
+  /api/presupuestos/empresas/listar, /proyectos/listar, etc.
+  retornan errores.
+
+PENDIENTE DE VERIFICAR:
+  - Abrir consola del navegador (F12) y revisar errores
+  - Verificar que el login funciona correctamente
+  - Probar los endpoints manualmente
+
+ARCHIVOS RELACIONADOS:
+  - app/templates/presupuesto.html
+  - app/static/js/presupuesto.js
+
+================================================================================
+FIN
+================================================================================

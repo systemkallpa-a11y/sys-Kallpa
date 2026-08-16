@@ -1,0 +1,78 @@
+================================================================================
+KALLPA - PASOS PARA EJECUTAR LOCALMENTE
+Fecha creación: 13/08/2026
+================================================================================
+
+REQUISITOS PREVIOS:
+  - Python 3.12 instalado
+  - MySQL 8.0 instalado (opcional, la BD está en la nube)
+  - Acceso a internet (conexión via SSH a PythonAnywhere)
+
+================================================================================
+PASOS
+================================================================================
+
+PASO 1: Navegar al directorio del proyecto
+  > cd F:\Kallpa\sys-Kallpa
+
+PASO 2: Crear entorno virtual (solo primera vez)
+  > python -m venv venv
+
+PASO 3: Activar entorno virtual
+  > .\venv\Scripts\activate
+
+PASO 4: Instalar dependencias (solo primera vez o si se actualiza requirements.txt)
+  > pip install -r requirements.txt
+
+  NOTA: pdfplumber NO está en requirements.txt, instalar adicional:
+  > pip install pdfplumber
+
+PASO 5: Instalar sshtunnel y paramiko (si no están)
+  > pip install sshtunnel paramiko==3.5.1
+
+PASO 6: Levantar servidor Flask
+  > python main.py
+
+  O alternativamente con variables de entorno:
+  > $env:PYTHONIOENCODING='utf-8'; $env:FLASK_ENV='development'; $env:DEBUG='True'; python main.py
+
+PASO 7: Abrir en navegador
+  Local:  http://127.0.0.1:5000
+  Red:    http://192.168.18.28:5000
+
+PASO 8: Hacer login
+  - Ir a http://127.0.0.1:5000/login
+  - Ingresar credenciales de usuario
+  - Luego navegar a la sección de Presupuestos
+
+================================================================================
+COMANDOS RÁPIDOS
+================================================================================
+
+TODO EN UNO (levantar desde cero):
+  > cd F:\Kallpa\sys-Kallpa; .\venv\Scripts\activate; python main.py
+
+DETENER SERVIDOR:
+  > Ctrl + C en la terminal
+
+VERIFICAR CONEXIÓN A BD (diagnóstico):
+  > .\venv\Scripts\python.exe -c "from sshtunnel import SSHTunnelForwarder; print('OK')"
+
+PROBAR ENDPOINT DE PDF (sin navegador):
+  > .\venv\Scripts\python.exe -c "import sys; sys.path.insert(0, '.'); from app.routes.presupuesto import extraer_items_del_pdf; items = extraer_items_del_pdf('tools/presupuestoclienteresumen-final.pdf'); print(f'Items: {len(items)}')"
+
+================================================================================
+CREDENCIALES DE BASE DE DATOS (PythonAnywhere)
+================================================================================
+
+  Host: kallpasystem.mysql.pythonanywhere-services.com
+  User: kallpasystem
+  Pass: #21592159xDxD
+  DB:   kallpasystem$kallgwkn_kallpa_bd
+
+  Conexión: Via SSH Tunnel (ssh.pythonanywhere.com)
+  NOTA: NO permite conexión directa externa
+
+================================================================================
+FIN
+================================================================================

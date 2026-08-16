@@ -1,0 +1,106 @@
+================================================================================
+KALLPA - FUNCIONALIDADES AGREGADAS Y CAMBIOS REALIZADOS
+Fecha creación: 13/08/2026
+================================================================================
+
+================================================================================
+FUNCIONALIDAD #1: IMPORTAR PDF PARA AUTO-REllenAR PRESUPUESTO
+================================================================================
+
+ESTADO: IMPLEMENTADA
+
+DESCRIPCIÓN:
+  Permite al usuario subir un PDF de presupuesto desde el formulario
+  de "Crear Presupuesto". El sistema parsea el documento, extrae
+  materiales y servicios, y rellena automáticamente las secciones
+  del formulario. Los materiales nuevos se crean automáticamente
+  en TblMateriales.
+
+FLUJO:
+  1. Usuario hace clic en ícono de upload (📎) en el header del modal
+  2. Selecciona un archivo PDF
+  3. El PDF se envía al backend (/api/presupuestos/importar-pdf)
+  4. El parser extrae texto y busca items con formato XX.XX.XX
+  5. Maneja descripciones en múltiples líneas (búsqueda hacia atrás)
+  6. Clasifica items: materiales (m2, m3, kg, und) vs servicios (mes, día)
+  7. Por cada MATERIAL:
+     a. Busca en TblMateriales por nombre exacto
+     b. Si NO existe:
+        - Busca id_unidad en TblUnidadMedida por abreviatura
+        - Crea material usando sp_CrearMaterialConCodigoAuto
+     c. Si YA existe: usa el id_material existente
+  8. Retorna JSON con arrays de materiales (con id_material) y servicios
+  9. JS rellena materiales_agregados[] y servicios_agregados[]
+  10. Se renderizan las tablas en el formulario
+  11. El usuario revisa, edita y guarda cuando quiera
+
+ARCHIVOS MODIFICADOS:
+
+  1. app/routes/presupuesto.py
+     - Agregado: import os, tempfile, pdfplumber, re
+     - Agregado: UNIDADES_SERVICIO (lista de unidades de tiempo)
+     - Agregado: FILAS_RESUMEN (palabras clave para filtrar totales)
+     - Agregado: función clasificar_unidad(unidad_texto)
+     - Agregado: función es_fila_item(codigo)
+     - Agregado: función extraer_items_del_pdf(filepath)
+     - Modificado: endpoint POST /api/presupuestos/importar-pdf
+       - Busca material por nombre exacto
+       - Busca id_unidad por abreviatura/nombre
+       - Crea material con sp_CrearMaterialConCodigoAuto si no existe
+       - Retorna materiales_nuevos[] y materiales_existentes[]
+
+  2. app/templates/presupuesto.html
+     - Agregado: botón upload PDF en header del modal (fa-file-upload)
+     - Agregado: input file oculto #input-pdf-importar
+
+  3. app/static/js/presupuesto.js
+     - Agregado: función async importarPDF(input)
+     - Manejo de upload, envío FormData, procesamiento de respuesta
+     - Rellena materiales_agregados[] con id_material
+     - Muestra feedback: materiales nuevos vs existentes
+
+SPs EN BASE DE DATOS (ya existentes):
+  - sp_CrearMaterialConCodigoAuto: Crea material con código automático MAT-XXX
+
+SPs CREADOS:
+  - sp_BuscarMaterialPorNombre: Busca material por nombre exacto
+  - sp_BuscarUnidadPorNombre: Busca id_unidad por abreviatura o nombre
+
+PENDIENTE:
+  - Agregar pdfplumber a requirements.txt
+  - Probar con otros PDFs de diferente formato
+  - Ajustar regex si algún PDF tiene estructura diferente
+
+================================================================================
+CAMBIOS EN BASE DE DATOS
+================================================================================
+
+SPs agregados:
+  - sp_BuscarMaterialPorNombre(IN p_nombre VARCHAR(150))
+  - sp_BuscarUnidadPorNombre(IN p_nombre VARCHAR(100))
+
+================================================================================
+ESTRUCTURA DE TABLAS RELACIONADAS
+================================================================================
+
+TblPresupuesto (cabecera):
+  - id_presupuesto, numero_presupuesto, id_empresa, id_obra
+  - monto, monto_total, estado, observaciones
+  - gastos_generales, utilidad, igv, supervision_obra
+
+TblPresupuestoDetalle (líneas):
+  - id_detalle, id_presupuesto, id_material
+  - tipo_item (MATERIAL/SERVICIO), descripcion
+  - cantidad, precio_unitario, subtotal
+
+TblMateriales (catálogo):
+  - id_material, codigo_material, nombre
+  - id_categoria, id_unidad, estado
+
+TblUnidadMedida:
+  - id_unidad, codigo, nombre, abreviatura
+  - estado
+
+================================================================================
+FIN
+================================================================================

@@ -33,8 +33,8 @@ def create_app():
     app.config['JSON_SORT_KEYS'] = False
     
     # VERSION DE ASSETS - Incrementar este número cuando se actualicen archivos estáticos
-    app.config['ASSETS_VERSION'] = '20260805_1'
-    
+    app.config['ASSETS_VERSION'] = '20260813_2'
+
     # Configurar logging
     if not app.debug:
         # Crear directorio de logs si no existe
@@ -61,6 +61,7 @@ def create_app():
     from app.routes.empresa_logo import logo_bp
     from app.routes.materiales import materiales_bp
     from app.routes.marcacion import marcacion_bp
+    from app.routes.memo_pdf import memo_pdf_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
@@ -69,6 +70,7 @@ def create_app():
     app.register_blueprint(logo_bp)
     app.register_blueprint(materiales_bp)
     app.register_blueprint(marcacion_bp)
+    app.register_blueprint(memo_pdf_bp)
     
     # Inyectar versión de assets en todos los templates
     @app.context_processor
