@@ -1,0 +1,186 @@
+================================================================================
+  SOLUCIÓN: Error al crear usuarios con ñ en nombres o apellidos
+================================================================================
+
+PROBLEMA:
+---------
+Al intentar crear un usuario con "ñ" (o acentos) en nombres o apellidos, 
+aparece el siguiente error:
+
+  Error 3819 (HY000): Check constraint 'chk_apellido_materno_solo_letras' 
+  is violated.
+
+Ejemplo de datos que fallan:
+  • Apellido Materno: "Núñez"
+  • Nombres: "José María"
+  • Apellido Paterno: "Peña"
+
+
+CAUSA:
+------
+Los constraints (restricciones) de la tabla TblPersona solo permiten 
+letras básicas a-z y A-Z. No aceptan:
+  ✗ ñ, Ñ
+  ✗ á, é, í, ó, ú
+  ✗ Á, É, Í, Ó, Ú
+  ✗ ü, Ü
+
+
+SOLUCIÓN:
+---------
+Actualizar los constraints para aceptar caracteres del alfabeto español.
+
+
+================================================================================
+  INSTRUCCIONES PARA APLICAR EL FIX
+================================================================================
+
+OPCIÓN 1: Usando PowerShell (RECOMENDADO - Windows)
+----------------------------------------------------
+1. Abrir PowerShell en esta carpeta (database_scripts)
+
+2. Ejecutar:
+   .\ejecutar_fix_caracteres_espanoles.ps1
+
+3. Ingresar credenciales de MySQL cuando se solicite
+
+4. ¡Listo! El fix se aplica automáticamente
+
+
+OPCIÓN 2: Usando MySQL Workbench
+---------------------------------
+1. Abrir MySQL Workbench
+
+2. Conectarse a la base de datos "kallpasystem$kallgwkn_kallpa_bd"
+
+3. Menú: File → Open SQL Script
+
+4. Seleccionar: fix_constraint_caracteres_espanoles.sql
+
+5. Clic en el icono de rayo ⚡ (Execute)
+
+6. Verificar que dice "FIX APLICADO CORRECTAMENTE"
+
+
+OPCIÓN 3: Línea de comandos MySQL
+----------------------------------
+1. Abrir CMD o PowerShell
+
+2. Navegar a la carpeta database_scripts:
+   cd d:\kallpa\sys-Kallpa\sys-Kallpa\database_scripts
+
+3. Ejecutar:
+   mysql -u kallpasystem -p "kallpasystem$kallgwkn_kallpa_bd" < fix_constraint_caracteres_espanoles.sql
+
+4. Ingresar la contraseña cuando se solicite
+
+
+================================================================================
+  CÓMO VERIFICAR QUE FUNCIONÓ
+================================================================================
+
+1. Ir a RR.HH → Usuarios en el sistema web
+
+2. Clic en "Crear Nuevo Usuario"
+
+3. Completar los datos con caracteres españoles:
+   - Nombres: José María
+   - Apellido Paterno: Peña
+   - Apellido Materno: Núñez
+   - Documento: 12345678
+
+4. Clic en "Guardar Usuario"
+
+5. ESPERADO: Usuario se crea correctamente sin errores
+
+6. ANTES: Error "Check constraint is violated"
+
+
+================================================================================
+  CARACTERES AHORA PERMITIDOS
+================================================================================
+
+✓ Letras básicas: a-z, A-Z
+✓ Letra ñ: ñ, Ñ
+✓ Vocales acentuadas: á, é, í, ó, ú, Á, É, Í, Ó, Ú
+✓ Diéresis: ü, Ü
+✓ Espacios (para nombres compuestos como "José María")
+
+Ejemplos válidos:
+  • José
+  • María Ángeles
+  • Peña
+  • Núñez
+  • Señán
+  • Muñoz
+  • Hernández
+  • Íñiguez
+
+
+================================================================================
+  ARCHIVOS EN ESTA CARPETA
+================================================================================
+
+fix_constraint_caracteres_espanoles.sql
+  → Script SQL que actualiza los constraints
+
+ejecutar_fix_caracteres_espanoles.ps1
+  → Script PowerShell para aplicar automáticamente (Windows)
+
+EJECUTAR_FIX_CARACTERES_ESPANOLES.txt
+  → Este archivo (instrucciones rápidas)
+
+
+================================================================================
+  ¿NECESITAS AYUDA?
+================================================================================
+
+Si encuentras algún error:
+
+1. Verifica que MySQL esté corriendo:
+   services.msc → MySQL debe estar "Running"
+
+2. Verifica la versión de MySQL:
+   Requiere MySQL 8.0 o superior
+   
+   En MySQL Workbench ejecuta:
+   SELECT VERSION();
+
+3. Verifica las credenciales:
+   Usuario: kallpasystem
+   Base de datos: kallpasystem$kallgwkn_kallpa_bd
+
+
+================================================================================
+  IMPORTANTE
+================================================================================
+
+✓ NO es necesario reiniciar el servidor Python
+✓ NO es necesario recargar la página web
+✓ Los cambios son inmediatos en la base de datos
+✓ Los usuarios existentes NO se ven afectados
+✓ Solo afecta a las NUEVAS validaciones al crear/editar usuarios
+
+
+================================================================================
+  DETALLES TÉCNICOS
+================================================================================
+
+Constraints modificados:
+  1. chk_nombres_solo_letras
+  2. chk_apellido_paterno_solo_letras
+  3. chk_apellido_materno_solo_letras
+
+ANTES:
+  CHECK (campo REGEXP '^[a-zA-Z ]+$')
+
+DESPUÉS:
+  CHECK (campo REGEXP '^[a-zA-ZñÑáéíóúÁÉÍÓÚüÜ ]+$')
+
+
+================================================================================
+Fecha: 16/08/2026
+Estado: ✅ Listo para aplicar
+Tabla afectada: TblPersona
+Cambios: 3 constraints actualizados
+================================================================================
