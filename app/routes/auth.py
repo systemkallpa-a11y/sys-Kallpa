@@ -172,6 +172,92 @@ def login():
     redirect_to = request.args.get('redirect', 'marcacion')
     return render_template('login_kallpa.html', redirect_to=redirect_to)
 
+@auth_bp.route('/api/cambiar-contrasena', methods=['POST'])
+def cambiar_contrasena():
+    """API para cambiar la contraseña del usuario usando SP"""
+    from flask import jsonify, current_app
+    
+    # Verificar que el usuario esté autenticado
+    if 'user_documento' not in session and 'user_email' not in session:
+        return jsonify({'success': False, 'message': 'No autenticado'}), 401
+    
+    try:
+        data = request.get_json()
+        
+        contrasena_actual = data.get('contrasena_actual')
+        contrasena_nueva = data.get('contrasena_nueva')
+        
+        if not contrasena_actual or not contrasena_nueva:
+            return jsonify({'success': False, 'message': 'Todos los campos son obligatorios'}), 400
+        
+        if len(contrasena_nueva) < 6:
+            return jsonify({'success': False, 'message': 'La nueva contraseña debe tener al menos 6 caracteres'}), 400
+        
+        num_documento = session.get('user_documento')
+        
+        current_app.logger.info(f"[CAMBIAR_CONTRASEÑA] Usuario: {num_documento}")
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'message': 'Error de conexión a la base de datos'}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        # Generar hashes
+        password_hash_actual = hash_password(contrasena_actual)
+        password_hash_nueva = hash_password(contrasena_nueva)
+        
+        current_app.logger.info(f"[CAMBIAR_CONTRASEÑA] Llamando a SP sp_CambiarContrasena")
+        current_app.logger.info(f"[CAMBIAR_CONTRASEÑA] Hash actual (primeros 10): {password_hash_actual[:10]}...")
+        current_app.logger.info(f"[CAMBIAR_CONTRASEÑA] Hash nueva (primeros 10): {password_hash_nueva[:10]}...")
+        
+        # Llamar al SP para cambiar contraseña
+        cursor.callproc('sp_CambiarContrasena', [
+            num_documento,
+            password_hash_actual,
+            password_hash_nueva
+        ])
+        
+        # Obtener resultado del SP
+        result = None
+        for resultado in cursor.stored_results():
+            result = resultado.fetchone()
+            break
+        
+        # ⚠️ IMPORTANTE: Hacer commit después del SP
+        connection.commit()
+        
+        cursor.close()
+        connection.close()
+        
+        if not result:
+            current_app.logger.error(f"[CAMBIAR_CONTRASEÑA] SP no retornó resultado")
+            return jsonify({'success': False, 'message': 'Error al cambiar la contraseña'}), 500
+        
+        current_app.logger.info(f"[CAMBIAR_CONTRASEÑA] Resultado SP: {result}")
+        current_app.logger.info(f"[CAMBIAR_CONTRASEÑA] Success: {result.get('success')}")
+        
+        # El SP retorna: success (bool), message (string), usuario (string - opcional)
+        if result.get('success'):
+            current_app.logger.info(f"[CAMBIAR_CONTRASEÑA] ✅ Contraseña cambiada exitosamente")
+            return jsonify({
+                'success': True,
+                'message': result.get('message', 'Contraseña actualizada exitosamente')
+            }), 200
+        else:
+            current_app.logger.warning(f"[CAMBIAR_CONTRASEÑA] ❌ {result.get('message')}")
+            return jsonify({
+                'success': False,
+                'message': result.get('message', 'Error al cambiar la contraseña')
+            }), 400
+        
+    except Exception as e:
+        current_app.logger.error(f"[CAMBIAR_CONTRASEÑA] Error: {e}")
+        import traceback
+        current_app.logger.error(f"[CAMBIAR_CONTRASEÑA] Traceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'message': f'Error al cambiar la contraseña: {str(e)}'}), 500
+
+
 @auth_bp.route('/logout')
 def logout():
     """Cerrar sesión"""
