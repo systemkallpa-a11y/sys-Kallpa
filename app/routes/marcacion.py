@@ -55,6 +55,17 @@ def reporte_asistencia():
 
 
 # ============================================================================
+# RUTA: PÁGINA DE CONTROL DE ASISTENCIA (ADMIN)
+# ============================================================================
+
+@marcacion_bp.route('/reportes')
+@login_required
+def reportes():
+    """Página de reportes de asistencia"""
+    return render_template('control_asistencia.html')
+
+
+# ============================================================================
 # RUTA: PÁGINA DE MARCACIÓN INDIVIDUAL
 # ============================================================================
 
@@ -831,4 +842,330 @@ def obtener_memos_empleado():
     
     except Exception as e:
         print(f"[MEMOS_EMPLEADO] ❌ Error general: {e}")
+        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+
+
+# ============================================================================
+# API: REPORTE DE CONTROL DE ASISTENCIA (NUEVO)
+# ============================================================================
+
+@marcacion_bp.route('/api/reportes/control-asistencia')
+@login_required
+def obtener_control_asistencia():
+    """API: Obtener reporte de control de asistencia detallado por día usando SP"""
+    from flask import current_app
+    
+    try:
+        fecha_inicio = request.args.get('fecha_inicio')
+        fecha_fin = request.args.get('fecha_fin')
+        num_usuario = request.args.get('num_usuario', None)
+        
+        if not fecha_inicio or not fecha_fin:
+            return jsonify({'success': False, 'error': 'Se requieren fecha_inicio y fecha_fin'}), 400
+        
+        print(f"[CONTROL_ASISTENCIA] 📊 Consultando: {fecha_inicio} al {fecha_fin}, usuario={num_usuario}")
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión a BD'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            # Llamar al SP sp_reporte_asistencia_automatica
+            if num_usuario and num_usuario != 'null' and num_usuario != '':
+                cursor.callproc('sp_reporte_asistencia_automatica', [
+                    fecha_inicio,
+                    fecha_fin,
+                    int(num_usuario)
+                ])
+            else:
+                cursor.callproc('sp_reporte_asistencia_automatica', [
+                    fecha_inicio,
+                    fecha_fin,
+                    None
+                ])
+            
+            # Obtener resultados del SP
+            registros = []
+            for result in cursor.stored_results():
+                registros = result.fetchall()
+            
+            cursor.close()
+            connection.close()
+            
+            print(f"[CONTROL_ASISTENCIA] ✅ {len(registros)} registros obtenidos")
+            
+            return jsonify({
+                'success': True,
+                'data': registros
+            }), 200
+        
+        except Error as e:
+            print(f"[CONTROL_ASISTENCIA] ❌ Error SQL: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    except Exception as e:
+        print(f"[CONTROL_ASISTENCIA] ❌ Error general: {e}")
+        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+
+
+# ============================================================================
+# API: EXPORTAR CONTROL DE ASISTENCIA A EXCEL
+# ============================================================================
+
+@marcacion_bp.route('/api/reportes/control-asistencia/excel', methods=['GET'])
+@login_required
+def exportar_control_asistencia_excel():
+    """Exportar reporte de control de asistencia a Excel"""
+    try:
+        fecha_inicio = request.args.get('fecha_inicio')
+        fecha_fin = request.args.get('fecha_fin')
+        
+        if not fecha_inicio or not fecha_fin:
+            return jsonify({'success': False, 'error': 'Se requieren fecha_inicio y fecha_fin'}), 400
+        
+        print(f"[EXPORTAR_CONTROL] 📊 Exportando: {fecha_inicio} al {fecha_fin}")
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión a BD'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            # Llamar al SP sp_reporte_asistencia_automatica
+            cursor.callproc('sp_reporte_asistencia_automatica', [
+                fecha_inicio,
+                fecha_fin,
+                None
+            ])
+            
+            # Obtener resultados del SP
+            registros = []
+            for result in cursor.stored_results():
+                registros = result.fetchall()
+            
+            cursor.close()
+            connection.close()
+            
+            print(f"[EXPORTAR_CONTROL] ✅ {len(registros)} registros obtenidos")
+            
+            if not registros:
+                return jsonify({'success': False, 'error': 'No hay datos para exportar'}), 404
+            
+            # ====================================================================
+            # CREAR ARCHIVO EXCEL
+            # ====================================================================
+            
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Control Asistencia"
+            
+            # Estilos
+            header_fill = PatternFill(start_color="16A34A", end_color="16A34A", fill_type="solid")
+            header_font = Font(color="FFFFFF", bold=True, size=10)
+            header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            
+            cell_alignment = Alignment(horizontal="left", vertical="center")
+            cell_alignment_center = Alignment(horizontal="center", vertical="center")
+            
+            border_style = Border(
+                left=Side(style='thin', color='D1D5DB'),
+                right=Side(style='thin', color='D1D5DB'),
+                top=Side(style='thin', color='D1D5DB'),
+                bottom=Side(style='thin', color='D1D5DB')
+            )
+            
+            # ====================================================================
+            # ENCABEZADOS
+            # ====================================================================
+            
+            headers = [
+                'Empresa',
+                'Nombres',
+                'DNI/CE',
+                'Cargo',
+                'Sede',
+                'Día',
+                'Mes',
+                'Año',
+                'H. Ingreso T1',
+                'H. Salida T1',
+                'Min T1',
+                'Detalle T1',
+                'H. Ingreso T2',
+                'H. Salida T2',
+                'Min T2',
+                'Detalle T2'
+            ]
+            
+            for col_num, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col_num)
+                cell.value = header
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = header_alignment
+                cell.border = border_style
+            
+            # ====================================================================
+            # DATOS
+            # ====================================================================
+            
+            # Colores para detalles
+            verde_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+            verde_font = Font(color="006100", bold=True, size=10)
+            amarillo_fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
+            amarillo_font = Font(color="9C6500", bold=True, size=10)
+            naranja_fill = PatternFill(start_color="FDE68A", end_color="FDE68A", fill_type="solid")
+            naranja_font = Font(color="92400E", bold=True, size=10)
+            gris_fill = PatternFill(start_color="F3F4F6", end_color="F3F4F6", fill_type="solid")
+            gris_font = Font(color="6B7280", size=10)
+            
+            row_num = 2
+            for reg in registros:
+                # Datos del empleado
+                ws.cell(row=row_num, column=1, value=reg.get('EMPRESA', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=2, value=reg.get('NOMBRES', '')).alignment = cell_alignment
+                ws.cell(row=row_num, column=3, value=reg.get('DNI_CE', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=4, value=reg.get('CARGO', '')).alignment = cell_alignment
+                ws.cell(row=row_num, column=5, value=reg.get('SEDE_TRABAJO', '')).alignment = cell_alignment
+                
+                # Fecha
+                ws.cell(row=row_num, column=6, value=reg.get('DIA', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=7, value=reg.get('MES', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=8, value=reg.get('ANO', '')).alignment = cell_alignment_center
+                
+                # Turno 1
+                ws.cell(row=row_num, column=9, value=reg.get('H_INGRESO_T1', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=10, value=reg.get('H_SALIDA_T1', '')).alignment = cell_alignment_center
+                
+                # Minutos T1 con formato horas:minutos
+                min_t1 = reg.get('MINUTOS_T1', '')
+                if min_t1 and min_t1 != '-' and min_t1 != 'Sin Marcación':
+                    try:
+                        num_min = int(min_t1)
+                        horas = abs(num_min) // 60
+                        mins = abs(num_min) % 60
+                        formato = f"{horas}:{mins:02d}"
+                        if num_min > 0:
+                            min_t1_display = f"+{formato}"
+                        elif num_min < 0:
+                            min_t1_display = f"-{formato}"
+                        else:
+                            min_t1_display = "0:00"
+                    except:
+                        min_t1_display = str(min_t1)
+                else:
+                    min_t1_display = '-'
+                ws.cell(row=row_num, column=11, value=min_t1_display).alignment = cell_alignment_center
+                
+                # Detalle T1 con color
+                cell_detalle_t1 = ws.cell(row=row_num, column=12, value=reg.get('DETALLE_T1', ''))
+                cell_detalle_t1.alignment = cell_alignment_center
+                if reg.get('DETALLE_T1') == 'ASISTENCIA':
+                    cell_detalle_t1.fill = verde_fill
+                    cell_detalle_t1.font = verde_font
+                elif reg.get('DETALLE_T1') == 'TARDANZA':
+                    cell_detalle_t1.fill = amarillo_fill
+                    cell_detalle_t1.font = amarillo_font
+                elif reg.get('DETALLE_T1') == 'SIN MARCACIÓN':
+                    cell_detalle_t1.fill = gris_fill
+                    cell_detalle_t1.font = gris_font
+                
+                # Turno 2
+                ws.cell(row=row_num, column=13, value=reg.get('H_INGRESO_T2', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=14, value=reg.get('H_SALIDA_T2', '')).alignment = cell_alignment_center
+                
+                # Minutos T2 con formato horas:minutos
+                min_t2 = reg.get('MINUTOS_T2', '')
+                if min_t2 and min_t2 != '-' and min_t2 != 'Sin Marcación':
+                    try:
+                        num_min = int(min_t2)
+                        horas = abs(num_min) // 60
+                        mins = abs(num_min) % 60
+                        formato = f"{horas}:{mins:02d}"
+                        if num_min > 0:
+                            min_t2_display = f"+{formato}"
+                        elif num_min < 0:
+                            min_t2_display = f"-{formato}"
+                        else:
+                            min_t2_display = "0:00"
+                    except:
+                        min_t2_display = str(min_t2)
+                else:
+                    min_t2_display = '-'
+                ws.cell(row=row_num, column=15, value=min_t2_display).alignment = cell_alignment_center
+                
+                # Detalle T2 con color
+                cell_detalle_t2 = ws.cell(row=row_num, column=16, value=reg.get('DETALLE_T2', ''))
+                cell_detalle_t2.alignment = cell_alignment_center
+                if reg.get('DETALLE_T2') == 'CUMPLIÓ HORARIO':
+                    cell_detalle_t2.fill = verde_fill
+                    cell_detalle_t2.font = verde_font
+                elif reg.get('DETALLE_T2') == 'SALIDA TEMPRANA':
+                    cell_detalle_t2.fill = naranja_fill
+                    cell_detalle_t2.font = naranja_font
+                elif reg.get('DETALLE_T2') == 'SIN MARCACIÓN':
+                    cell_detalle_t2.fill = gris_fill
+                    cell_detalle_t2.font = gris_font
+                
+                # Aplicar bordes a toda la fila
+                for col in range(1, 17):
+                    ws.cell(row=row_num, column=col).border = border_style
+                
+                row_num += 1
+            
+            # ====================================================================
+            # AJUSTAR ANCHO DE COLUMNAS
+            # ====================================================================
+            
+            ws.column_dimensions['A'].width = 18  # Empresa
+            ws.column_dimensions['B'].width = 35  # Nombres
+            ws.column_dimensions['C'].width = 12  # DNI
+            ws.column_dimensions['D'].width = 20  # Cargo
+            ws.column_dimensions['E'].width = 15  # Sede
+            ws.column_dimensions['F'].width = 8   # Día
+            ws.column_dimensions['G'].width = 8   # Mes
+            ws.column_dimensions['H'].width = 8   # Año
+            ws.column_dimensions['I'].width = 12  # H.Ingreso T1
+            ws.column_dimensions['J'].width = 12  # H.Salida T1
+            ws.column_dimensions['K'].width = 8   # Min T1
+            ws.column_dimensions['L'].width = 15  # Detalle T1
+            ws.column_dimensions['M'].width = 12  # H.Ingreso T2
+            ws.column_dimensions['N'].width = 12  # H.Salida T2
+            ws.column_dimensions['O'].width = 8   # Min T2
+            ws.column_dimensions['P'].width = 15  # Detalle T2
+            
+            # Fijar primera fila (encabezado)
+            ws.freeze_panes = 'A2'
+            
+            # ====================================================================
+            # GUARDAR EN MEMORIA Y ENVIAR
+            # ====================================================================
+            
+            output = BytesIO()
+            wb.save(output)
+            output.seek(0)
+            
+            # Nombre del archivo
+            from datetime import datetime as dt
+            timestamp = dt.now().strftime('%Y%m%d_%H%M%S')
+            filename = f'Control_Asistencia_{fecha_inicio}_a_{fecha_fin}_{timestamp}.xlsx'
+            
+            print(f"[EXPORTAR_CONTROL] ✅ Archivo generado: {filename}")
+            
+            return send_file(
+                output,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=filename
+            )
+        
+        except Error as e:
+            print(f"[EXPORTAR_CONTROL] ❌ Error SQL: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    except Exception as e:
+        print(f"[EXPORTAR_CONTROL] ❌ Error general: {e}")
         return jsonify({'success': False, 'error': 'Error del servidor'}), 500

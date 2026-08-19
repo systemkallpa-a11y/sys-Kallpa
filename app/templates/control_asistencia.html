@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+
+{% block title %}Kallpa - Control de Asistencia{% endblock %}
+
+{% block content %}
+
+<div class="flex flex-col h-screen bg-gray-50 dark:bg-slate-950">
+
+    <!-- Header -->
+    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
+        <!-- Título y botones -->
+        <div class="px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="bg-gradient-to-br from-green-600 to-green-800 p-2 rounded-lg shadow-lg">
+                        <i class="fas fa-clipboard-check text-xl text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-gray-900 dark:text-white">Control de Asistencia</h1>
+                        <p class="text-gray-500 dark:text-gray-400 text-xs">Reporte detallado por día</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="exportarExcel()" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
+                        <i class="fas fa-file-excel mr-1"></i>Exportar
+                    </button>
+                    <button onclick="aplicarFiltrosControl()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+                        <i class="fas fa-sync-alt mr-1"></i>Actualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros compactos -->
+        <div class="px-4 py-2 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700">
+            <div class="flex items-center gap-3 flex-wrap">
+                <!-- Fecha Inicio -->
+                <div>
+                    <input type="date" id="filtro-fecha-inicio" 
+                           class="px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
+                </div>
+
+                <!-- Separador -->
+                <span class="text-gray-500 dark:text-gray-400 text-xs">al</span>
+
+                <!-- Fecha Fin -->
+                <div>
+                    <input type="date" id="filtro-fecha-fin" 
+                           class="px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
+                </div>
+
+                <!-- Empleado -->
+                <div class="w-48">
+                    <input type="text" id="filtro-empleado" placeholder="Buscar empleado..."
+                           class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
+                </div>
+
+                <!-- Botón Buscar -->
+                <button onclick="aplicarFiltrosControl()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors">
+                    <i class="fas fa-search mr-1"></i>Buscar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leyenda de estados -->
+    <div class="px-6 py-2 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
+        <div class="flex items-center gap-4 text-xs">
+            <span class="font-semibold text-gray-600 dark:text-gray-400">Leyenda:</span>
+            <span class="flex items-center gap-1">
+                <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                <span class="text-gray-700 dark:text-gray-300">Asistencia</span>
+            </span>
+            <span class="flex items-center gap-1">
+                <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                <span class="text-gray-700 dark:text-gray-300">Tardanza</span>
+            </span>
+            <span class="flex items-center gap-1">
+                <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                <span class="text-gray-700 dark:text-gray-300">Falta / Inasistencia</span>
+            </span>
+            <span class="flex items-center gap-1">
+                <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                <span class="text-gray-700 dark:text-gray-300">Permiso</span>
+            </span>
+            <span class="flex items-center gap-1">
+                <span class="w-3 h-3 rounded-full bg-gray-400"></span>
+                <span class="text-gray-700 dark:text-gray-300">Descanso</span>
+            </span>
+        </div>
+    </div>
+
+    <!-- Contenido Principal - Tabla -->
+    <div class="flex-1 overflow-auto p-6">
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-slate-700">
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs">
+                    <!-- Encabezado agrupado -->
+                    <thead>
+                        <!-- Fila 1: Grupos principales -->
+                        <tr class="bg-gradient-to-r from-green-700 to-green-800">
+                            <th colspan="5" class="px-2 py-2 text-center text-white font-bold border-r border-green-600">DATOS DEL EMPLEADO</th>
+                            <th colspan="3" class="px-2 py-2 text-center text-white font-bold border-r border-green-600">FECHA</th>
+                            <th colspan="3" class="px-2 py-2 text-center text-white font-bold border-r border-green-600">TURNO 1 (MAÑANA)</th>
+                            <th colspan="3" class="px-2 py-2 text-center text-white font-bold">TURNO 2 (TARDE)</th>
+                        </tr>
+                        <!-- Fila 2: Sub-encabezados -->
+                        <tr class="bg-gradient-to-r from-green-600 to-green-700">
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">EMPRESA</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">NOMBRES</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">DNI / CE</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">CARGO</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">SEDE</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">DÍA</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">MES</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">AÑO</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">H. INGRESO</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">H. SALIDA</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">MINUTOS</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">DETALLE</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">H. INGRESO</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">H. SALIDA</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">MINUTOS</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold">DETALLE</th>
+                        </tr>
+                    </thead>
+
+                    <!-- Body dinámico -->
+                    <tbody id="tabla-control-asistencia" class="divide-y divide-gray-200 dark:divide-slate-700">
+                        <tr>
+                            <td colspan="16" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Cargando datos...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ============================================================================
+// VARIABLES GLOBALES
+// ============================================================================
+let datosReporte = [];
+let datosFiltrados = [];
+
+// ============================================================================
+// INICIALIZACIÓN
+// ============================================================================
+document.addEventListener('DOMContentLoaded', function() {
+    // Establecer fechas por defecto: primer día del mes actual hasta hoy
+    const hoy = new Date();
+    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    
+    document.getElementById('filtro-fecha-inicio').value = formatearFechaInput(primerDiaMes);
+    document.getElementById('filtro-fecha-fin').value = formatearFechaInput(hoy);
+    
+    // Cargar datos iniciales
+    aplicarFiltrosControl();
+});
+
+// ============================================================================
+// FORMATEAR FECHA PARA INPUT
+// ============================================================================
+function formatearFechaInput(fecha) {
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// ============================================================================
+// APLICAR FILTROS
+// ============================================================================
+async function aplicarFiltrosControl() {
+    const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
+    const fechaFin = document.getElementById('filtro-fecha-fin').value;
+    const empleado = document.getElementById('filtro-empleado').value.trim();
+    
+    if (!fechaInicio || !fechaFin) {
+        alert('Seleccioná ambas fechas');
+        return;
+    }
+    
+    console.log(`[CONTROL] Consultando: ${fechaInicio} al ${fechaFin}, empleado=${empleado}`);
+    
+    await cargarControlAsistencia(fechaInicio, fechaFin, empleado);
+}
+
+// ============================================================================
+// CARGAR CONTROL DE ASISTENCIA DESDE API
+// ============================================================================
+async function cargarControlAsistencia(fechaInicio, fechaFin, empleado) {
+    const tbody = document.getElementById('tabla-control-asistencia');
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="16" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                <i class="fas fa-spinner fa-spin mr-2"></i>Cargando datos...
+            </td>
+        </tr>
+    `;
+    
+    try {
+        let url = `/api/reportes/control-asistencia?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;
+        
+        const response = await fetch(url);
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Error al cargar datos');
+        }
+        
+        datosReporte = result.data || [];
+        
+        // Filtrar por empleado si se escribió algo
+        if (empleado) {
+            const empLower = empleado.toLowerCase();
+            datosFiltrados = datosReporte.filter(r => 
+                (r.NOMBRES && r.NOMBRES.toLowerCase().includes(empLower)) ||
+                (r.DNI_CE && r.DNI_CE.toString().includes(empLower))
+            );
+        } else {
+            datosFiltrados = [...datosReporte];
+        }
+        
+        // Filtrar por días seleccionados
+        const diasSeleccionados = [];
+        document.querySelectorAll('.dia-btn.bg-blue-600').forEach(btn => {
+            diasSeleccionados.push(parseInt(btn.getAttribute('data-dia')));
+        });
+        
+        if (diasSeleccionados.length > 0) {
+            datosFiltrados = datosFiltrados.filter(r => 
+                diasSeleccionados.includes(r.DIA)
+            );
+        }
+        
+        renderizarTabla(datosFiltrados);
+        
+    } catch (error) {
+        console.error('[CONTROL] Error:', error);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="16" class="px-4 py-8 text-center text-red-500">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>Error al cargar datos: ${error.message}
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// ============================================================================
+// RENDERIZAR TABLA
+// ============================================================================
+function renderizarTabla(data) {
+    const tbody = document.getElementById('tabla-control-asistencia');
+    
+    if (!data || data.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="18" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                    <i class="fas fa-inbox mr-2"></i>No se encontraron registros
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    let html = '';
+    
+    data.forEach((fila, index) => {
+        // Colores según detalle
+        const coloresT1 = obtenerColoresDetalle(fila.DETALLE_T1);
+        const coloresT2 = obtenerColoresDetalle(fila.DETALLE_T2);
+        const colorFila = determinarColorFila(fila.DETALLE_T1, fila.DETALLE_T2);
+        
+        html += `
+            <tr class="hover:bg-opacity-80 transition-colors ${colorFila}">
+                <td class="px-2 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.EMPRESA || '-')}</td>
+                <td class="px-2 py-2 text-left text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700 whitespace-nowrap">${escapeHtml(fila.NOMBRES || '-')}</td>
+                <td class="px-2 py-2 text-center text-gray-900 dark:text-white font-mono border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.DNI_CE || '-')}</td>
+                <td class="px-2 py-2 text-left text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-slate-700 whitespace-nowrap">${escapeHtml(fila.CARGO || '-')}</td>
+                <td class="px-2 py-2 text-left text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-slate-700 whitespace-nowrap">${escapeHtml(fila.SEDE_TRABAJO || '-')}</td>
+                <td class="px-2 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.DIA || '-')}</td>
+                <td class="px-2 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.MES || '-')}</td>
+                <td class="px-2 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.ANO || '-')}</td>
+                <td class="px-2 py-2 text-center text-gray-900 dark:text-white font-semibold border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.H_INGRESO_T1 || '-')}</td>
+                <td class="px-2 py-2 text-center text-gray-900 dark:text-white font-semibold border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.H_SALIDA_T1 || '-')}</td>
+                <td class="px-2 py-2 text-center ${coloresT1.colorMinutos} border-r border-gray-200 dark:border-slate-700">${formatearMinutos(fila.MINUTOS_T1)}</td>
+                <td class="px-2 py-2 text-center ${coloresT1.colorDetalle} border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.DETALLE_T1 || '-')}</td>
+                <td class="px-2 py-2 text-center text-gray-900 dark:text-white font-semibold border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.H_INGRESO_T2 || '-')}</td>
+                <td class="px-2 py-2 text-center text-gray-900 dark:text-white font-semibold border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.H_SALIDA_T2 || '-')}</td>
+                <td class="px-2 py-2 text-center ${coloresT2.colorMinutos} border-r border-gray-200 dark:border-slate-700">${formatearMinutos(fila.MINUTOS_T2)}</td>
+                <td class="px-2 py-2 text-center ${coloresT2.colorDetalle}">${escapeHtml(fila.DETALLE_T2 || '-')}</td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+// ============================================================================
+// OBTENER COLORES SEGÚN DETALLE
+// ============================================================================
+function obtenerColoresDetalle(detalle) {
+    if (!detalle) {
+        return {
+            colorMinutos: 'text-gray-500 dark:text-gray-400',
+            colorDetalle: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+        };
+    }
+    
+    const detalleUpper = detalle.toUpperCase();
+    
+    if (detalleUpper === 'ASISTENCIA' || detalleUpper === 'CUMPLIÓ HORARIO') {
+        return {
+            colorMinutos: 'text-green-600 dark:text-green-400 font-bold',
+            colorDetalle: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 font-semibold'
+        };
+    }
+    if (detalleUpper === 'TARDANZA') {
+        return {
+            colorMinutos: 'text-yellow-600 dark:text-yellow-400 font-bold',
+            colorDetalle: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 font-semibold'
+        };
+    }
+    if (detalleUpper === 'SALIDA TEMPRANA') {
+        return {
+            colorMinutos: 'text-orange-600 dark:text-orange-400 font-bold',
+            colorDetalle: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 font-semibold'
+        };
+    }
+    if (detalleUpper === 'SIN MARCACIÓN') {
+        return {
+            colorMinutos: 'text-gray-400 dark:text-gray-500',
+            colorDetalle: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500'
+        };
+    }
+    if (detalleUpper === 'SIN HORARIO') {
+        return {
+            colorMinutos: 'text-purple-600 dark:text-purple-400',
+            colorDetalle: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+        };
+    }
+    
+    return {
+        colorMinutos: 'text-gray-500 dark:text-gray-400',
+        colorDetalle: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+    };
+}
+
+// ============================================================================
+// FORMATEAR MINUTOS EN HORAS:MINUTOS
+// ============================================================================
+function formatearMinutos(minutos) {
+    if (!minutos || minutos === '-' || minutos === 'Sin Marcación') return '-';
+    
+    const num = parseInt(minutos);
+    if (isNaN(num)) return minutos;
+    
+    const horas = Math.floor(Math.abs(num) / 60);
+    const mins = Math.abs(num) % 60;
+    const formato = `${horas}:${String(mins).padStart(2, '0')}`;
+    
+    if (num > 0) return `+${formato}`;
+    if (num < 0) return `-${formato}`;
+    return '0:00';
+}
+
+// ============================================================================
+// DETERMINAR COLOR DE FILA
+// ============================================================================
+function determinarColorFila(detalleT1, detalleT2) {
+    const t1 = (detalleT1 || '').toUpperCase();
+    const t2 = (detalleT2 || '').toUpperCase();
+    
+    if (t1 === 'TARDANZA') return 'bg-yellow-50/50 dark:bg-yellow-900/10';
+    if (t2 === 'SALIDA TEMPRANA') return 'bg-orange-50/50 dark:bg-orange-900/10';
+    if (t1 === 'ASISTENCIA' && t2 === 'CUMPLIÓ HORARIO') return 'bg-green-50/50 dark:bg-green-900/10';
+    if (t1 === 'SIN MARCACIÓN') return 'bg-gray-100/50 dark:bg-gray-800/30';
+    return '';
+}
+
+// ============================================================================
+// FORMATEAR FECHA
+// ============================================================================
+function formatFecha(dia, mes, anio) {
+    return `${String(dia).padStart(2,'0')}/${String(mes).padStart(2,'0')}/${anio}`;
+}
+
+// ============================================================================
+// ESCAPAR HTML
+// ============================================================================
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ============================================================================
+// EXPORTAR A EXCEL
+// ============================================================================
+function exportarExcel() {
+    const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
+    const fechaFin = document.getElementById('filtro-fecha-fin').value;
+    
+    if (!fechaInicio || !fechaFin) {
+        alert('Seleccioná ambas fechas para exportar');
+        return;
+    }
+    
+    console.log(`[EXPORTAR] Exportando: ${fechaInicio} a ${fechaFin}`);
+    
+    // Descargar archivo
+    window.location.href = `/api/reportes/control-asistencia/excel?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;
+}</script>
+{% endblock %}
