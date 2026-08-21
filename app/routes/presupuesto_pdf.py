@@ -1,6 +1,6 @@
 """
 Module: presupuesto_pdf.py
-Propósito: Generar PDFs profesionales de presupuestos
+Propsito: Generar PDFs profesionales de presupuestos
 Fecha: 10 Julio 2026
 """
 
@@ -20,7 +20,7 @@ try:
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
-    print("⚠️ Warning: reportlab not available - PDF generation will not work")
+    print("[!] Warning: reportlab not available - PDF generation will not work")
 
 from datetime import datetime
 from app.config import DatabaseConfig
@@ -33,25 +33,25 @@ pdf_bp = Blueprint('presupuesto_pdf', __name__)
 
 
 def get_db_connection():
-    """Crear conexión a la base de datos Kallpa"""
+    """Crear conexin a la base de datos Kallpa"""
     try:
         params = DatabaseConfig.get_connection_params()
         connection = mysql.connector.connect(**params)
         return connection
     except Error as e:
-        print(f"Error de conexión: {e}")
+        print(f"Error de conexin: {e}")
         return None
 
 
 def login_required(f):
-    """Decorador para proteger rutas que requieren autenticación"""
+    """Decorador para proteger rutas que requieren autenticacin"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         from flask import session, redirect, url_for, flash
         if 'user_documento' not in session and 'user_email' not in session:
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return {'success': False, 'message': 'No autenticado'}, 401
-            flash('Debes iniciar sesión', 'warning')
+            flash('Debes iniciar sesin', 'warning')
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -63,27 +63,27 @@ def descargar_presupuesto_pdf(id_presupuesto):
     """Generar y descargar presupuesto en PDF usando SP"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
         
-        print(f"\n[PDF] Iniciando generación de PDF para presupuesto: {id_presupuesto}")
+        print(f"\n[PDF] Iniciando generacin de PDF para presupuesto: {id_presupuesto}")
         
         # Llamar SP para obtener datos
         print(f"[PDF] Ejecutando SP: sp_ObtenerPresupuestoPDF({id_presupuesto})")
         cursor.callproc('sp_ObtenerPresupuestoPDF', [id_presupuesto])
         
-        # Convertir stored_results() a lista para acceder a múltiples result sets
+        # Convertir stored_results() a lista para acceder a mltiples result sets
         results_list = list(cursor.stored_results())
         
         if not results_list or len(results_list) < 2:
             cursor.close()
             connection.close()
-            print(f"[PDF] ❌ No se obtuvieron suficientes result sets del SP")
+            print(f"[PDF] [X] No se obtuvieron suficientes result sets del SP")
             return jsonify({'success': False, 'error': 'Error al ejecutar SP'}), 500
         
-        # Result Set 1: Información del Presupuesto
+        # Result Set 1: Informacin del Presupuesto
         presupuesto = None
         presupuesto_result = results_list[0]
         presupuesto = presupuesto_result.fetchone()
@@ -91,10 +91,10 @@ def descargar_presupuesto_pdf(id_presupuesto):
         if not presupuesto:
             cursor.close()
             connection.close()
-            print(f"[PDF] ❌ Presupuesto no encontrado: {id_presupuesto}")
+            print(f"[PDF] [X] Presupuesto no encontrado: {id_presupuesto}")
             return jsonify({'success': False, 'error': 'Presupuesto no encontrado'}), 404
         
-        print(f"[PDF] ✓ Presupuesto encontrado: {presupuesto['numero_presupuesto']}")
+        print(f"[PDF] [OK] Presupuesto encontrado: {presupuesto['numero_presupuesto']}")
         
         # Result Set 2: Detalles de Materiales
         materiales = []
@@ -102,7 +102,7 @@ def descargar_presupuesto_pdf(id_presupuesto):
             materiales_result = results_list[1]
             materiales = materiales_result.fetchall()
         
-        print(f"[PDF] ✓ Materiales obtenidos: {len(materiales)} items")
+        print(f"[PDF] [OK] Materiales obtenidos: {len(materiales)} items")
         
         # Result Set 3: Detalles de Servicios
         servicios = []
@@ -110,12 +110,12 @@ def descargar_presupuesto_pdf(id_presupuesto):
             servicios_result = results_list[2]
             servicios = servicios_result.fetchall()
         
-        print(f"[PDF] ✓ Servicios obtenidos: {len(servicios)} items")
+        print(f"[PDF] [OK] Servicios obtenidos: {len(servicios)} items")
         
         cursor.close()
         connection.close()
         
-        # Generar PDF con márgenes reducidos para aprovechar más espacio
+        # Generar PDF con mrgenes reducidos para aprovechar ms espacio
         pdf_buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             pdf_buffer,
@@ -179,7 +179,7 @@ def descargar_presupuesto_pdf(id_presupuesto):
         
         # ==================== CONTENIDO DEL PDF ====================
         
-        # 1. ENCABEZADO CON LOGO DINÁMICO DE LA EMPRESA
+        # 1. ENCABEZADO CON LOGO DINMICO DE LA EMPRESA
         # Intentar obtener logo de empresa desde base de datos
         logo_path = None
         
@@ -207,11 +207,11 @@ def descargar_presupuesto_pdf(id_presupuesto):
                 image.save(temp_logo.name, 'PNG')
                 temp_logo.close()
                 logo_path = temp_logo.name
-                print(f"[PDF] ✓ Logo de empresa cargado y convertido dinámicamente")
+                print(f"[PDF] [OK] Logo de empresa cargado y convertido dinmicamente")
             except Exception as e:
-                print(f"[PDF] ⚠ Error al cargar logo de empresa: {e}")
+                print(f"[PDF] [!] Error al cargar logo de empresa: {e}")
                 import traceback
-                print(f"[PDF] ⚠ Traceback: {traceback.format_exc()}")
+                print(f"[PDF] [!] Traceback: {traceback.format_exc()}")
                 logo_path = None
         
         # Si no hay logo de empresa, usar logo por defecto
@@ -219,9 +219,9 @@ def descargar_presupuesto_pdf(id_presupuesto):
             default_logo_path = os.path.join(os.path.dirname(__file__), '..', 'static', 'images', 'Logo Kallpa.png')
             if os.path.exists(default_logo_path):
                 logo_path = default_logo_path
-                print(f"[PDF] ✓ Logo por defecto cargado")
+                print(f"[PDF] [OK] Logo por defecto cargado")
         
-        # Crear tabla con logo (ahora dinámico)
+        # Crear tabla con logo (ahora dinmico)
         header_table_data = []
         if logo_path and os.path.exists(logo_path):
             try:
@@ -230,20 +230,20 @@ def descargar_presupuesto_pdf(id_presupuesto):
                 header_table_data.append([
                     logo,
                     Paragraph(
-                        f"<b>{company_name}</b><br/><font size=9>Sistema de Gestión de Presupuestos</font>",
+                        f"<b>{company_name}</b><br/><font size=9>Sistema de Gestin de Presupuestos</font>",
                         header_style
                     )
                 ])
             except Exception as e:
-                print(f"[PDF] ⚠ Error al insertar logo: {e}")
+                print(f"[PDF] [!] Error al insertar logo: {e}")
                 company_name = presupuesto.get('nombre_empresa', 'KALLPA')
                 header_table_data.append([
-                    Paragraph(f"<b>{company_name}</b><br/><font size=9>Sistema de Gestión</font>", header_style)
+                    Paragraph(f"<b>{company_name}</b><br/><font size=9>Sistema de Gestin</font>", header_style)
                 ])
         else:
             company_name = presupuesto.get('nombre_empresa', 'KALLPA')
             header_table_data.append([
-                Paragraph(f"<b>{company_name}</b><br/><font size=9>Sistema de Gestión</font>", header_style)
+                Paragraph(f"<b>{company_name}</b><br/><font size=9>Sistema de Gestin</font>", header_style)
             ])
         
         header_table = Table(header_table_data, colWidths=[1.2*inch, 6.15*inch])
@@ -259,7 +259,7 @@ def descargar_presupuesto_pdf(id_presupuesto):
         story.append(header_table)
         story.append(Spacer(1, 0.05*inch))
         
-        # Línea separadora con colores Quska
+        # Lnea separadora con colores Quska
         sep_data = [['_' * 120]]
         sep_table = Table(sep_data, colWidths=[7.35*inch])
         sep_table.setStyle(TableStyle([
@@ -273,18 +273,18 @@ def descargar_presupuesto_pdf(id_presupuesto):
         story.append(sep_table)
         story.append(Spacer(1, 0.08*inch))
         
-        # 2. INFORMACIÓN DEL PRESUPUESTO Y RESPONSABLE - USAR FUNCIONES HELPER
+        # 2. INFORMACIN DEL PRESUPUESTO Y RESPONSABLE - USAR FUNCIONES HELPER
         from .pdf_helpers import PDFStyles, crear_info_presupuesto, crear_responsable, crear_tabla_materiales, crear_tabla_servicios, crear_desglose_financiero, crear_observaciones
         
         # Obtener estilos centralizados
         pdf_styles = PDFStyles.get_styles()
         
-        # Usar función helper para info del presupuesto (alineado con materiales)
+        # Usar funcin helper para info del presupuesto (alineado con materiales)
         info_table = crear_info_presupuesto(presupuesto, pdf_styles)
         story.append(info_table)
         story.append(Spacer(1, 0.1*inch))
         
-        # Usar función helper para responsable (alineado con materiales)
+        # Usar funcin helper para responsable (alineado con materiales)
         header_resp, table_resp = crear_responsable(presupuesto, pdf_styles)
         story.append(header_resp)
         story.append(table_resp)
@@ -313,16 +313,16 @@ def descargar_presupuesto_pdf(id_presupuesto):
         story.append(table_desglose)
         story.append(Spacer(1, 0.1*inch))
         
-        # 5. OBSERVACIONES - USAR FUNCIÓN HELPER
+        # 5. OBSERVACIONES - USAR FUNCIN HELPER
         header_obs, table_obs = crear_observaciones(presupuesto, pdf_styles)
         if header_obs and table_obs:
             story.append(header_obs)
             story.append(table_obs)
             story.append(Spacer(1, 0.1*inch))
         
-        # 8. PIE DE PÁGINA
+        # 8. PIE DE PGINA
         story.append(Spacer(1, 0.2*inch))
-        footer_text = f"Generado el {datetime.now().strftime('%d/%m/%Y a las %H:%M:%S')} | KALLPA Sistema de Gestión"
+        footer_text = f"Generado el {datetime.now().strftime('%d/%m/%Y a las %H:%M:%S')} | KALLPA Sistema de Gestin"
         footer_paragraph = Paragraph(footer_text, ParagraphStyle(
             'Footer',
             parent=styles['Normal'],

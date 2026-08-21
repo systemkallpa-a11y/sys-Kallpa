@@ -1,8 +1,8 @@
 """
 Module: pdf_helpers.py
-Propósito: Funciones auxiliares para generar PDFs estructurados
+Propsito: Funciones auxiliares para generar PDFs estructurados
 Fecha: 20 Julio 2026
-Descripción: Proporciona funciones modulares para crear secciones del PDF
+Descripcin: Proporciona funciones modulares para crear secciones del PDF
 """
 
 # Importar reportlab de forma opcional
@@ -21,12 +21,12 @@ import os
 
 
 # ============================================================================
-# CONSTANTE GLOBAL: ANCHO ESTÁNDAR DE TABLAS
+# CONSTANTE GLOBAL: ANCHO ESTNDAR DE TABLAS
 # ============================================================================
-ANCHO_TABLA_ESTANDAR = 8.0*inch  # Todas las secciones usan este ancho para alineación perfecta
+ANCHO_TABLA_ESTANDAR = 8.0*inch  # Todas las secciones usan este ancho para alineacin perfecta
 
 # ============================================================================
-# CLASE: PDFStyles - Gestión centralizada de estilos y colores
+# CLASE: PDFStyles - Gestin centralizada de estilos y colores
 # ============================================================================
 
 class PDFStyles:
@@ -101,19 +101,19 @@ class PDFStyles:
 
 
 # ============================================================================
-# FUNCIÓN: Crear Encabezado con Logo
+# FUNCIN: Crear Encabezado con Logo
 # ============================================================================
 
 def crear_encabezado(logo_path, styles):
     """
-    Crea tabla de encabezado con logo + título
+    Crea tabla de encabezado con logo + ttulo
     
     Args:
         logo_path (str): Ruta al archivo de logo
         styles (dict): Diccionario de estilos
         
     Returns:
-        Table: Tabla formateada con logo y título
+        Table: Tabla formateada con logo y ttulo
     """
     header_data = []
     
@@ -123,17 +123,17 @@ def crear_encabezado(logo_path, styles):
             header_data.append([
                 logo,
                 Paragraph(
-                    "<b>KALLPA</b><br/><font size=9>Sistema de Gestión de Presupuestos</font>",
+                    "<b>KALLPA</b><br/><font size=9>Sistema de Gestin de Presupuestos</font>",
                     styles['header']
                 )
             ])
         except:
             header_data.append([
-                Paragraph("<b>KALLPA</b><br/><font size=9>Sistema de Gestión</font>", styles['header'])
+                Paragraph("<b>KALLPA</b><br/><font size=9>Sistema de Gestin</font>", styles['header'])
             ])
     else:
         header_data.append([
-            Paragraph("<b>KALLPA</b><br/><font size=9>Sistema de Gestión</font>", styles['header'])
+            Paragraph("<b>KALLPA</b><br/><font size=9>Sistema de Gestin</font>", styles['header'])
         ])
     
     header_table = Table(header_data, colWidths=[1.2*inch, 6.15*inch])
@@ -150,24 +150,24 @@ def crear_encabezado(logo_path, styles):
 
 
 # ============================================================================
-# FUNCIÓN: Crear Información del Presupuesto
+# FUNCIN: Crear Informacin del Presupuesto
 # ============================================================================
 
 def crear_info_presupuesto(presupuesto, styles):
     """
-    Crea tabla con información general del presupuesto
+    Crea tabla con informacin general del presupuesto
     
     Args:
         presupuesto (dict): Datos del presupuesto
         styles (dict): Diccionario de estilos
         
     Returns:
-        Table: Tabla con información estructurada
+        Table: Tabla con informacin estructurada
     """
     # Usar Paragraph para renderizar HTML correctamente
     info_data = [
         [
-            Paragraph("<b>NÚMERO:</b>", styles['normal']),
+            Paragraph("<b>NMERO:</b>", styles['normal']),
             Paragraph(f"{presupuesto['numero_presupuesto']}", styles['normal']),
             Paragraph("<b>ESTADO:</b>", styles['normal']),
             Paragraph(f"{presupuesto['estado']}", styles['normal']),
@@ -179,13 +179,13 @@ def crear_info_presupuesto(presupuesto, styles):
             Paragraph(f"{presupuesto.get('nombre_proyecto', 'N/A')}", styles['normal']),
             Paragraph("<b>OBRA:</b>", styles['normal']),
             Paragraph(f"{presupuesto.get('nombre_obra', 'N/A')}", styles['normal']),
-            "",  # Celda que se fusionará
-            ""   # Celda que se fusionará
+            "",  # Celda que se fusionar
+            ""   # Celda que se fusionar
         ],
     ]
     
     # Anchos ajustados para usar ANCHO_TABLA_ESTANDAR (8.0")
-    # Distribución: 6 columnas con proporciones equilibradas
+    # Distribucin: 6 columnas con proporciones equilibradas
     col_widths = [
         0.8*inch,   # Etiqueta 1
         1.86*inch,  # Valor 1
@@ -197,7 +197,7 @@ def crear_info_presupuesto(presupuesto, styles):
     
     info_table = Table(info_data, colWidths=col_widths)
     info_table.setStyle(TableStyle([
-        # ⭐ FUSIONAR CELDAS para OBRA (columnas 3-5 de la fila 1)
+        #  FUSIONAR CELDAS para OBRA (columnas 3-5 de la fila 1)
         ('SPAN', (3, 1), (5, 1)),  # La celda de OBRA ocupa 3 columnas
         
         # Etiquetas (columnas pares: 0, 2, 4)
@@ -229,12 +229,12 @@ def crear_info_presupuesto(presupuesto, styles):
 
 
 # ============================================================================
-# FUNCIÓN: Crear Información del Responsable
+# FUNCIN: Crear Informacin del Responsable
 # ============================================================================
 
 def crear_responsable(presupuesto, styles):
     """
-    Crea tabla con información del usuario responsable
+    Crea tabla con informacin del usuario responsable
     
     Args:
         presupuesto (dict): Datos del presupuesto
@@ -264,7 +264,7 @@ def crear_responsable(presupuesto, styles):
         Paragraph(nombre_completo or 'N/A', styles['normal']),
         Paragraph("<b>Email:</b>", styles['normal']),
         Paragraph(presupuesto.get('usuario_email', 'N/A'), styles['normal']),
-        Paragraph("<b>Teléfono:</b>", styles['normal']),
+        Paragraph("<b>Telfono:</b>", styles['normal']),
         Paragraph(presupuesto.get('usuario_celular', 'N/A'), styles['normal']),
     ]]
     
@@ -300,7 +300,7 @@ def crear_responsable(presupuesto, styles):
 
 
 # ============================================================================
-# FUNCIÓN: Crear Tabla de Materiales
+# FUNCIN: Crear Tabla de Materiales
 # ============================================================================
 
 def crear_tabla_materiales(materiales, styles):
@@ -312,12 +312,12 @@ def crear_tabla_materiales(materiales, styles):
         styles (dict): Diccionario de estilos
         
     Returns:
-        tuple: (header_table, materiales_table) o (None, None) si está vacía
+        tuple: (header_table, materiales_table) o (None, None) si est vaca
     """
     if not materiales:
         return None, None
     
-    # Encabezado - Usar ancho estándar para alineación perfecta
+    # Encabezado - Usar ancho estndar para alineacin perfecta
     header_data = [['DETALLE DE MATERIALES']]
     header_table = Table(header_data, colWidths=[ANCHO_TABLA_ESTANDAR])
     header_table.setStyle(TableStyle([
@@ -331,9 +331,9 @@ def crear_tabla_materiales(materiales, styles):
     ]))
     
     # Tabla de materiales - Ajustada para usar todo el ancho (8.0")
-    mat_data = [['#', 'Material', 'Categoría', 'Unidad', 'Cantidad', 'P. Unit.', 'Subtotal']]
+    mat_data = [['#', 'Material', 'Categora', 'Unidad', 'Cantidad', 'P. Unit.', 'Subtotal']]
     
-    # Estilo para textos largos con word wrap - Fuente más pequeña
+    # Estilo para textos largos con word wrap - Fuente ms pequea
     text_style = ParagraphStyle(
         'MaterialText',
         parent=styles['normal'],
@@ -358,7 +358,7 @@ def crear_tabla_materiales(materiales, styles):
         ])
     
     # Anchos optimizados para usar todo el ancho (8.0")
-    # #: 0.35" | Material: 2.75" | Categoría: 1.6" | Unidad: 0.7" | Cantidad: 0.9" | P.Unit: 1.0" | Subtotal: 0.7"
+    # #: 0.35" | Material: 2.75" | Categora: 1.6" | Unidad: 0.7" | Cantidad: 0.9" | P.Unit: 1.0" | Subtotal: 0.7"
     mat_table = Table(mat_data, colWidths=[0.35*inch, 2.75*inch, 1.6*inch, 0.7*inch, 0.9*inch, 1.0*inch, 0.7*inch])
     mat_table.setStyle(TableStyle([
         # Encabezado
@@ -376,10 +376,10 @@ def crear_tabla_materiales(materiales, styles):
         ('FONTNAME', (1, 1), (-1, -1), 'Helvetica'),
         ('FONTSIZE', (0, 1), (-1, -1), 7),  # Reducido de 8 a 7
         
-        # Alineación
-        ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # # (índice)
-        ('VALIGN', (0, 1), (-1, -1), 'TOP'),   # Alineación vertical superior
-        ('ALIGN', (1, 1), (3, -1), 'LEFT'),    # Material, Categoría, Unidad
+        # Alineacin
+        ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # # (ndice)
+        ('VALIGN', (0, 1), (-1, -1), 'TOP'),   # Alineacin vertical superior
+        ('ALIGN', (1, 1), (3, -1), 'LEFT'),    # Material, Categora, Unidad
         ('ALIGN', (4, 1), (4, -1), 'CENTER'),  # Cantidad - CENTRADO
         ('ALIGN', (5, 1), (5, -1), 'CENTER'),  # P. Unit. - CENTRADO
         ('ALIGN', (6, 1), (6, -1), 'CENTER'),  # Subtotal - CENTRADO
@@ -390,7 +390,7 @@ def crear_tabla_materiales(materiales, styles):
         # Bordes
         ('GRID', (0, 0), (-1, -1), 0.5, PDFStyles.BORDER_COLOR),
         
-        # Espaciado reducido para más profesional
+        # Espaciado reducido para ms profesional
         ('TOPPADDING', (0, 1), (-1, -1), 4),
         ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
         ('LEFTPADDING', (0, 0), (-1, -1), 4),
@@ -401,7 +401,7 @@ def crear_tabla_materiales(materiales, styles):
 
 
 # ============================================================================
-# FUNCIÓN: Crear Tabla de Servicios
+# FUNCIN: Crear Tabla de Servicios
 # ============================================================================
 
 def crear_tabla_servicios(servicios, styles):
@@ -413,12 +413,12 @@ def crear_tabla_servicios(servicios, styles):
         styles (dict): Diccionario de estilos
         
     Returns:
-        tuple: (header_table, servicios_table) o (None, None) si está vacía
+        tuple: (header_table, servicios_table) o (None, None) si est vaca
     """
     if not servicios:
         return None, None
     
-    # Encabezado - Usar ancho estándar para alineación perfecta
+    # Encabezado - Usar ancho estndar para alineacin perfecta
     header_data = [['DETALLE DE SERVICIOS']]
     header_table = Table(header_data, colWidths=[ANCHO_TABLA_ESTANDAR])
     header_table.setStyle(TableStyle([
@@ -432,9 +432,9 @@ def crear_tabla_servicios(servicios, styles):
     ]))
     
     # Tabla de servicios - Ajustada para usar todo el ancho (8.0")
-    svc_data = [['#', 'Descripción', 'Cantidad', 'P. Unit.', 'Subtotal']]
+    svc_data = [['#', 'Descripcin', 'Cantidad', 'P. Unit.', 'Subtotal']]
     
-    # Estilo para descripciones largas con word wrap - Fuente más pequeña
+    # Estilo para descripciones largas con word wrap - Fuente ms pequea
     text_style = ParagraphStyle(
         'ServiceText',
         parent=styles['normal'],
@@ -444,7 +444,7 @@ def crear_tabla_servicios(servicios, styles):
     )
     
     for idx, servicio in enumerate(servicios, 1):
-        # Usar Paragraph para descripción larga que necesita word wrap
+        # Usar Paragraph para descripcin larga que necesita word wrap
         descripcion = Paragraph(servicio.get('servicio_nombre', 'N/A'), text_style)
         
         svc_data.append([
@@ -456,7 +456,7 @@ def crear_tabla_servicios(servicios, styles):
         ])
     
     # Anchos optimizados para usar todo el ancho (8.0")
-    # #: 0.35" | Descripción: 5.2" | Cantidad: 0.95" | P.Unit: 0.8" | Subtotal: 0.7"
+    # #: 0.35" | Descripcin: 5.2" | Cantidad: 0.95" | P.Unit: 0.8" | Subtotal: 0.7"
     svc_table = Table(svc_data, colWidths=[0.35*inch, 5.2*inch, 0.95*inch, 0.8*inch, 0.7*inch])
     svc_table.setStyle(TableStyle([
         # Encabezado
@@ -474,10 +474,10 @@ def crear_tabla_servicios(servicios, styles):
         ('FONTNAME', (1, 1), (-1, -1), 'Helvetica'),
         ('FONTSIZE', (0, 1), (-1, -1), 7),  # Reducido de 8 a 7
         
-        # Alineación
-        ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # # (índice)
-        ('VALIGN', (0, 1), (-1, -1), 'TOP'),   # Alineación vertical superior
-        ('ALIGN', (1, 1), (1, -1), 'LEFT'),    # Descripción
+        # Alineacin
+        ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # # (ndice)
+        ('VALIGN', (0, 1), (-1, -1), 'TOP'),   # Alineacin vertical superior
+        ('ALIGN', (1, 1), (1, -1), 'LEFT'),    # Descripcin
         ('ALIGN', (2, 1), (2, -1), 'CENTER'),  # Cantidad - CENTRADO
         ('ALIGN', (3, 1), (3, -1), 'CENTER'),  # P. Unit. - CENTRADO
         ('ALIGN', (4, 1), (4, -1), 'CENTER'),  # Subtotal - CENTRADO
@@ -488,7 +488,7 @@ def crear_tabla_servicios(servicios, styles):
         # Bordes
         ('GRID', (0, 0), (-1, -1), 0.5, PDFStyles.BORDER_COLOR),
         
-        # Espaciado reducido para más profesional
+        # Espaciado reducido para ms profesional
         ('TOPPADDING', (0, 1), (-1, -1), 4),
         ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
         ('LEFTPADDING', (0, 0), (-1, -1), 4),
@@ -499,7 +499,7 @@ def crear_tabla_servicios(servicios, styles):
 
 
 # ============================================================================
-# FUNCIÓN: Crear Desglose Financiero Mejorado con Estructura Completa
+# FUNCIN: Crear Desglose Financiero Mejorado con Estructura Completa
 # ============================================================================
 
 def crear_desglose_financiero(presupuesto, materiales, servicios, styles):
@@ -512,8 +512,8 @@ def crear_desglose_financiero(presupuesto, materiales, servicios, styles):
     - Utilidad
     - SUB TOTAL (Costos Directos + GG + Utilidad)
     - IGV
-    - Supervisión Obra
-    - PRESUPUESTO DE EJECUCIÓN (SubTotal + IGV + Supervisión)
+    - Supervisin Obra
+    - PRESUPUESTO DE EJECUCIN (SubTotal + IGV + Supervisin)
     
     Args:
         presupuesto (dict): Datos del presupuesto con campos desglose
@@ -565,10 +565,10 @@ def crear_desglose_financiero(presupuesto, materiales, servicios, styles):
         ['SUB TOTAL', '-', f"S/. {subtotal:,.2f}"],
         # IGV
         ['IGV', '18%', f"S/. {igv:,.2f}"],
-        # Supervisión
-        ['Supervisión de Obra', '5%', f"S/. {supervision_obra:,.2f}"],
-        # Presupuesto de Ejecución
-        ['PRESUPUESTO DE EJECUCIÓN DE OBRA', '-', f"S/. {presupuesto_ejecucion:,.2f}"],
+        # Supervisin
+        ['Supervisin de Obra', '5%', f"S/. {supervision_obra:,.2f}"],
+        # Presupuesto de Ejecucin
+        ['PRESUPUESTO DE EJECUCIN DE OBRA', '-', f"S/. {presupuesto_ejecucion:,.2f}"],
     ]
     
     # Anchos ajustados para usar 8.0" total
@@ -599,17 +599,17 @@ def crear_desglose_financiero(presupuesto, materiales, servicios, styles):
         ('FONTNAME', (0, 4), (-1, 4), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 4), (-1, 4), 10),
         
-        # ====== FILAS 5-6: IGV y Supervisión (Naranja claro) ======
+        # ====== FILAS 5-6: IGV y Supervisin (Naranja claro) ======
         ('BACKGROUND', (0, 5), (-1, 6), PDFStyles.LIGHT_ACCENT),
         ('FONTNAME', (0, 5), (-1, 6), 'Helvetica'),
         
-        # ====== FILA 7: PRESUPUESTO DE EJECUCIÓN (Verde oscuro) ======
+        # ====== FILA 7: PRESUPUESTO DE EJECUCIN (Verde oscuro) ======
         ('BACKGROUND', (0, 7), (-1, 7), PDFStyles.PRIMARY_COLOR),
         ('TEXTCOLOR', (0, 7), (-1, 7), colors.white),
         ('FONTNAME', (0, 7), (-1, 7), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 7), (-1, 7), 11),
         
-        # ====== ALINEACIÓN ======
+        # ====== ALINEACIN ======
         ('ALIGN', (0, 0), (0, -1), 'LEFT'),           # Concepto izquierda
         ('ALIGN', (1, 0), (1, -1), 'CENTER'),         # Porcentaje centro
         ('ALIGN', (2, 0), (2, -1), 'RIGHT'),          # Monto derecha
@@ -632,12 +632,12 @@ def crear_desglose_financiero(presupuesto, materiales, servicios, styles):
 
 
 # ============================================================================
-# FUNCIÓN: Crear Observaciones
+# FUNCIN: Crear Observaciones
 # ============================================================================
 
 def crear_observaciones(presupuesto, styles):
     """
-    Crea sección de observaciones si existen
+    Crea seccin de observaciones si existen
     
     Args:
         presupuesto (dict): Datos del presupuesto
@@ -649,7 +649,7 @@ def crear_observaciones(presupuesto, styles):
     if not presupuesto.get('observaciones'):
         return None, None
     
-    # Encabezado - Usar ancho estándar para alineación perfecta
+    # Encabezado - Usar ancho estndar para alineacin perfecta
     header_data = [['OBSERVACIONES']]
     header_table = Table(header_data, colWidths=[ANCHO_TABLA_ESTANDAR])
     header_table.setStyle(TableStyle([
@@ -680,20 +680,20 @@ def crear_observaciones(presupuesto, styles):
 
 
 # ============================================================================
-# FUNCIÓN: Crear Footer
+# FUNCIN: Crear Footer
 # ============================================================================
 
 def crear_footer(styles):
     """
-    Crea pie de página con información de generación
+    Crea pie de pgina con informacin de generacin
     
     Args:
         styles (dict): Diccionario de estilos
         
     Returns:
-        Paragraph: Párrafo con información del footer
+        Paragraph: Prrafo con informacin del footer
     """
-    footer_text = f"Generado el {datetime.now().strftime('%d/%m/%Y a las %H:%M:%S')} | KALLPA Sistema de Gestión"
+    footer_text = f"Generado el {datetime.now().strftime('%d/%m/%Y a las %H:%M:%S')} | KALLPA Sistema de Gestin"
     return Paragraph(footer_text, styles['footer'])
 
 

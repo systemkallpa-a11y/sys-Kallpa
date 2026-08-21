@@ -8,7 +8,7 @@ from app.config import DatabaseConfig
 from .main import validar_acceso_usuario
 
 def get_db_connection():
-    """Crear conexión a la base de datos Kallpa"""
+    """Crear conexin a la base de datos Kallpa"""
     try:
         params = DatabaseConfig.get_connection_params()
         connection = mysql.connector.connect(**params)
@@ -17,11 +17,11 @@ def get_db_connection():
         cursor.close()
         return connection
     except Error as e:
-        print(f"Error de conexión: {e}")
+        print(f"Error de conexin: {e}")
         return None
 
 def guardar_horarios_usuario(connection, num_documento, horarios):
-    """Guardar o actualizar horarios de trabajo de un usuario (con 2 turnos por día)"""
+    """Guardar o actualizar horarios de trabajo de un usuario (con 2 turnos por da)"""
     try:
         cursor = connection.cursor()
         
@@ -40,7 +40,7 @@ def guardar_horarios_usuario(connection, num_documento, horarios):
             es_activo = horario['es_activo']
             dia_semana = horario['dia_semana']
             
-            # Si es día laboral
+            # Si es da laboral
             if es_activo == 1:
                 # Turno 1
                 cursor.execute("""
@@ -65,7 +65,7 @@ def guardar_horarios_usuario(connection, num_documento, horarios):
                 ))
                 print(f"[HORARIOS]   - {dia_semana}: T1={horario['hora_entrada']}-{horario['hora_salida']} T2={horario['hora_entrada2']}-{horario['hora_salida2']}")
             else:
-                # Día libre (sin turnos)
+                # Da libre (sin turnos)
                 cursor.execute("""
                     INSERT INTO TblHorarioTrabajo (
                         num_documento,
@@ -93,18 +93,18 @@ def guardar_horarios_usuario(connection, num_documento, horarios):
         return False
 
 def hash_password(password):
-    """Encriptar contraseña usando SHA-256"""
+    """Encriptar contrasea usando SHA-256"""
     return hashlib.sha256(password.encode()).hexdigest()
 
-# Decorador para requerir autenticación
+# Decorador para requerir autenticacin
 def login_required(f):
-    """Decorador para proteger rutas que requieren autenticación"""
+    """Decorador para proteger rutas que requieren autenticacin"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_documento' not in session and 'user_email' not in session:
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return {'success': False, 'message': 'No autenticado'}, 401
-            flash('Debes iniciar sesión', 'warning')
+            flash('Debes iniciar sesin', 'warning')
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -112,13 +112,13 @@ def login_required(f):
 @main_bp.route('/usuarios')
 @login_required
 def usuarios():
-    """Página de gestión de usuarios"""
-    # Validar que el usuario tenga acceso a Gestión de Usuarios
+    """Pgina de gestin de usuarios"""
+    # Validar que el usuario tenga acceso a Gestin de Usuarios
     num_documento = session.get('user_documento')
     
-    # ID 1 = RR.HH, ID 1 = Usuario (submenú específico)
+    # ID 1 = RR.HH, ID 1 = Usuario (submen especfico)
     if not validar_acceso_usuario(num_documento, id_menu=1, id_submenu=1):
-        flash('No tienes acceso a Gestión de Usuarios', 'danger')
+        flash('No tienes acceso a Gestin de Usuarios', 'danger')
         return redirect(url_for('main.dashboard'))
     
     return render_template('usuarios.html')
@@ -129,7 +129,7 @@ def obtener_usuarios():
     """Obtener lista de todos los usuarios usando SP"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -155,7 +155,7 @@ def obtener_usuario(id_usuario):
     """Obtener datos COMPLETOS de un usuario para el modal Editar"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -203,7 +203,7 @@ def obtener_usuario(id_usuario):
         # Retornar usuario + horarios
         usuario['horarios'] = horarios
         
-        # Definir función para convertir recursivamente cualquier timedelta a string HH:MM
+        # Definir funcin para convertir recursivamente cualquier timedelta a string HH:MM
         def convert_timedelta(obj):
             """Convierte recursivamente timedeltas a strings HH:MM en dicts y listas"""
             if isinstance(obj, dict):
@@ -218,10 +218,10 @@ def obtener_usuario(id_usuario):
             else:
                 return obj
         
-        # Aplicar conversión recursiva a toda la estructura (usuario + horarios)
+        # Aplicar conversin recursiva a toda la estructura (usuario + horarios)
         usuario = convert_timedelta(usuario)
         
-        # Mostrar horarios en logs después de la conversión
+        # Mostrar horarios en logs despus de la conversin
         print(f"[HORARIOS DE TRABAJO]:")
         print(f"{'='*80}")
         if usuario.get('horarios'):
@@ -233,7 +233,7 @@ def obtener_usuario(id_usuario):
         return jsonify({'success': True, 'data': usuario}), 200
     
     except Error as e:
-        print(f"[SP_OBTENER_USUARIO_COMPLETO] ❌ Error SQL: {e}")
+        print(f"[SP_OBTENER_USUARIO_COMPLETO] [X] Error SQL: {e}")
         print(f"{'='*80}\n")
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -253,13 +253,13 @@ def crear_usuario():
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         try:
             cursor = connection.cursor(dictionary=True)
             
-            # Llamar SP - genera usuario y contraseña automáticamente + horarios
-            # Preparar horarios como parámetros individuales (5 por día: activo, entrada, salida, entrada2, salida2)
+            # Llamar SP - genera usuario y contrasea automticamente + horarios
+            # Preparar horarios como parmetros individuales (5 por da: activo, entrada, salida, entrada2, salida2)
             horarios = data.get('horarios', [])
             horarios_params = []
             
@@ -272,7 +272,7 @@ def crear_usuario():
                 horarios_params.append(horario.get('hora_salida2') if horario['es_activo'] == 1 else None)
                 print(f"  [{i}] {horario['dia_semana']}: T1={horario['hora_entrada']}-{horario['hora_salida']} T2={horario.get('hora_entrada2')}-{horario.get('hora_salida2')} activo={horario['es_activo']}")
             
-            # Crear lista de parámetros completa: usuario + 5*7 horarios
+            # Crear lista de parmetros completa: usuario + 5*7 horarios
             all_params = [
                 data['documento_numero'],
                 data.get('tipo_documento', 'DNI'),
@@ -290,11 +290,11 @@ def crear_usuario():
                 data['id_empresa'],
             ] + horarios_params
             
-            print(f"[CREAR_USUARIO] [TOTAL] Total de parámetros: {len(all_params)}")
+            print(f"[CREAR_USUARIO] [TOTAL] Total de parmetros: {len(all_params)}")
             print(f"[CREAR_USUARIO] [DESG] Desglose: 14 (usuario) + {len(horarios_params)} (horarios 5x7) = {len(all_params)}")
             
-            # Construir dinámicamente el CALL con los parámetros correctos
-            # 14 parámetros de usuario + 35 de horarios (5 * 7 días) = 49 IN params
+            # Construir dinmicamente el CALL con los parmetros correctos
+            # 14 parmetros de usuario + 35 de horarios (5 * 7 das) = 49 IN params
             placeholders = ', '.join(['%s'] * len(all_params))
             
             cursor.execute(f"""
@@ -348,7 +348,7 @@ def actualizar_usuario(id_usuario):
         data = request.get_json()
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         cursor = connection.cursor(dictionary=True)
         
@@ -435,7 +435,7 @@ def eliminar_usuario(id_usuario):
     try:
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         cursor = connection.cursor()
         
@@ -476,7 +476,7 @@ def obtener_cargos():
     """Obtener lista de cargos disponibles usando SP"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -497,10 +497,10 @@ def obtener_cargos():
 @main_bp.route('/api/areas/obtener', methods=['GET'])
 @login_required
 def obtener_areas():
-    """Obtener lista de áreas disponibles usando SP"""
+    """Obtener lista de reas disponibles usando SP"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -512,7 +512,7 @@ def obtener_areas():
         for result in cursor.stored_results():
             areas = result.fetchall()
         
-        print(f"[BACKEND] [OK] Áreas obtenidas: {len(areas)} registros")
+        print(f"[BACKEND] [OK] reas obtenidas: {len(areas)} registros")
         if areas:
             for a in areas[:3]:
                 print(f"[BACKEND]   - {a}")
@@ -520,20 +520,20 @@ def obtener_areas():
         cursor.close()
         connection.close()
         
-        print(f"[BACKEND] [SEND] Retornando: success=True, data={len(areas)} áreas")
+        print(f"[BACKEND] [SEND] Retornando: success=True, data={len(areas)} reas")
         return jsonify({'success': True, 'data': areas}), 200
     
     except Error as e:
-        print(f"[BACKEND] [ERROR] Error al obtener áreas: {e}")
+        print(f"[BACKEND] [ERROR] Error al obtener reas: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @main_bp.route('/api/cargos/por-area/<int:id_area>', methods=['GET'])
 @login_required
 def obtener_cargos_por_area(id_area):
-    """Obtener cargos de un área específica usando SP"""
+    """Obtener cargos de un rea especfica usando SP"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -545,7 +545,7 @@ def obtener_cargos_por_area(id_area):
         for result in cursor.stored_results():
             cargos = result.fetchall()
         
-        print(f"[BACKEND] [OK] Cargos obtenidos: {len(cargos)} registros para área {id_area}")
+        print(f"[BACKEND] [OK] Cargos obtenidos: {len(cargos)} registros para rea {id_area}")
         if cargos:
             for c in cargos[:3]:
                 print(f"[BACKEND]   - {c}")
@@ -557,7 +557,7 @@ def obtener_cargos_por_area(id_area):
         return jsonify({'success': True, 'data': cargos}), 200
     
     except Error as e:
-        print(f"[BACKEND] [ERROR] Error al obtener cargos por área: {e}")
+        print(f"[BACKEND] [ERROR] Error al obtener cargos por rea: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @main_bp.route('/api/empresas/listar', methods=['GET'])
@@ -566,7 +566,7 @@ def obtener_empresas_modal():
     """Obtener lista de empresas disponibles para el modal usando SP"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -600,7 +600,7 @@ def obtener_departamentos():
     """Obtener lista de departamentos"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -623,10 +623,10 @@ def obtener_departamentos():
 @main_bp.route('/api/ubicacion/provincias/<int:id_departamento>', methods=['GET'])
 @login_required
 def obtener_provincias(id_departamento):
-    """Obtener provincias de un departamento específico"""
+    """Obtener provincias de un departamento especfico"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -649,10 +649,10 @@ def obtener_provincias(id_departamento):
 @main_bp.route('/api/ubicacion/distritos/<int:id_provincia>', methods=['GET'])
 @login_required
 def obtener_distritos(id_provincia):
-    """Obtener distritos de una provincia específica"""
+    """Obtener distritos de una provincia especfica"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -674,16 +674,16 @@ def obtener_distritos(id_provincia):
 
 
 # ============================================================================
-# API: GESTIÓN DE UBICACIONES DE MARCACIÓN (CON STORED PROCEDURES)
+# API: GESTIN DE UBICACIONES DE MARCACIN (CON STORED PROCEDURES)
 # ============================================================================
 
 @main_bp.route('/api/ubicaciones/obtener/<int:num_documento>', methods=['GET'])
 @login_required
 def obtener_ubicaciones_usuario(num_documento):
-    """Obtener todas las ubicaciones de marcación de un usuario usando SP"""
+    """Obtener todas las ubicaciones de marcacin de un usuario usando SP"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -712,7 +712,7 @@ def obtener_ubicaciones_usuario(num_documento):
 @main_bp.route('/api/ubicaciones/crear', methods=['POST'])
 @login_required
 def crear_ubicacion_marcacion():
-    """Crear nueva ubicación de marcación usando SP"""
+    """Crear nueva ubicacin de marcacin usando SP"""
     try:
         data = request.get_json()
         
@@ -725,7 +725,7 @@ def crear_ubicacion_marcacion():
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         try:
             cursor = connection.cursor(dictionary=True)
@@ -733,7 +733,7 @@ def crear_ubicacion_marcacion():
             # Obtener usuario actual
             creado_por = session.get('user_documento')
             
-            print(f"[UBICACIONES] Creando ubicación para documento: {data['num_documento']}")
+            print(f"[UBICACIONES] Creando ubicacin para documento: {data['num_documento']}")
             print(f"[UBICACIONES] Nombre: {data['nombre_zona']}")
             print(f"[UBICACIONES] Centro: ({data['latitud_centro']}, {data['longitud_centro']})")
             print(f"[UBICACIONES] Radio: {data.get('radio_metros', 100)}m")
@@ -779,7 +779,7 @@ def crear_ubicacion_marcacion():
             else:
                 return jsonify({
                     'success': False,
-                    'error': resultado['mensaje'] if resultado else 'Error al crear ubicación'
+                    'error': resultado['mensaje'] if resultado else 'Error al crear ubicacin'
                 }), 400
         
         except Error as e:
@@ -795,18 +795,18 @@ def crear_ubicacion_marcacion():
 @main_bp.route('/api/ubicaciones/actualizar/<int:id_ubicacion>', methods=['PUT'])
 @login_required
 def actualizar_ubicacion_marcacion(id_ubicacion):
-    """Actualizar ubicación de marcación usando SP"""
+    """Actualizar ubicacin de marcacin usando SP"""
     try:
         data = request.get_json()
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         try:
             cursor = connection.cursor(dictionary=True)
             
-            print(f"[UBICACIONES] Actualizando ubicación ID: {id_ubicacion}")
+            print(f"[UBICACIONES] Actualizando ubicacin ID: {id_ubicacion}")
             print(f"[UBICACIONES] Nombre: {data['nombre_zona']}")
             
             # Llamar SP
@@ -842,7 +842,7 @@ def actualizar_ubicacion_marcacion(id_ubicacion):
             
             return jsonify({
                 'success': True,
-                'message': resultado['mensaje'] if resultado else 'Ubicación actualizada exitosamente'
+                'message': resultado['mensaje'] if resultado else 'Ubicacin actualizada exitosamente'
             }), 200
         
         except Error as e:
@@ -858,16 +858,16 @@ def actualizar_ubicacion_marcacion(id_ubicacion):
 @main_bp.route('/api/ubicaciones/eliminar/<int:id_ubicacion>', methods=['DELETE'])
 @login_required
 def eliminar_ubicacion_marcacion(id_ubicacion):
-    """Eliminar ubicación de marcación usando SP"""
+    """Eliminar ubicacin de marcacin usando SP"""
     try:
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         try:
             cursor = connection.cursor(dictionary=True)
             
-            print(f"[UBICACIONES] Eliminando ubicación ID: {id_ubicacion}")
+            print(f"[UBICACIONES] Eliminando ubicacin ID: {id_ubicacion}")
             
             # Llamar SP
             cursor.execute("""
@@ -889,7 +889,7 @@ def eliminar_ubicacion_marcacion(id_ubicacion):
             
             return jsonify({
                 'success': True,
-                'message': resultado['mensaje'] if resultado else 'Ubicación eliminada exitosamente'
+                'message': resultado['mensaje'] if resultado else 'Ubicacin eliminada exitosamente'
             }), 200
         
         except Error as e:

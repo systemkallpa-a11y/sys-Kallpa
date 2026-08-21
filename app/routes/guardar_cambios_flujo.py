@@ -1,8 +1,8 @@
 """
 ENDPOINT: POST /api/flujo-aprobacion/guardar-cambios-flujo
 
-Permite guardar múltiples cambios en un flujo de aprobación:
-- Agregar nuevos cargos en pasos específicos
+Permite guardar mltiples cambios en un flujo de aprobacin:
+- Agregar nuevos cargos en pasos especficos
 - Eliminar cargos existentes
 """
 
@@ -12,13 +12,13 @@ from mysql.connector import Error
 from app.config import DatabaseConfig
 
 def get_db_connection():
-    """Crear conexión a la base de datos Kallpa"""
+    """Crear conexin a la base de datos Kallpa"""
     try:
         params = DatabaseConfig.get_connection_params()
         connection = mysql.connector.connect(**params)
         return connection
     except Error as e:
-        print(f"Error de conexión: {e}")
+        print(f"Error de conexin: {e}")
         return None
 
 def guardar_cambios_flujo():
@@ -58,21 +58,21 @@ def guardar_cambios_flujo():
         cargos_agregar = datos.get('cargos_agregados', [])
         cargos_eliminar = datos.get('cargos_eliminados', [])
         
-        print(f"[GUARDAR_CAMBIOS_FLUJO] Parámetros:")
+        print(f"[GUARDAR_CAMBIOS_FLUJO] Parmetros:")
         print(f"  - Tipo documento: {id_tipo_documento}")
         print(f"  - Cargos a agregar: {len(cargos_agregar)}")
         print(f"  - Cargos a eliminar: {len(cargos_eliminar)}")
         
-        # Validar parámetros
+        # Validar parmetros
         if not id_tipo_documento:
             return jsonify({
                 'success': False,
-                'error': 'Parámetro requerido: id_tipo_documento'
+                'error': 'Parmetro requerido: id_tipo_documento'
             }), 400
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         cursor = connection.cursor(dictionary=True)
         
@@ -103,12 +103,12 @@ def guardar_cambios_flujo():
                             resultado = rows[0]
                             if resultado.get('resultado') == 'OK':
                                 contador_eliminados += 1
-                                print(f"  ✓ Eliminado flujo {id_flujo_cargo}")
+                                print(f"  [OK] Eliminado flujo {id_flujo_cargo}")
                             else:
-                                print(f"  ⚠️ {resultado.get('mensaje')}")
+                                print(f"  [!] {resultado.get('mensaje')}")
                     
                 except Error as e:
-                    print(f"  ❌ Error al eliminar {id_flujo_cargo}: {e}")
+                    print(f"  [X] Error al eliminar {id_flujo_cargo}: {e}")
         
         # ====================================================================
         # PASO 2: AGREGAR NUEVOS CARGOS
@@ -135,7 +135,7 @@ def guardar_cambios_flujo():
                     ''', (id_tipo_documento, numero_paso, id_cargo))
                     
                     if cursor.fetchone():
-                        print(f"  ⚠️ Cargo {id_cargo} ya existe en paso {numero_paso}")
+                        print(f"  [!] Cargo {id_cargo} ya existe en paso {numero_paso}")
                         continue
                     
                     # Obtener nombre del paso si no viene
@@ -170,23 +170,23 @@ def guardar_cambios_flujo():
                     ))
                     
                     contador_agregados += 1
-                    print(f"  ✓ Agregado cargo {id_cargo} en paso {numero_paso}")
+                    print(f"  [OK] Agregado cargo {id_cargo} en paso {numero_paso}")
                     
                 except Error as e:
-                    print(f"  ❌ Error al agregar cargo {cargo.get('id_cargo')}: {e}")
+                    print(f"  [X] Error al agregar cargo {cargo.get('id_cargo')}: {e}")
         
         # Hacer commit de todos los cambios
         connection.commit()
         
-        print(f"[GUARDAR_CAMBIOS_FLUJO] ✓ Cambios guardados:")
+        print(f"[GUARDAR_CAMBIOS_FLUJO] [OK] Cambios guardados:")
         print(f"  - Cargos agregados: {contador_agregados}")
         print(f"  - Cargos eliminados: {contador_eliminados}")
         
         # ====================================================================
-        # PASO 3: REINICIAR FLUJO DE APROBACIÓN EN PRESUPUESTOS PENDIENTE
+        # PASO 3: REINICIAR FLUJO DE APROBACIN EN PRESUPUESTOS PENDIENTE
         # ====================================================================
         
-        print(f"\n[GUARDAR_CAMBIOS_FLUJO] REINICIANDO FLUJO DE APROBACIÓN EN PRESUPUESTOS PENDIENTE...")
+        print(f"\n[GUARDAR_CAMBIOS_FLUJO] REINICIANDO FLUJO DE APROBACIN EN PRESUPUESTOS PENDIENTE...")
         
         contador_reiniciados = 0
         
@@ -202,35 +202,35 @@ def guardar_cambios_flujo():
             presupuestos_pendiente = cursor.fetchall()
             
             if presupuestos_pendiente:
-                print(f"  • Encontrados {len(presupuestos_pendiente)} presupuesto(s) PENDIENTE")
+                print(f"   Encontrados {len(presupuestos_pendiente)} presupuesto(s) PENDIENTE")
                 
                 for row in presupuestos_pendiente:
                     id_presupuesto = row['id_presupuesto']
                     
                     try:
-                        # Eliminar todos los registros de aprobación para reiniciar el flujo
+                        # Eliminar todos los registros de aprobacin para reiniciar el flujo
                         # Esto hace que el presupuesto vuelva a empezar desde el Paso 1
-                        # con la nueva configuración del flujo
+                        # con la nueva configuracin del flujo
                         cursor.execute('''
                             DELETE FROM TblRegistroAprobacion
                             WHERE id_presupuesto = %s
                         ''', (id_presupuesto,))
                         
                         contador_reiniciados += 1
-                        print(f"  ✓ Flujo reiniciado en presupuesto {id_presupuesto}")
+                        print(f"  [OK] Flujo reiniciado en presupuesto {id_presupuesto}")
                         
                     except Error as e:
-                        print(f"  ⚠️ Error al reiniciar presupuesto {id_presupuesto}: {e}")
+                        print(f"  [!] Error al reiniciar presupuesto {id_presupuesto}: {e}")
                         # Continuar con el siguiente
                 
                 connection.commit()
                 
-                print(f"  ✓ Flujos reiniciados: {contador_reiniciados}/{len(presupuestos_pendiente)}")
+                print(f"  [OK] Flujos reiniciados: {contador_reiniciados}/{len(presupuestos_pendiente)}")
             else:
-                print(f"  ℹ️ No hay presupuestos PENDIENTE con este tipo de documento")
+                print(f"   No hay presupuestos PENDIENTE con este tipo de documento")
         
         except Error as e:
-            print(f"  ❌ Error al reiniciar flujos: {e}")
+            print(f"  [X] Error al reiniciar flujos: {e}")
             # No fallar el endpoint, pero advertir
         
         cursor.close()
@@ -261,6 +261,6 @@ def guardar_cambios_flujo():
         }), 200
     
     except Exception as e:
-        print(f"[GUARDAR_CAMBIOS_FLUJO] ❌ ERROR: {str(e)}")
+        print(f"[GUARDAR_CAMBIOS_FLUJO] [X] ERROR: {str(e)}")
         print(f"{'='*80}\n")
         return jsonify({'success': False, 'error': str(e)}), 500

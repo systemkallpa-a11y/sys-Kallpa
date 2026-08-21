@@ -1,7 +1,7 @@
 # ==============================================================================
 # RUTAS: MATERIALES
 # ==============================================================================
-# Descripción: Endpoints para gestionar materiales
+# Descripcin: Endpoints para gestionar materiales
 # Fecha: 31 Julio 2026
 # ==============================================================================
 
@@ -13,10 +13,10 @@ from app.config import DatabaseConfig
 materiales_bp = Blueprint('materiales', __name__)
 
 # ==============================================================================
-# Función auxiliar: Obtener conexión a la base de datos
+# Funcin auxiliar: Obtener conexin a la base de datos
 # ==============================================================================
 def get_db_connection():
-    """Crear conexión a MySQL usando DatabaseConfig"""
+    """Crear conexin a MySQL usando DatabaseConfig"""
     params = DatabaseConfig.get_connection_params()
     return mysql.connector.connect(**params)
 
@@ -26,7 +26,7 @@ def get_db_connection():
 @materiales_bp.route('/api/materiales/crear', methods=['POST'])
 def crear_material():
     """
-    Crea un nuevo material en TblMateriales usando SP que genera código automáticamente
+    Crea un nuevo material en TblMateriales usando SP que genera cdigo automticamente
     """
     try:
         data = request.json
@@ -42,7 +42,7 @@ def crear_material():
         connection = get_db_connection()
         cursor = connection.cursor(dictionary=True)
         
-        # Preparar parámetros para el SP
+        # Preparar parmetros para el SP
         nombre = data['nombre']
         descripcion = data.get('descripcion')
         id_categoria = data.get('id_categoria')
@@ -60,7 +60,7 @@ def crear_material():
                 )
             """, (nombre, descripcion, id_categoria, id_unidad, observaciones))
         except Error as sp_error:
-            print(f"[CREAR_MATERIAL] ✗ Error al ejecutar SP: {sp_error}")
+            print(f"[CREAR_MATERIAL] [X] Error al ejecutar SP: {sp_error}")
             cursor.close()
             connection.close()
             return jsonify({
@@ -68,7 +68,7 @@ def crear_material():
                 'error': f'Error al ejecutar procedimiento almacenado: {str(sp_error)}'
             }), 500
         
-        # Obtener los parámetros OUT
+        # Obtener los parmetros OUT
         cursor.execute("SELECT @p_id_material_creado, @p_codigo_generado, @p_resultado")
         result = cursor.fetchone()
         
@@ -76,10 +76,10 @@ def crear_material():
         p_codigo_generado = result['@p_codigo_generado']
         p_resultado = result['@p_resultado']
         
-        print(f"[CREAR_MATERIAL] SP retornó:")
+        print(f"[CREAR_MATERIAL] SP retorn:")
         print(f"  - Resultado: {p_resultado}")
         print(f"  - ID creado: {p_id_material_creado}")
-        print(f"  - Código generado: {p_codigo_generado}")
+        print(f"  - Cdigo generado: {p_codigo_generado}")
         
         if p_resultado == 1:
             # Obtener el material creado con sus relaciones
@@ -104,7 +104,7 @@ def crear_material():
             cursor.close()
             connection.close()
             
-            print(f"[CREAR_MATERIAL] ✓ Material creado exitosamente")
+            print(f"[CREAR_MATERIAL] [OK] Material creado exitosamente")
             
             return jsonify({
                 'success': True,
@@ -115,7 +115,7 @@ def crear_material():
             cursor.close()
             connection.close()
             
-            print(f"[CREAR_MATERIAL] ✗ SP retornó error (resultado={p_resultado})")
+            print(f"[CREAR_MATERIAL] [X] SP retorn error (resultado={p_resultado})")
             
             return jsonify({
                 'success': False,
@@ -123,13 +123,13 @@ def crear_material():
             }), 500
         
     except Error as e:
-        print(f"[CREAR_MATERIAL] ✗ Error MySQL: {e}")
+        print(f"[CREAR_MATERIAL] [X] Error MySQL: {e}")
         return jsonify({
             'success': False,
             'error': f'Error de base de datos: {str(e)}'
         }), 500
     except Exception as e:
-        print(f"[CREAR_MATERIAL] ✗ Error: {e}")
+        print(f"[CREAR_MATERIAL] [X] Error: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -169,7 +169,7 @@ def obtener_unidades_medida():
         }), 200
         
     except Exception as e:
-        print(f"[OBTENER_UNIDADES] ✗ Error: {e}")
+        print(f"[OBTENER_UNIDADES] [X] Error: {e}")
         return jsonify({
             'success': False,
             'error': str(e)

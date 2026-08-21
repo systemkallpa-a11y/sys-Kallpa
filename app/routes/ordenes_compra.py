@@ -1,6 +1,6 @@
 """
 Module: ordenes_compra.py
-Propósito: Gestión de Órdenes de Compra
+Propsito: Gestin de rdenes de Compra
 Fecha: 30 Julio 2026
 """
 
@@ -16,24 +16,24 @@ import json
 
 
 def get_db_connection():
-    """Crear conexión a la base de datos Kallpa"""
+    """Crear conexin a la base de datos Kallpa"""
     try:
         params = DatabaseConfig.get_connection_params()
         connection = mysql.connector.connect(**params)
         return connection
     except Error as e:
-        print(f"Error de conexión: {e}")
+        print(f"Error de conexin: {e}")
         return None
 
 
 def login_required(f):
-    """Decorador para proteger rutas que requieren autenticación"""
+    """Decorador para proteger rutas que requieren autenticacin"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_documento' not in session and 'user_email' not in session:
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return {'success': False, 'message': 'No autenticado'}, 401
-            flash('Debes iniciar sesión', 'warning')
+            flash('Debes iniciar sesin', 'warning')
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -42,12 +42,12 @@ def login_required(f):
 @main_bp.route('/ordenes-compra')
 @login_required
 def ordenes_compra():
-    """Página de gestión de órdenes de compra"""
+    """Pgina de gestin de rdenes de compra"""
     num_documento = session.get('user_documento')
     
-    # Validar acceso a Órdenes de Compra (Menu 2, SubMenu 5)
+    # Validar acceso a rdenes de Compra (Menu 2, SubMenu 5)
     if not validar_acceso_usuario(num_documento, id_menu=2, id_submenu=5):
-        flash('No tienes acceso a Gestión de Órdenes de Compra', 'danger')
+        flash('No tienes acceso a Gestin de rdenes de Compra', 'danger')
         return redirect(url_for('main.dashboard'))
     
     return render_template('ordenes_compra.html')
@@ -56,10 +56,10 @@ def ordenes_compra():
 @main_bp.route('/api/ordenes-compra/requerimientos-aprobados', methods=['GET'])
 @login_required
 def obtener_requerimientos_aprobados():
-    """Obtener requerimientos aprobados para crear órdenes de compra"""
+    """Obtener requerimientos aprobados para crear rdenes de compra"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -75,7 +75,7 @@ def obtener_requerimientos_aprobados():
             requerimientos = result.fetchall()
             break
         
-        print(f"[ORDENES_COMPRA] ✓ {len(requerimientos) if requerimientos else 0} requerimientos aprobados obtenidos")
+        print(f"[ORDENES_COMPRA] [OK] {len(requerimientos) if requerimientos else 0} requerimientos aprobados obtenidos")
         
         cursor.close()
         connection.close()
@@ -89,17 +89,17 @@ def obtener_requerimientos_aprobados():
         return jsonify({'success': False, 'error': str(e)}), 500
 @login_required
 def obtener_ordenes_compra():
-    """Obtener lista de todas las órdenes de compra"""
+    """Obtener lista de todas las rdenes de compra"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
         
-        print(f"[ORDENES_COMPRA] [GET] Obteniendo lista de órdenes de compra...")
+        print(f"[ORDENES_COMPRA] [GET] Obteniendo lista de rdenes de compra...")
         
-        # Obtener órdenes de compra con información del requerimiento
+        # Obtener rdenes de compra con informacin del requerimiento
         query = """
             SELECT 
                 oc.id_orden_compra,
@@ -129,7 +129,7 @@ def obtener_ordenes_compra():
                 if orden.get('fecha_creacion'):
                     orden['fecha_creacion_formatted'] = orden['fecha_creacion'].strftime('%d/%m/%Y')
         
-        print(f"[ORDENES_COMPRA] ✓ {len(ordenes) if ordenes else 0} órdenes de compra obtenidas")
+        print(f"[ORDENES_COMPRA] [OK] {len(ordenes) if ordenes else 0} rdenes de compra obtenidas")
         
         cursor.close()
         connection.close()
@@ -149,7 +149,7 @@ def obtener_orden_compra(id_orden_compra):
     """Obtener datos completos de una orden de compra"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -158,7 +158,7 @@ def obtener_orden_compra(id_orden_compra):
         print(f"[OBTENER_ORDEN_COMPRA] Iniciando para ID: {id_orden_compra}")
         print(f"{'='*80}")
         
-        # 1. Obtener información de la orden de compra
+        # 1. Obtener informacin de la orden de compra
         cursor.execute("""
             SELECT 
                 oc.id_orden_compra,
@@ -219,7 +219,7 @@ def obtener_orden_compra(id_orden_compra):
         }
         
         print(f"[OBTENER_ORDEN_COMPRA] [OK] Orden encontrada")
-        print(f"[OBTENER_ORDEN_COMPRA]   Número: {orden_compra.get('numero_oc')}")
+        print(f"[OBTENER_ORDEN_COMPRA]   Nmero: {orden_compra.get('numero_oc')}")
         print(f"[OBTENER_ORDEN_COMPRA]   Estado: {orden_compra.get('estado')}")
         print(f"[OBTENER_ORDEN_COMPRA]   Detalles: {len(detalles)} items")
         print(f"{'='*80}\n")
@@ -260,13 +260,13 @@ def crear_orden_compra():
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         try:
             cursor = connection.cursor()
             
             print(f"\n{'='*80}")
-            print(f"[CREAR_ORDEN_COMPRA] Iniciando creación")
+            print(f"[CREAR_ORDEN_COMPRA] Iniciando creacin")
             print(f"{'='*80}")
             
             num_usuario = session.get('user_id')
@@ -299,7 +299,7 @@ def crear_orden_compra():
             ))
             
             id_orden_compra = cursor.lastrowid
-            print(f"[CREAR_ORDEN_COMPRA] ✓ Orden creada con ID: {id_orden_compra}")
+            print(f"[CREAR_ORDEN_COMPRA] [OK] Orden creada con ID: {id_orden_compra}")
             
             # 2. Insertar detalles de la orden
             for detalle in detalles:
@@ -317,7 +317,7 @@ def crear_orden_compra():
                     detalle.get('observaciones', '')
                 ))
             
-            print(f"[CREAR_ORDEN_COMPRA] ✓ {len(detalles)} detalles insertados")
+            print(f"[CREAR_ORDEN_COMPRA] [OK] {len(detalles)} detalles insertados")
             
             connection.commit()
             
@@ -357,7 +357,7 @@ def actualizar_orden_compra(id_orden_compra):
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         cursor = connection.cursor()
         
@@ -442,11 +442,11 @@ def actualizar_orden_compra(id_orden_compra):
 @main_bp.route('/api/ordenes-compra/eliminar/<int:id_orden_compra>', methods=['DELETE'])
 @login_required
 def eliminar_orden_compra(id_orden_compra):
-    """Eliminar una orden de compra (solo si está en PENDIENTE)"""
+    """Eliminar una orden de compra (solo si est en PENDIENTE)"""
     try:
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         cursor = connection.cursor(dictionary=True)
         
@@ -455,7 +455,7 @@ def eliminar_orden_compra(id_orden_compra):
             print(f"[ELIMINAR_ORDEN_COMPRA] Iniciando para ID: {id_orden_compra}")
             print(f"{'='*80}")
             
-            # Verificar que la orden existe y está en PENDIENTE
+            # Verificar que la orden existe y est en PENDIENTE
             cursor.execute("""
                 SELECT id_orden_compra, numero_oc, estado
                 FROM TblOrdenCompra
@@ -514,7 +514,7 @@ def cambiar_estado_orden_compra(id_orden_compra, nuevo_estado):
     try:
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         cursor = connection.cursor()
         
@@ -522,7 +522,7 @@ def cambiar_estado_orden_compra(id_orden_compra, nuevo_estado):
             # Validar estado
             estados_validos = ['PENDIENTE', 'ENVIADA', 'RECIBIDA', 'CANCELADA']
             if nuevo_estado not in estados_validos:
-                return jsonify({'success': False, 'error': f'Estado inválido: {nuevo_estado}'}), 400
+                return jsonify({'success': False, 'error': f'Estado invlido: {nuevo_estado}'}), 400
             
             cursor.execute("""
                 UPDATE TblOrdenCompra

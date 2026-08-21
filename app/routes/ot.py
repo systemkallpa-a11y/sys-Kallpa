@@ -8,24 +8,24 @@ from .main import validar_acceso_usuario
 from datetime import datetime
 
 def get_db_connection():
-    """Crear conexión a la base de datos Kallpa"""
+    """Crear conexin a la base de datos Kallpa"""
     try:
         params = DatabaseConfig.get_connection_params()
         connection = mysql.connector.connect(**params)
         return connection
     except Error as e:
-        print(f"Error de conexión: {e}")
+        print(f"Error de conexin: {e}")
         return None
 
-# Decorador para requerir autenticación
+# Decorador para requerir autenticacin
 def login_required(f):
-    """Decorador para proteger rutas que requieren autenticación"""
+    """Decorador para proteger rutas que requieren autenticacin"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_documento' not in session and 'user_email' not in session:
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return {'success': False, 'message': 'No autenticado'}, 401
-            flash('Debes iniciar sesión', 'warning')
+            flash('Debes iniciar sesin', 'warning')
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -33,11 +33,11 @@ def login_required(f):
 @main_bp.route('/ot')
 @login_required
 def ot():
-    """Página principal de gestión de O.T (Órdenes de Trabajo)"""
+    """Pgina principal de gestin de O.T (rdenes de Trabajo)"""
     num_documento = session.get('user_documento')
     
-    # ID 5 = O.T (Órdenes de Trabajo)
-    # No requiere validar submenú en ruta principal
+    # ID 5 = O.T (rdenes de Trabajo)
+    # No requiere validar submen en ruta principal
     
     return render_template('ot.html')
 
@@ -47,7 +47,7 @@ def obtener_ots():
     """Obtener lista de todas las O.T"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -89,10 +89,10 @@ def obtener_ots():
 @main_bp.route('/api/ot/obtener/<int:id_ot>', methods=['GET'])
 @login_required
 def obtener_ot(id_ot):
-    """Obtener datos de una O.T específica"""
+    """Obtener datos de una O.T especfica"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -152,25 +152,25 @@ def crear_ot():
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         try:
             cursor = connection.cursor()
             
             print(f"\n{'='*80}")
-            print(f"[CREAR_OT] Iniciando creación")
+            print(f"[CREAR_OT] Iniciando creacin")
             print(f"{'='*80}")
             print(f"[CREAR_OT] Datos:")
             for key, value in data.items():
                 print(f"  - {key}: {value}")
             
-            # Verificar que el número de O.T no exista
+            # Verificar que el nmero de O.T no exista
             cursor.execute("SELECT COUNT(*) as count FROM TblOT WHERE numero_ot = %s", (data['numero_ot'],))
             result = cursor.fetchone()
             
             if result[0] > 0:
-                print(f"[CREAR_OT] [ERROR] El número de O.T ya existe")
-                return jsonify({'success': False, 'error': 'El número de O.T ya existe'}), 400
+                print(f"[CREAR_OT] [ERROR] El nmero de O.T ya existe")
+                return jsonify({'success': False, 'error': 'El nmero de O.T ya existe'}), 400
             
             # Insertar la O.T
             cursor.execute("""
@@ -234,7 +234,7 @@ def actualizar_ot(id_ot):
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         cursor = connection.cursor()
         
@@ -305,7 +305,7 @@ def eliminar_ot(id_ot):
     try:
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         cursor = connection.cursor()
         

@@ -1,6 +1,6 @@
 """
 Module: memo_pdf.py
-Propósito: Generar PDFs de memorandos/amonestaciones
+Propsito: Generar PDFs de memorandos/amonestaciones
 Fecha: 16 Agosto 2026
 """
 
@@ -20,7 +20,7 @@ try:
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
-    print("⚠️ Warning: reportlab not available - PDF generation will not work")
+    print("[!] Warning: reportlab not available - PDF generation will not work")
 
 from datetime import datetime
 from app.config import DatabaseConfig
@@ -31,55 +31,55 @@ memo_pdf_bp = Blueprint('memo_pdf', __name__)
 
 
 def get_db_connection():
-    """Crear conexión a la base de datos"""
+    """Crear conexin a la base de datos"""
     try:
         params = DatabaseConfig.get_connection_params()
         connection = mysql.connector.connect(**params)
         return connection
     except Error as e:
-        print(f"Error de conexión: {e}")
+        print(f"Error de conexin: {e}")
         return None
 
 
 def login_required(f):
-    """Decorador para proteger rutas que requieren autenticación"""
+    """Decorador para proteger rutas que requieren autenticacin"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         from flask import session, redirect, url_for, flash
         if 'user_documento' not in session and 'user_email' not in session:
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return {'success': False, 'message': 'No autenticado'}, 401
-            flash('Debes iniciar sesión', 'warning')
+            flash('Debes iniciar sesin', 'warning')
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
 
 
-# Textos de amonestación según tipo
+# Textos de amonestacin segn tipo
 TEXTOS_MEMO = {
     'TARDANZA': {
-        'titulo': 'MEMORANDO DE AMONESTACIÓN POR TARDANZA',
+        'titulo': 'MEMORANDO DE AMONESTACIN POR TARDANZA',
         'motivo': 'tardanzas reiteradas',
         'descripcion': '''Por medio del presente, se le hace de su conocimiento que ha sido observado(a) llegando tarde a su puesto de trabajo en reiteradas ocasiones, lo cual contraviene las normas laborales establecidas por la empresa y afecta el normal desarrollo de las actividades.
 
-La puntualidad es un valor fundamental en nuestra organización y es responsabilidad de cada colaborador cumplir con los horarios establecidos.''',
-        'consecuencias': '''De persistir esta conducta, se procederá con las sanciones correspondientes según el Reglamento Interno de Trabajo, pudiendo llegar hasta la terminación del contrato laboral.'''
+La puntualidad es un valor fundamental en nuestra organizacin y es responsabilidad de cada colaborador cumplir con los horarios establecidos.''',
+        'consecuencias': '''De persistir esta conducta, se proceder con las sanciones correspondientes segn el Reglamento Interno de Trabajo, pudiendo llegar hasta la terminacin del contrato laboral.'''
     },
     'FALTA': {
-        'titulo': 'MEMORANDO DE AMONESTACIÓN POR INASISTENCIA',
+        'titulo': 'MEMORANDO DE AMONESTACIN POR INASISTENCIA',
         'motivo': 'inasistencia injustificada',
-        'descripcion': '''Por medio del presente, se le hace de su conocimiento que ha incurrido en inasistencia injustificada a su puesto de trabajo, lo cual constituye una falta grave según el Reglamento Interno de Trabajo y las disposiciones laborales vigentes.
+        'descripcion': '''Por medio del presente, se le hace de su conocimiento que ha incurrido en inasistencia injustificada a su puesto de trabajo, lo cual constituye una falta grave segn el Reglamento Interno de Trabajo y las disposiciones laborales vigentes.
 
 La asistencia regular es esencial para el cumplimiento de sus responsabilidades y el funcionamiento adecuado de la empresa.''',
-        'consecuencias': '''De reincidir en esta conducta, se procederá con la aplicación de sanciones progresivas, pudiendo llegar hasta la suspensión o término de su contrato laboral, según corresponda.'''
+        'consecuencias': '''De reincidir en esta conducta, se proceder con la aplicacin de sanciones progresivas, pudiendo llegar hasta la suspensin o trmino de su contrato laboral, segn corresponda.'''
     },
     'UNIFORME': {
-        'titulo': 'MEMORANDO DE AMONESTACIÓN POR INCUMPLIMIENTO DE NORMAS DE PRESENTACIÓN',
+        'titulo': 'MEMORANDO DE AMONESTACIN POR INCUMPLIMIENTO DE NORMAS DE PRESENTACIN',
         'motivo': 'no portar el uniforme reglamentario',
         'descripcion': '''Por medio del presente, se le hace de su conocimiento que ha sido observado(a) asistiendo a su puesto de trabajo sin portar el uniforme reglamentario de la empresa o presentando una imagen personal que no se ajusta a las normas establecidas.
 
-El uso del uniforme es obligatorio para todos los colaboradores y forma parte de la imagen corporativa de nuestra organización.''',
-        'consecuencias': '''De persistir en el incumplimiento de esta disposición, se aplicarán las sanciones correspondientes según el Reglamento Interno de Trabajo, pudiendo escalar a medidas disciplinarias más severas.'''
+El uso del uniforme es obligatorio para todos los colaboradores y forma parte de la imagen corporativa de nuestra organizacin.''',
+        'consecuencias': '''De persistir en el incumplimiento de esta disposicin, se aplicarn las sanciones correspondientes segn el Reglamento Interno de Trabajo, pudiendo escalar a medidas disciplinarias ms severas.'''
     }
 }
 
@@ -91,7 +91,7 @@ def obtener_tipos_memo():
     try:
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión a BD'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin a BD'}), 500
         
         cursor = connection.cursor(dictionary=True)
         
@@ -125,9 +125,9 @@ def obtener_tipos_memo():
 @memo_pdf_bp.route('/api/marcacion/generar-memo', methods=['POST'])
 @login_required
 def generar_memo():
-    """Generar PDF de memorando de amonestación"""
+    """Generar PDF de memorando de amonestacin"""
     if not REPORTLAB_AVAILABLE:
-        return jsonify({'success': False, 'error': 'reportlab no está disponible'}), 500
+        return jsonify({'success': False, 'error': 'reportlab no est disponible'}), 500
     
     try:
         data = request.get_json()
@@ -140,27 +140,27 @@ def generar_memo():
         
         # Validar datos requeridos
         if not num_documento or not tipo_memo or not fecha_incidente:
-            print(f"[MEMO_PDF] ❌ Faltan datos: num_documento={num_documento}, tipo_memo={tipo_memo}, fecha_incidente={fecha_incidente}")
+            print(f"[MEMO_PDF] [X] Faltan datos: num_documento={num_documento}, tipo_memo={tipo_memo}, fecha_incidente={fecha_incidente}")
             return jsonify({'success': False, 'error': 'Faltan datos requeridos'}), 400
         
         # Convertir num_documento a INT
         try:
             num_documento = int(num_documento)
         except (ValueError, TypeError):
-            print(f"[MEMO_PDF] ❌ num_documento inválido: {num_documento}")
-            return jsonify({'success': False, 'error': 'Número de documento inválido'}), 400
+            print(f"[MEMO_PDF] [X] num_documento invlido: {num_documento}")
+            return jsonify({'success': False, 'error': 'Nmero de documento invlido'}), 400
         
         # Validar tipo de memo
         if not tipo_memo:
-            print(f"[MEMO_PDF] ❌ Tipo inválido: {tipo_memo}")
-            return jsonify({'success': False, 'error': f'Tipo de memo inválido'}), 400
+            print(f"[MEMO_PDF] [X] Tipo invlido: {tipo_memo}")
+            return jsonify({'success': False, 'error': f'Tipo de memo invlido'}), 400
         
         print(f"[MEMO_PDF] Generando memo {tipo_memo} para {nombre_completo} ({num_documento})")
         
         # Obtener datos del empleado y tipo de memo usando SPs
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión a BD'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin a BD'}), 500
         
         cursor = connection.cursor(dictionary=True)
         
@@ -282,7 +282,7 @@ def generar_memo():
             ['DE:', 'Gerencia de Recursos Humanos'],
             ['PARA:', nombre_completo_bd],
             ['CARGO:', empleado.get('cargo', 'N/A')],
-            ['ÁREA:', empleado.get('area', 'N/A')],
+            ['REA:', empleado.get('area', 'N/A')],
             ['ASUNTO:', textos['motivo'].upper()]
         ]
         
@@ -314,7 +314,7 @@ def generar_memo():
         story.append(Spacer(1, 0.2*inch))
         
         # Cierre
-        story.append(Paragraph("Se le exhorta a corregir esta situación de inmediato y a cumplir con las disposiciones laborales establecidas.", body_style))
+        story.append(Paragraph("Se le exhorta a corregir esta situacin de inmediato y a cumplir con las disposiciones laborales establecidas.", body_style))
         story.append(Spacer(1, 0.3*inch))
         
         # Firma
@@ -337,7 +337,7 @@ def generar_memo():
         story.append(table_firma)
         story.append(Spacer(1, 0.3*inch))
         
-        # Nota de recepción
+        # Nota de recepcin
         story.append(Paragraph("<i>He recibido copia del presente memorando y tomo conocimiento de su contenido.</i>", 
                                ParagraphStyle('Italic', parent=styles['Normal'], fontSize=9, textColor=colors.grey)))
         story.append(Spacer(1, 0.2*inch))
@@ -364,9 +364,9 @@ def generar_memo():
         # Registrar el memo en la base de datos
         try:
             from flask import session
-            user_documento = session.get('user_documento')  # Usuario que generó el memo
+            user_documento = session.get('user_documento')  # Usuario que gener el memo
             
-            print(f"[MEMO_PDF] 🔄 Registrando memo en BD: num_doc={num_documento}, tipo={tipo_memo}, generado_por={user_documento}, fecha={fecha_incidente}")
+            print(f"[MEMO_PDF] [...] Registrando memo en BD: num_doc={num_documento}, tipo={tipo_memo}, generado_por={user_documento}, fecha={fecha_incidente}")
             
             connection2 = get_db_connection()
             if connection2:
@@ -394,7 +394,7 @@ def generar_memo():
                 cursor2.close()
                 connection2.close()
                 
-                print(f"[MEMO_PDF] ✅ Memo registrado en BD con ID: {id_memo}")
+                print(f"[MEMO_PDF] [OK] Memo registrado en BD con ID: {id_memo}")
                 
                 # Enviar email al empleado con el PDF adjunto
                 try:
@@ -403,7 +403,7 @@ def generar_memo():
                     
                     email_empleado = empleado.get('email')
                     if email_empleado:
-                        print(f"[MEMO_PDF] 📧 Enviando email a: {email_empleado}")
+                        print(f"[MEMO_PDF]  Enviando email a: {email_empleado}")
                         
                         # Generar HTML del email
                         html_email = generar_html_memo(
@@ -416,7 +416,7 @@ def generar_memo():
                         success, message = enviar_email_con_adjunto(
                             destinatario_email=email_empleado,
                             destinatario_nombre=nombre_completo_bd,
-                            asunto=f"Memorando de Amonestación - {tipo_memo_data['nombre']}",
+                            asunto=f"Memorando de Amonestacin - {tipo_memo_data['nombre']}",
                             cuerpo_html=html_email,
                             archivo_pdf_bytes=pdf_buffer.getvalue(),
                             nombre_archivo_pdf=filename,
@@ -427,28 +427,28 @@ def generar_memo():
                         )
                         
                         if success:
-                            print(f"[MEMO_PDF] ✅ Email enviado exitosamente a {email_empleado}")
+                            print(f"[MEMO_PDF] [OK] Email enviado exitosamente a {email_empleado}")
                         else:
-                            print(f"[MEMO_PDF] ⚠️ Error al enviar email: {message}")
+                            print(f"[MEMO_PDF] [!] Error al enviar email: {message}")
                     else:
-                        print(f"[MEMO_PDF] ⚠️ El empleado no tiene email registrado")
+                        print(f"[MEMO_PDF] [!] El empleado no tiene email registrado")
                         
                 except Exception as email_error:
                     import traceback
-                    print(f"[MEMO_PDF] ⚠️ Error al enviar email: {email_error}")
+                    print(f"[MEMO_PDF] [!] Error al enviar email: {email_error}")
                     print(f"[MEMO_PDF] Traceback: {traceback.format_exc()}")
                     # No detener el proceso
             else:
-                print(f"[MEMO_PDF] ⚠️ No se pudo registrar el memo en BD (sin conexión)")
+                print(f"[MEMO_PDF] [!] No se pudo registrar el memo en BD (sin conexin)")
                 
         except Exception as reg_error:
             import traceback
-            print(f"[MEMO_PDF] ⚠️ Error al registrar memo en BD: {reg_error}")
+            print(f"[MEMO_PDF] [!] Error al registrar memo en BD: {reg_error}")
             print(f"[MEMO_PDF] Traceback: {traceback.format_exc()}")
-            # No detener el proceso, el PDF ya se generó
+            # No detener el proceso, el PDF ya se gener
         
         # Enviar PDF
-        print(f"[MEMO_PDF] ✅ PDF generado exitosamente: {filename}")
+        print(f"[MEMO_PDF] [OK] PDF generado exitosamente: {filename}")
         
         return pdf_buffer.getvalue(), 200, {
             'Content-Type': 'application/pdf',
@@ -457,6 +457,6 @@ def generar_memo():
         
     except Exception as e:
         import traceback
-        print(f"[MEMO_PDF] ❌ Error: {e}")
+        print(f"[MEMO_PDF] [X] Error: {e}")
         print(f"[MEMO_PDF] Traceback: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': str(e)}), 500

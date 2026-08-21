@@ -1,6 +1,6 @@
 """
-MÓDULO: Gerencia
-DESCRIPCIÓN: Rutas y funciones para el módulo de Gerencia
+MDULO: Gerencia
+DESCRIPCIN: Rutas y funciones para el mdulo de Gerencia
 """
 
 from flask import render_template, request, jsonify, session, flash, redirect, url_for
@@ -8,15 +8,15 @@ from . import main_bp
 from functools import wraps
 from .main import validar_acceso_usuario
 
-# Decorador para requerir autenticación
+# Decorador para requerir autenticacin
 def login_required(f):
-    """Decorador para proteger rutas que requieren autenticación"""
+    """Decorador para proteger rutas que requieren autenticacin"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_documento' not in session and 'user_email' not in session:
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return {'success': False, 'message': 'No autenticado'}, 401
-            flash('Debes iniciar sesión', 'warning')
+            flash('Debes iniciar sesin', 'warning')
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -29,7 +29,7 @@ def login_required(f):
 @main_bp.route('/proceso-de-abastecimiento')
 @login_required
 def proceso_abastecimiento():
-    """Página principal de Proceso de Abastecimiento"""
+    """Pgina principal de Proceso de Abastecimiento"""
     num_documento = session.get('user_documento')
     
     print(f"\n{'='*80}")
@@ -37,16 +37,16 @@ def proceso_abastecimiento():
     print(f"[PROCESO_ABASTECIMIENTO_ACCESS] Documento: {num_documento}")
     print(f"{'='*80}")
     
-    # Validar acceso - Menú Gerencia (ID a confirmar), Submenu Proceso Abastecimiento
+    # Validar acceso - Men Gerencia (ID a confirmar), Submenu Proceso Abastecimiento
     # Por ahora lo dejamos como acceso libre para pruebas
     tiene_acceso = True
     
     if not tiene_acceso:
-        print(f"[PROCESO_ABASTECIMIENTO_ACCESS] ❌ ACCESO DENEGADO")
+        print(f"[PROCESO_ABASTECIMIENTO_ACCESS] [X] ACCESO DENEGADO")
         flash('No tienes acceso a Proceso de Abastecimiento', 'danger')
         return redirect(url_for('main.dashboard'))
     
-    print(f"[PROCESO_ABASTECIMIENTO_ACCESS] ✅ ACCESO PERMITIDO")
+    print(f"[PROCESO_ABASTECIMIENTO_ACCESS] [OK] ACCESO PERMITIDO")
     print(f"{'='*80}\n")
     
     return render_template('gerencia/proceso_abastecimiento.html')

@@ -553,7 +553,7 @@ function renderizarMateriales() {
                        class="w-20 px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-center text-sm">
             </td>
             <td class="px-4 py-3 text-sm text-right">
-                <input type="number" value="${m.precio_unitario}" step="0.01" min="0"
+                <input type="number" value="${Number(m.precio_unitario).toFixed(2)}" step="0.01" min="0"
                        onchange="actualizarPrecioMaterial(${m.id_temporal}, this.value)"
                        onkeydown="if(event.key==='Enter'){event.preventDefault();}"
                        class="w-24 px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-right text-sm">
@@ -659,7 +659,7 @@ function renderizarServicios() {
                        class="w-20 px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-center text-sm">
             </td>
             <td class="px-4 py-3 text-sm text-right">
-                <input type="number" value="${s.precio_unitario}" step="0.01" min="0"
+                <input type="number" value="${Number(s.precio_unitario).toFixed(2)}" step="0.01" min="0"
                        onchange="actualizarPrecioServicio(${s.id_temporal}, this.value)"
                        onkeydown="if(event.key==='Enter'){event.preventDefault();}"
                        class="w-24 px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-right text-sm">
@@ -1805,7 +1805,7 @@ async function importarPDF(input) {
                     unidad: m.unidad || 'Unidad',
                     cantidad: m.cantidad || 1,
                     precio_unitario: m.precio_unitario || 0,
-                    subtotal: (m.cantidad || 1) * (m.precio_unitario || 0)
+                    subtotal: m.subtotal || 0
                 });
             });
             renderizarMateriales();
@@ -1820,7 +1820,7 @@ async function importarPDF(input) {
                     descripcion: s.descripcion,
                     cantidad: s.cantidad || 1,
                     precio_unitario: s.precio_unitario || 0,
-                    subtotal: (s.cantidad || 1) * (s.precio_unitario || 0)
+                    subtotal: s.subtotal || 0
                 });
             });
             renderizarServicios();
@@ -1867,6 +1867,127 @@ async function importarPDF(input) {
         mostrarError('Error al conectar con el servidor: ' + error.message);
     } finally {
         // Restaurar botón
+        if (btnLabel) {
+            btnLabel.innerHTML = iconoOriginal;
+            btnLabel.style.pointerEvents = '';
+        }
+        input.value = '';
+    }
+}
+
+// ============================================================================
+// IMPORTAR EXCEL - Extraer materiales y servicios desde un archivo Excel
+// ============================================================================
+
+async function importarExcel(input) {
+    const archivo = input.files[0];
+    if (!archivo) return;
+    
+    const nombreLower = archivo.name.toLowerCase();
+    if (!nombreLower.endsWith('.xlsx') && !nombreLower.endsWith('.xls')) {
+        mostrarError('El archivo debe ser un Excel (.xlsx o .xls)');
+        input.value = '';
+        return;
+    }
+    
+    console.log('[IMPORTAR_EXCEL] Procesando:', archivo.name);
+    
+    // Mostrar indicador de carga
+    const btnLabel = document.querySelector('label[for="input-excel-importar"]');
+    const iconoOriginal = btnLabel ? btnLabel.innerHTML : '';
+    if (btnLabel) {
+        btnLabel.innerHTML = '<i class="fas fa-spinner fa-spin text-lg"></i>';
+        btnLabel.style.pointerEvents = 'none';
+    }
+    
+    try {
+        const formData = new FormData();
+        formData.append('archivo', archivo);
+        
+        const response = await fetch('/api/presupuestos/importar-excel', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            mostrarError(result.error || 'Error al procesar el Excel');
+            return;
+        }
+        
+        console.log('[IMPORTAR_EXCEL] Resultado:', result);
+        
+        // Agregar materiales al array global (misma logica que importarPDF)
+        if (result.materiales && result.materiales.length > 0) {
+            result.materiales.forEach(m => {
+                id_contador_material++;
+                materiales_agregados.push({
+                    id_temporal: id_contador_material,
+                    id_material: m.id_material || null,
+                    nombre: m.nombre,
+                    codigo: '',
+                    categoria: '',
+                    unidad: m.unidad || 'Unidad',
+                    cantidad: m.cantidad || 1,
+                    precio_unitario: m.precio_unitario || 0,
+                    subtotal: m.subtotal || 0
+                });
+            });
+            renderizarMateriales();
+        }
+        
+        // Agregar servicios al array global
+        if (result.servicios && result.servicios.length > 0) {
+            result.servicios.forEach(s => {
+                id_contador_servicio++;
+                servicios_agregados.push({
+                    id_temporal: id_contador_servicio,
+                    descripcion: s.descripcion,
+                    cantidad: s.cantidad || 1,
+                    precio_unitario: s.precio_unitario || 0,
+                    subtotal: s.subtotal || 0
+                });
+            });
+            renderizarServicios();
+        }
+        
+        // Actualizar porcentajes desde el Excel
+        if (result.porcentajes) {
+            porcentajes_pdf.gastos_generales = result.porcentajes.gastos_generales || 0;
+            porcentajes_pdf.utilidad = result.porcentajes.utilidad || 0;
+            porcentajes_pdf.igv = result.porcentajes.igv || 18;
+            porcentajes_pdf.supervision = 0;
+            
+            desglose_editado_manualmente = false;
+            
+            console.log('[IMPORTAR_EXCEL] Porcentajes del Excel:', porcentajes_pdf);
+            
+            document.getElementById('gastos-generales').value = '0.00';
+            document.getElementById('utilidad').value = '0.00';
+            document.getElementById('supervision-obra').value = '0.00';
+        }
+        
+        // Recalcular totales
+        actualizarTotales();
+        
+        const totalMat = result.materiales ? result.materiales.length : 0;
+        const totalServ = result.servicios ? result.servicios.length : 0;
+        const nuevos = result.materiales_nuevos ? result.materiales_nuevos.length : 0;
+        const existentes = result.materiales_existentes ? result.materiales_existentes.length : 0;
+        
+        let mensaje = `Excel importado: ${totalMat} materiales y ${totalServ} servicios`;
+        if (nuevos > 0 || existentes > 0) {
+            mensaje += ` (${nuevos} nuevos, ${existentes} existentes)`;
+        }
+        
+        mostrarExito(mensaje);
+        console.log(`[IMPORTAR_EXCEL] completado: ${totalMat} materiales (${nuevos} nuevos, ${existentes} existentes), ${totalServ} servicios`);
+        
+    } catch (error) {
+        console.error('[IMPORTAR_EXCEL] Error:', error);
+        mostrarError('Error al conectar con el servidor: ' + error.message);
+    } finally {
         if (btnLabel) {
             btnLabel.innerHTML = iconoOriginal;
             btnLabel.style.pointerEvents = '';

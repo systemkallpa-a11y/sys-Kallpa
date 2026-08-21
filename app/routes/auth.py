@@ -6,17 +6,17 @@ import hashlib
 from app.config import DatabaseConfig
 
 def get_db_connection():
-    """Crear conexión a la base de datos Kallpa"""
+    """Crear conexin a la base de datos Kallpa"""
     try:
         params = DatabaseConfig.get_connection_params()
         connection = mysql.connector.connect(**params)
         return connection
     except Error as e:
-        print(f"Error de conexión: {e}")
+        print(f"Error de conexin: {e}")
         return None
 
 def hash_password(password):
-    """Encriptar contraseña usando SHA-256"""
+    """Encriptar contrasea usando SHA-256"""
     return hashlib.sha256(password.encode()).hexdigest()
 
 def validate_user_kallpa(usuario, password):
@@ -29,7 +29,7 @@ def validate_user_kallpa(usuario, password):
     try:
         cursor = connection.cursor(dictionary=True)
         
-        # Encriptar la contraseña
+        # Encriptar la contrasea
         password_hash = hash_password(password)
         print(f"[DEBUG] Usuario: {usuario}, Password hash: {password_hash}")
         
@@ -72,9 +72,9 @@ def validate_user_kallpa(usuario, password):
         print(f"[DEBUG] Resultado final: {user_result}")
         
         if not user_result:
-            return {'error': 'Usuario o contraseña incorrectos'}
+            return {'error': 'Usuario o contrasea incorrectos'}
         
-        # Autenticación exitosa
+        # Autenticacin exitosa
         return {
             'num_usuario': user_result['num_usuario'],
             'num_documento': user_result['num_documento'],
@@ -90,8 +90,8 @@ def validate_user_kallpa(usuario, password):
         }
         
     except Error as e:
-        print(f"[DEBUG] Error en validación: {e}")
-        return {'error': f'Error en la validación: {str(e)}'}
+        print(f"[DEBUG] Error en validacin: {e}")
+        return {'error': f'Error en la validacin: {str(e)}'}
     finally:
         if connection.is_connected():
             cursor.close()
@@ -100,12 +100,12 @@ def validate_user_kallpa(usuario, password):
 
 @auth_bp.route('/welcome')
 def show_welcome():
-    """Página de bienvenida"""
+    """Pgina de bienvenida"""
     return render_template('welcome.html')
 
 @auth_bp.route('/check-session', methods=['GET'])
 def check_session():
-    """API para verificar si hay sesión activa"""
+    """API para verificar si hay sesin activa"""
     from flask import jsonify
     
     authenticated = 'user_documento' in session or 'user_email' in session
@@ -120,19 +120,19 @@ def check_session():
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    """Página de login para Kallpa"""
+    """Pgina de login para Kallpa"""
     from flask import current_app
     
     if request.method == 'POST':
         usuario = request.form.get('email')
         password = request.form.get('password')
         remember = request.form.get('remember')
-        redirect_to = request.form.get('redirect_to', 'marcacion')  # Por defecto a marcación
+        redirect_to = request.form.get('redirect_to', 'marcacion')  # Por defecto a marcacin
         
         current_app.logger.info(f"[LOGIN KALLPA] Intentando login con usuario: {usuario}")
         
         if not usuario or not password:
-            current_app.logger.warning(f"[LOGIN KALLPA] ERROR: Campos vacíos")
+            current_app.logger.warning(f"[LOGIN KALLPA] ERROR: Campos vacos")
             flash('Por favor completa todos los campos', 'error')
             return render_template('login_kallpa.html', redirect_to=redirect_to)
         
@@ -141,12 +141,12 @@ def login():
         result = validate_user_kallpa(usuario, password)
         
         if 'error' in result:
-            current_app.logger.error(f"[LOGIN KALLPA] ERROR de autenticación: {result['error']}")
+            current_app.logger.error(f"[LOGIN KALLPA] ERROR de autenticacin: {result['error']}")
             flash(result['error'], 'error')
             return render_template('login_kallpa.html', redirect_to=redirect_to)
         
-        # Login exitoso - guardar datos en sesión
-        current_app.logger.info(f"[LOGIN KALLPA] Login exitoso! Guardando sesión...")
+        # Login exitoso - guardar datos en sesin
+        current_app.logger.info(f"[LOGIN KALLPA] Login exitoso! Guardando sesin...")
         session['user_documento'] = result['num_documento']
         session['user_id'] = result['num_usuario']
         session['user_name'] = f"{result['nombres']} {result['apellido_paterno']}"
@@ -159,10 +159,10 @@ def login():
         if remember:
             session.permanent = True
         
-        flash(f"¡Bienvenido {result['nombres']}!", 'success')
+        flash(f"Bienvenido {result['nombres']}!", 'success')
         current_app.logger.info(f"[LOGIN KALLPA] Redirigiendo a {redirect_to}...")
         
-        # Redirigir según el parámetro
+        # Redirigir segn el parmetro
         if redirect_to == 'dashboard':
             return redirect(url_for('main.dashboard'))
         else:  # marcacion es el default
@@ -174,10 +174,10 @@ def login():
 
 @auth_bp.route('/api/cambiar-contrasena', methods=['POST'])
 def cambiar_contrasena():
-    """API para cambiar la contraseña del usuario usando SP"""
+    """API para cambiar la contrasea del usuario usando SP"""
     from flask import jsonify, current_app
     
-    # Verificar que el usuario esté autenticado
+    # Verificar que el usuario est autenticado
     if 'user_documento' not in session and 'user_email' not in session:
         return jsonify({'success': False, 'message': 'No autenticado'}), 401
     
@@ -191,15 +191,15 @@ def cambiar_contrasena():
             return jsonify({'success': False, 'message': 'Todos los campos son obligatorios'}), 400
         
         if len(contrasena_nueva) < 6:
-            return jsonify({'success': False, 'message': 'La nueva contraseña debe tener al menos 6 caracteres'}), 400
+            return jsonify({'success': False, 'message': 'La nueva contrasea debe tener al menos 6 caracteres'}), 400
         
         num_documento = session.get('user_documento')
         
-        current_app.logger.info(f"[CAMBIAR_CONTRASEÑA] Usuario: {num_documento}")
+        current_app.logger.info(f"[CAMBIAR_CONTRASEA] Usuario: {num_documento}")
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'message': 'Error de conexión a la base de datos'}), 500
+            return jsonify({'success': False, 'message': 'Error de conexin a la base de datos'}), 500
         
         cursor = connection.cursor(dictionary=True)
         
@@ -207,11 +207,11 @@ def cambiar_contrasena():
         password_hash_actual = hash_password(contrasena_actual)
         password_hash_nueva = hash_password(contrasena_nueva)
         
-        current_app.logger.info(f"[CAMBIAR_CONTRASEÑA] Llamando a SP sp_CambiarContrasena")
-        current_app.logger.info(f"[CAMBIAR_CONTRASEÑA] Hash actual (primeros 10): {password_hash_actual[:10]}...")
-        current_app.logger.info(f"[CAMBIAR_CONTRASEÑA] Hash nueva (primeros 10): {password_hash_nueva[:10]}...")
+        current_app.logger.info(f"[CAMBIAR_CONTRASEA] Llamando a SP sp_CambiarContrasena")
+        current_app.logger.info(f"[CAMBIAR_CONTRASEA] Hash actual (primeros 10): {password_hash_actual[:10]}...")
+        current_app.logger.info(f"[CAMBIAR_CONTRASEA] Hash nueva (primeros 10): {password_hash_nueva[:10]}...")
         
-        # Llamar al SP para cambiar contraseña
+        # Llamar al SP para cambiar contrasea
         cursor.callproc('sp_CambiarContrasena', [
             num_documento,
             password_hash_actual,
@@ -224,58 +224,58 @@ def cambiar_contrasena():
             result = resultado.fetchone()
             break
         
-        # ⚠️ IMPORTANTE: Hacer commit después del SP
+        # [!] IMPORTANTE: Hacer commit despus del SP
         connection.commit()
         
         cursor.close()
         connection.close()
         
         if not result:
-            current_app.logger.error(f"[CAMBIAR_CONTRASEÑA] SP no retornó resultado")
-            return jsonify({'success': False, 'message': 'Error al cambiar la contraseña'}), 500
+            current_app.logger.error(f"[CAMBIAR_CONTRASEA] SP no retorn resultado")
+            return jsonify({'success': False, 'message': 'Error al cambiar la contrasea'}), 500
         
-        current_app.logger.info(f"[CAMBIAR_CONTRASEÑA] Resultado SP: {result}")
-        current_app.logger.info(f"[CAMBIAR_CONTRASEÑA] Success: {result.get('success')}")
+        current_app.logger.info(f"[CAMBIAR_CONTRASEA] Resultado SP: {result}")
+        current_app.logger.info(f"[CAMBIAR_CONTRASEA] Success: {result.get('success')}")
         
         # El SP retorna: success (bool), message (string), usuario (string - opcional)
         if result.get('success'):
-            current_app.logger.info(f"[CAMBIAR_CONTRASEÑA] ✅ Contraseña cambiada exitosamente")
+            current_app.logger.info(f"[CAMBIAR_CONTRASEA] [OK] Contrasea cambiada exitosamente")
             return jsonify({
                 'success': True,
-                'message': result.get('message', 'Contraseña actualizada exitosamente')
+                'message': result.get('message', 'Contrasea actualizada exitosamente')
             }), 200
         else:
-            current_app.logger.warning(f"[CAMBIAR_CONTRASEÑA] ❌ {result.get('message')}")
+            current_app.logger.warning(f"[CAMBIAR_CONTRASEA] [X] {result.get('message')}")
             return jsonify({
                 'success': False,
-                'message': result.get('message', 'Error al cambiar la contraseña')
+                'message': result.get('message', 'Error al cambiar la contrasea')
             }), 400
         
     except Exception as e:
-        current_app.logger.error(f"[CAMBIAR_CONTRASEÑA] Error: {e}")
+        current_app.logger.error(f"[CAMBIAR_CONTRASEA] Error: {e}")
         import traceback
-        current_app.logger.error(f"[CAMBIAR_CONTRASEÑA] Traceback: {traceback.format_exc()}")
-        return jsonify({'success': False, 'message': f'Error al cambiar la contraseña: {str(e)}'}), 500
+        current_app.logger.error(f"[CAMBIAR_CONTRASEA] Traceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'message': f'Error al cambiar la contrasea: {str(e)}'}), 500
 
 
 @auth_bp.route('/logout')
 def logout():
-    """Cerrar sesión"""
+    """Cerrar sesin"""
     session.clear()
-    flash('Sesión cerrada', 'info')
+    flash('Sesin cerrada', 'info')
     return redirect(url_for('auth.show_welcome'))
 
 @auth_bp.route('/clear-session')
 def clear_session():
-    """Ruta para limpiar sesión (DEBUG)"""
+    """Ruta para limpiar sesin (DEBUG)"""
     session.clear()
     return '''
     <!DOCTYPE html>
     <html>
-    <head><title>Sesión Limpiada</title></head>
+    <head><title>Sesin Limpiada</title></head>
     <body style="font-family: Arial; text-align: center; padding: 40px;">
-        <h1>✓ Sesión Limpiada</h1>
-        <p>Las cookies de sesión han sido eliminadas.</p>
+        <h1>[OK] Sesin Limpiada</h1>
+        <p>Las cookies de sesin han sido eliminadas.</p>
         <p><a href="/">Ir al inicio</a></p>
     </body>
     </html>

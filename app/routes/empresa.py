@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Routes para gestión de Empresas
+Routes para gestin de Empresas
 Maneja todas las operaciones CRUD de empresas
 """
 
@@ -13,27 +13,27 @@ from app.config import DatabaseConfig
 
 
 def get_db_connection():
-    """Crear conexión a la base de datos Kallpa"""
+    """Crear conexin a la base de datos Kallpa"""
     try:
         params = DatabaseConfig.get_connection_params()
         connection = mysql.connector.connect(**params)
         return connection
     except Error as e:
-        print(f"Error de conexión: {e}")
+        print(f"Error de conexin: {e}")
         return None
 
 
-# Decorador para requerir autenticación
+# Decorador para requerir autenticacin
 def login_required(f):
-    """Decorador para proteger rutas que requieren autenticación"""
+    """Decorador para proteger rutas que requieren autenticacin"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         from flask import session, redirect, url_for, flash
-        # Verificar si está autenticado (puede ser user_email o user_documento)
+        # Verificar si est autenticado (puede ser user_email o user_documento)
         if 'user_documento' not in session and 'user_email' not in session:
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return {'success': False, 'message': 'No autenticado'}, 401
-            flash('Debes iniciar sesión para acceder a esta página', 'warning')
+            flash('Debes iniciar sesin para acceder a esta pgina', 'warning')
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -42,11 +42,11 @@ def login_required(f):
 @main_bp.route('/empresa')
 @login_required
 def empresa():
-    """Página de registro y gestión de empresa"""
+    """Pgina de registro y gestin de empresa"""
     from flask import session, redirect, url_for, flash
     from .main import validar_acceso_usuario
     
-    # Validar que el usuario tenga acceso a Configuración de Empresa
+    # Validar que el usuario tenga acceso a Configuracin de Empresa
     num_documento = session.get('user_documento')
     
     print(f"\n{'='*80}")
@@ -54,27 +54,27 @@ def empresa():
     print(f"[EMPRESA_ACCESS] Documento: {num_documento}")
     print(f"{'='*80}")
     
-    # ID 4 = Configuración
-    # Permitir si tiene: acceso completo A Configuración O acceso específico a Empresa
-    print(f"[EMPRESA_ACCESS] 1️⃣ Validando acceso COMPLETO a menú 4 (id_submenu = NULL)...")
+    # ID 4 = Configuracin
+    # Permitir si tiene: acceso completo A Configuracin O acceso especfico a Empresa
+    print(f"[EMPRESA_ACCESS] 1 Validando acceso COMPLETO a men 4 (id_submenu = NULL)...")
     tiene_acceso_completo = validar_acceso_usuario(num_documento, id_menu=4, id_submenu=None)
     print(f"[EMPRESA_ACCESS] Resultado acceso completo: {tiene_acceso_completo}")
     
-    print(f"[EMPRESA_ACCESS] 2️⃣ Validando acceso específico a menú 4, submenú 7 (Empresa)...")
+    print(f"[EMPRESA_ACCESS] 2 Validando acceso especfico a men 4, submen 7 (Empresa)...")
     tiene_acceso_empresa = validar_acceso_usuario(num_documento, id_menu=4, id_submenu=7)
     print(f"[EMPRESA_ACCESS] Resultado acceso Empresa: {tiene_acceso_empresa}")
     
-    print(f"[EMPRESA_ACCESS] ✅ Acceso completo: {tiene_acceso_completo}")
-    print(f"[EMPRESA_ACCESS] ✅ Acceso Empresa: {tiene_acceso_empresa}")
-    print(f"[EMPRESA_ACCESS] ✅ Acceso permitido: {tiene_acceso_completo or tiene_acceso_empresa}")
+    print(f"[EMPRESA_ACCESS] [OK] Acceso completo: {tiene_acceso_completo}")
+    print(f"[EMPRESA_ACCESS] [OK] Acceso Empresa: {tiene_acceso_empresa}")
+    print(f"[EMPRESA_ACCESS] [OK] Acceso permitido: {tiene_acceso_completo or tiene_acceso_empresa}")
     
     if not (tiene_acceso_completo or tiene_acceso_empresa):
-        print(f"[EMPRESA_ACCESS] ❌ ACCESO DENEGADO - Redirigiendo a dashboard")
+        print(f"[EMPRESA_ACCESS] [X] ACCESO DENEGADO - Redirigiendo a dashboard")
         print(f"{'='*80}\n")
-        flash('No tienes acceso a Gestión de Empresa', 'danger')
+        flash('No tienes acceso a Gestin de Empresa', 'danger')
         return redirect(url_for('main.dashboard'))
     
-    print(f"[EMPRESA_ACCESS] ✅ ACCESO PERMITIDO - Cargando empresa.html")
+    print(f"[EMPRESA_ACCESS] [OK] ACCESO PERMITIDO - Cargando empresa.html")
     print(f"{'='*80}\n")
     return render_template('empresa.html')
 
@@ -86,7 +86,7 @@ def obtener_empresas():
     try:
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         try:
             cursor = connection.cursor(dictionary=True)
@@ -132,7 +132,7 @@ def obtener_empresa(id_empresa):
     try:
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         try:
             cursor = connection.cursor(dictionary=True)
@@ -189,12 +189,12 @@ def crear_empresa():
         longitud = data.get('longitud')
         radio_metros = data.get('radio_metros')
         
-        # Validaciones básicas
+        # Validaciones bsicas
         if not ruc:
             return jsonify({'success': False, 'error': 'El RUC es requerido'}), 400
         
         if len(ruc) != 11 or not ruc.isdigit():
-            return jsonify({'success': False, 'error': 'El RUC debe tener exactamente 11 dígitos'}), 400
+            return jsonify({'success': False, 'error': 'El RUC debe tener exactamente 11 dgitos'}), 400
         
         if not nombre:
             return jsonify({'success': False, 'error': 'El nombre es requerido'}), 400
@@ -207,9 +207,9 @@ def crear_empresa():
             lat_float = float(latitud)
             lon_float = float(longitud)
         except (ValueError, TypeError):
-            return jsonify({'success': False, 'error': 'Latitud y longitud deben ser números válidos'}), 400
+            return jsonify({'success': False, 'error': 'Latitud y longitud deben ser nmeros vlidos'}), 400
         
-        # Validar rangos de coordenadas geográficas
+        # Validar rangos de coordenadas geogrficas
         if lat_float < -90 or lat_float > 90:
             return jsonify({'success': False, 'error': 'La latitud debe estar entre -90 y 90'}), 400
         
@@ -221,12 +221,12 @@ def crear_empresa():
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión a BD'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin a BD'}), 500
         
         try:
             cursor = connection.cursor()
             
-            # Llamar SP sp_CrearEmpresa con logo = NULL (se cargará luego si es necesario)
+            # Llamar SP sp_CrearEmpresa con logo = NULL (se cargar luego si es necesario)
             cursor.execute("""
                 CALL sp_CrearEmpresa(%s, %s, %s, %s, %s, %s)
             """, (
@@ -240,7 +240,7 @@ def crear_empresa():
             
             connection.commit()
             
-            # Obtener ID de la empresa recién creada
+            # Obtener ID de la empresa recin creada
             cursor.execute("SELECT LAST_INSERT_ID() as id_empresa")
             result = cursor.fetchone()
             id_empresa = result[0] if result else None
@@ -283,12 +283,12 @@ def actualizar_empresa(id_empresa):
         longitud = data.get('longitud')
         radio_metros = data.get('radio_metros')
         
-        # Validaciones básicas
+        # Validaciones bsicas
         if not ruc:
             return jsonify({'success': False, 'error': 'El RUC es requerido'}), 400
         
         if len(ruc) != 11 or not ruc.isdigit():
-            return jsonify({'success': False, 'error': 'El RUC debe tener exactamente 11 dígitos'}), 400
+            return jsonify({'success': False, 'error': 'El RUC debe tener exactamente 11 dgitos'}), 400
         
         if not nombre:
             return jsonify({'success': False, 'error': 'El nombre es requerido'}), 400
@@ -301,9 +301,9 @@ def actualizar_empresa(id_empresa):
             lat_float = float(latitud)
             lon_float = float(longitud)
         except (ValueError, TypeError):
-            return jsonify({'success': False, 'error': 'Latitud y longitud deben ser números válidos'}), 400
+            return jsonify({'success': False, 'error': 'Latitud y longitud deben ser nmeros vlidos'}), 400
         
-        # Validar rangos de coordenadas geográficas
+        # Validar rangos de coordenadas geogrficas
         if lat_float < -90 or lat_float > 90:
             return jsonify({'success': False, 'error': 'La latitud debe estar entre -90 y 90'}), 400
         
@@ -315,7 +315,7 @@ def actualizar_empresa(id_empresa):
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión a BD'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin a BD'}), 500
         
         try:
             cursor = connection.cursor()
@@ -363,7 +363,7 @@ def eliminar_empresa(id_empresa):
     try:
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         try:
             cursor = connection.cursor()

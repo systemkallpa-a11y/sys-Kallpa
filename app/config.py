@@ -1,5 +1,5 @@
 """
-Configuración de base de datos para Kallpa
+Configuracin de base de datos para Kallpa
 Lee las credenciales desde variables de entorno
 """
 import os
@@ -14,38 +14,38 @@ load_dotenv()
 # Habilitar logs
 logging.basicConfig(level=logging.DEBUG)
 
-# Variable global para mantener el túnel SSH activo
+# Variable global para mantener el tnel SSH activo
 ssh_tunnel = None
 
 def get_ssh_tunnel():
-    """Obtener o crear el túnel SSH (singleton)"""
+    """Obtener o crear el tnel SSH (singleton)"""
     global ssh_tunnel
     
     use_ssh = os.getenv('USE_SSH_TUNNEL', 'False').lower() == 'true'
     
     if not use_ssh:
-        logging.info("[SSH TUNNEL] Túnel SSH deshabilitado en .env")
+        logging.info("[SSH TUNNEL] Tnel SSH deshabilitado en .env")
         return None
     
-    # Si ya existe y está activo, retornarlo
+    # Si ya existe y est activo, retornarlo
     if ssh_tunnel:
         try:
             if ssh_tunnel.is_active and ssh_tunnel.local_bind_port:
-                logging.debug(f"[SSH TUNNEL] ✅ Túnel activo en puerto local {ssh_tunnel.local_bind_port}")
+                logging.debug(f"[SSH TUNNEL] [OK] Tnel activo en puerto local {ssh_tunnel.local_bind_port}")
                 return ssh_tunnel
         except:
             pass
     
-    # Si existe pero no está activo, limpiarlo
+    # Si existe pero no est activo, limpiarlo
     if ssh_tunnel:
-        logging.warning("[SSH TUNNEL] ⚠️ Túnel existente pero inactivo. Limpiando...")
+        logging.warning("[SSH TUNNEL] [!] Tnel existente pero inactivo. Limpiando...")
         try:
             ssh_tunnel.stop()
         except:
             pass
         ssh_tunnel = None
     
-    # Crear nuevo túnel
+    # Crear nuevo tnel
     try:
         ssh_host = os.getenv('SSH_HOST', 'ssh.pythonanywhere.com')
         ssh_port = int(os.getenv('SSH_PORT', 22))
@@ -55,10 +55,10 @@ def get_ssh_tunnel():
         db_port = int(os.getenv('DB_PORT', 3306))
         
         if not ssh_user or not ssh_password:
-            logging.error("[SSH TUNNEL] ❌ Credenciales SSH faltantes en .env")
+            logging.error("[SSH TUNNEL] [X] Credenciales SSH faltantes en .env")
             return None
         
-        logging.info(f"[SSH TUNNEL] 🔄 Iniciando túnel SSH...")
+        logging.info(f"[SSH TUNNEL] [...] Iniciando tnel SSH...")
         logging.info(f"[SSH TUNNEL]    SSH: {ssh_user}@{ssh_host}:{ssh_port}")
         logging.info(f"[SSH TUNNEL]    MySQL remoto: {db_host}:{db_port}")
         
@@ -67,35 +67,35 @@ def get_ssh_tunnel():
             ssh_username=ssh_user,
             ssh_password=ssh_password,
             remote_bind_address=(db_host, db_port),
-            local_bind_address=('127.0.0.1',),  # Dejar que asigne un puerto automático
-            set_keepalive=30,  # Mantener conexión activa
+            local_bind_address=('127.0.0.1',),  # Dejar que asigne un puerto automtico
+            set_keepalive=30,  # Mantener conexin activa
             compression=True,
             allow_agent=False,
             host_pkey_directories=[]
         )
         
-        # Iniciar el túnel
+        # Iniciar el tnel
         ssh_tunnel.start()
         
-        # Esperar un momento para que el túnel se establezca
+        # Esperar un momento para que el tnel se establezca
         import time
         time.sleep(1)
         
-        # Verificar que el túnel está activo
+        # Verificar que el tnel est activo
         if not ssh_tunnel.is_active:
-            logging.error("[SSH TUNNEL] ❌ El túnel no se activó correctamente")
+            logging.error("[SSH TUNNEL] [X] El tnel no se activ correctamente")
             ssh_tunnel = None
             return None
         
-        logging.info(f"[SSH TUNNEL] ✅ Túnel SSH activo!")
+        logging.info(f"[SSH TUNNEL] [OK] Tnel SSH activo!")
         logging.info(f"[SSH TUNNEL]    Puerto local: {ssh_tunnel.local_bind_port}")
-        logging.info(f"[SSH TUNNEL]    Conexión: localhost:{ssh_tunnel.local_bind_port} -> {db_host}:{db_port}")
+        logging.info(f"[SSH TUNNEL]    Conexin: localhost:{ssh_tunnel.local_bind_port} -> {db_host}:{db_port}")
         
-        # Registrar cierre del túnel al salir
+        # Registrar cierre del tnel al salir
         def close_tunnel():
             global ssh_tunnel
             if ssh_tunnel:
-                logging.info("[SSH TUNNEL] 🔒 Cerrando túnel SSH...")
+                logging.info("[SSH TUNNEL] [-] Cerrando tnel SSH...")
                 try:
                     ssh_tunnel.stop()
                 except:
@@ -107,33 +107,33 @@ def get_ssh_tunnel():
         return ssh_tunnel
         
     except Exception as e:
-        logging.error(f"[SSH TUNNEL] ❌ Error al crear túnel: {type(e).__name__}: {e}")
+        logging.error(f"[SSH TUNNEL] [X] Error al crear tnel: {type(e).__name__}: {e}")
         logging.error(f"[SSH TUNNEL]    Verifica las credenciales SSH en .env")
         ssh_tunnel = None
         return None
 
 class DatabaseConfig:
-    """Configuración de base de datos - KALLPA"""
+    """Configuracin de base de datos - KALLPA"""
     HOST = os.getenv('DB_HOST', 'localhost')
     PORT = int(os.getenv('DB_PORT', 3306))
     USER = os.getenv('DB_USER', 'root')
     PASSWORD = os.getenv('DB_PASSWORD', '')
     DATABASE = os.getenv('DB_NAME', 'kallgwkn_kallpa_bd')
     
-    # Configuración SSH (opcional)
+    # Configuracin SSH (opcional)
     USE_SSH_TUNNEL = os.getenv('USE_SSH_TUNNEL', 'False').lower() == 'true'
     
     @classmethod
     def get_connection_params(cls):
-        """Retorna diccionario con parámetros de conexión"""
+        """Retorna diccionario con parmetros de conexin"""
         
-        # Intentar obtener túnel SSH si está habilitado
+        # Intentar obtener tnel SSH si est habilitado
         if cls.USE_SSH_TUNNEL:
             tunnel = get_ssh_tunnel()
             
             if tunnel and tunnel.is_active:
                 try:
-                    # Usar el túnel SSH
+                    # Usar el tnel SSH
                     params = {
                         'host': '127.0.0.1',
                         'port': tunnel.local_bind_port,
@@ -145,14 +145,14 @@ class DatabaseConfig:
                         'collation': 'utf8mb4_unicode_ci',
                         'use_unicode': True,
                         'connect_timeout': 10,
-                        'time_zone': '-05:00'  # Zona horaria de Perú (UTC-5)
+                        'time_zone': '-05:00'  # Zona horaria de Per (UTC-5)
                     }
-                    logging.info(f"✅ [DB CONFIG] Usando túnel SSH en puerto local {tunnel.local_bind_port}")
+                    logging.info(f"[OK] [DB CONFIG] Usando tnel SSH en puerto local {tunnel.local_bind_port}")
                     return params
                 except Exception as e:
-                    logging.error(f"❌ [DB CONFIG] Error al acceder al túnel: {e}")
+                    logging.error(f"[X] [DB CONFIG] Error al acceder al tnel: {e}")
         
-        # Conexión directa (sin túnel o si falló)
+        # Conexin directa (sin tnel o si fall)
         params = {
             'host': cls.HOST,
             'port': cls.PORT,
@@ -164,15 +164,15 @@ class DatabaseConfig:
             'collation': 'utf8mb4_unicode_ci',
             'use_unicode': True,
             'connect_timeout': 10,
-            'time_zone': '-05:00'  # Zona horaria de Perú (UTC-5)
+            'time_zone': '-05:00'  # Zona horaria de Per (UTC-5)
         }
-        logging.warning(f"⚠️ [DB CONFIG] Conexión directa a {cls.HOST}:{cls.PORT} (túnel no disponible)")
+        logging.warning(f"[!] [DB CONFIG] Conexin directa a {cls.HOST}:{cls.PORT} (tnel no disponible)")
         
         return params
 
 
 class DatabaseConfigKallpa:
-    """Configuración de base de datos - KALLPA"""
+    """Configuracin de base de datos - KALLPA"""
     HOST = os.getenv('DB_KALLPA_HOST', 'localhost')
     PORT = int(os.getenv('DB_KALLPA_PORT', 3306))
     USER = os.getenv('DB_KALLPA_USER', 'root')
@@ -181,7 +181,7 @@ class DatabaseConfigKallpa:
     
     @classmethod
     def get_connection_params(cls):
-        """Retorna diccionario con parámetros de conexión"""
+        """Retorna diccionario con parmetros de conexin"""
         params = {
             'host': cls.HOST,
             'port': cls.PORT,
@@ -189,7 +189,7 @@ class DatabaseConfigKallpa:
             'password': cls.PASSWORD,
             'database': cls.DATABASE,
             'ssl_disabled': True,
-            'time_zone': '-05:00'  # Zona horaria de Perú (UTC-5)
+            'time_zone': '-05:00'  # Zona horaria de Per (UTC-5)
         }
         
         return params

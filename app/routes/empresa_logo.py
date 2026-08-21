@@ -1,6 +1,6 @@
 """
 Module: empresa_logo.py
-Propósito: Manejar carga y descarga de logos de empresa
+Propsito: Manejar carga y descarga de logos de empresa
 Fecha: 10 Julio 2026
 """
 
@@ -15,19 +15,19 @@ import os
 # Blueprint
 logo_bp = Blueprint('empresa_logo', __name__)
 
-# Configuración de carga de archivos
+# Configuracin de carga de archivos
 ALLOWED_EXTENSIONS = {'png'}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 
 
 def get_db_connection():
-    """Crear conexión a la base de datos"""
+    """Crear conexin a la base de datos"""
     try:
         params = DatabaseConfig.get_connection_params()
         connection = mysql.connector.connect(**params)
         return connection
     except Error as e:
-        print(f"Error de conexión: {e}")
+        print(f"Error de conexin: {e}")
         return None
 
 
@@ -39,7 +39,7 @@ def login_required(f):
         if 'user_documento' not in session and 'user_email' not in session:
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return {'success': False, 'message': 'No autenticado'}, 401
-            flash('Debes iniciar sesión', 'warning')
+            flash('Debes iniciar sesin', 'warning')
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -56,28 +56,28 @@ def subir_logo_empresa():
     """Subir logo de empresa (PNG)"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
-        # Verificar que se proporcionó archivo
+        # Verificar que se proporcion archivo
         if 'file' not in request.files:
-            return jsonify({'success': False, 'error': 'No se proporcionó archivo'}), 400
+            return jsonify({'success': False, 'error': 'No se proporcion archivo'}), 400
         
         file = request.files['file']
         
         if file.filename == '':
-            return jsonify({'success': False, 'error': 'El nombre del archivo está vacío'}), 400
+            return jsonify({'success': False, 'error': 'El nombre del archivo est vaco'}), 400
         
         if not allowed_file(file.filename):
             return jsonify({'success': False, 'error': 'Solo se permiten archivos PNG'}), 400
         
-        # Verificar tamaño del archivo
+        # Verificar tamao del archivo
         file.seek(0, os.SEEK_END)
         file_size = file.tell()
         file.seek(0)
         
         if file_size > MAX_FILE_SIZE:
-            return jsonify({'success': False, 'error': f'Archivo muy grande. Máximo {MAX_FILE_SIZE / (1024*1024):.0f} MB'}), 400
+            return jsonify({'success': False, 'error': f'Archivo muy grande. Mximo {MAX_FILE_SIZE / (1024*1024):.0f} MB'}), 400
         
         # Leer contenido del archivo
         logo_data = file.read()
@@ -124,7 +124,7 @@ def descargar_logo_empresa(id_empresa):
     """Descargar logo de empresa"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -161,15 +161,15 @@ def descargar_logo_empresa(id_empresa):
 
 @logo_bp.route('/api/empresa/logo/info/<int:id_empresa>', methods=['GET'])
 def info_logo_empresa(id_empresa):
-    """Obtener información del logo"""
+    """Obtener informacin del logo"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
         
-        # Obtener información
+        # Obtener informacin
         cursor.execute("""
             SELECT 
                 id_empresa,
@@ -209,7 +209,7 @@ def eliminar_logo_empresa(id_empresa):
     """Eliminar logo de empresa"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor()

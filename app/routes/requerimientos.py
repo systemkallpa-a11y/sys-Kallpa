@@ -9,24 +9,24 @@ from datetime import datetime
 import json
 
 def get_db_connection():
-    """Crear conexión a la base de datos Kallpa"""
+    """Crear conexin a la base de datos Kallpa"""
     try:
         params = DatabaseConfig.get_connection_params()
         connection = mysql.connector.connect(**params)
         return connection
     except Error as e:
-        print(f"Error de conexión: {e}")
+        print(f"Error de conexin: {e}")
         return None
 
-# Decorador para requerir autenticación
+# Decorador para requerir autenticacin
 def login_required(f):
-    """Decorador para proteger rutas que requieren autenticación"""
+    """Decorador para proteger rutas que requieren autenticacin"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_documento' not in session and 'user_email' not in session:
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return {'success': False, 'message': 'No autenticado'}, 401
-            flash('Debes iniciar sesión', 'warning')
+            flash('Debes iniciar sesin', 'warning')
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -34,12 +34,12 @@ def login_required(f):
 @main_bp.route('/requerimiento')
 @login_required
 def requerimiento():
-    """Página de gestión de requerimientos"""
-    # Validar que el usuario tenga acceso a Gestión de Requerimientos
+    """Pgina de gestin de requerimientos"""
+    # Validar que el usuario tenga acceso a Gestin de Requerimientos
     num_documento = session.get('user_documento')
     
     if not validar_acceso_usuario(num_documento, id_menu=2, id_submenu=4):
-        flash('No tienes acceso a Gestión de Requerimientos', 'danger')
+        flash('No tienes acceso a Gestin de Requerimientos', 'danger')
         return redirect(url_for('main.dashboard'))
     
     return render_template('requerimiento.html')
@@ -50,7 +50,7 @@ def obtener_requerimientos():
     """Obtener lista de todos los requerimientos con aprobadores usando SP"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -58,7 +58,7 @@ def obtener_requerimientos():
         print(f"[REQUERIMIENTOS] [GET] Obteniendo lista de requerimientos con aprobadores...")
         print(f"[REQUERIMIENTOS] Usando SP: sp_ObtenerRequerimientosConAprobadores")
         
-        # Llamar al SP que incluye información de aprobadores
+        # Llamar al SP que incluye informacin de aprobadores
         cursor.callproc('sp_ObtenerRequerimientosConAprobadores')
         
         # Obtener resultados
@@ -80,8 +80,8 @@ def obtener_requerimientos():
                 if req.get('fecha_creacion'):
                     req['fecha_creacion_formatted'] = req['fecha_creacion'].strftime('%d/%m/%Y')
         
-        print(f"[REQUERIMIENTOS] ✓ {len(requerimientos) if requerimientos else 0} requerimientos obtenidos")
-        print(f"[REQUERIMIENTOS] ✓ Incluye columna 'aprobado_rechazado_por' para el flujo de aprobación")
+        print(f"[REQUERIMIENTOS] [OK] {len(requerimientos) if requerimientos else 0} requerimientos obtenidos")
+        print(f"[REQUERIMIENTOS] [OK] Incluye columna 'aprobado_rechazado_por' para el flujo de aprobacin")
         
         cursor.close()
         connection.close()
@@ -100,7 +100,7 @@ def obtener_requerimiento(id_requerimiento):
     """Obtener datos completos de un requerimiento con todos sus detalles (usando SPs)"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -109,7 +109,7 @@ def obtener_requerimiento(id_requerimiento):
         print(f"[OBTENER_REQUERIMIENTO] Iniciando para ID: {id_requerimiento}")
         print(f"{'='*80}")
         
-        # 1. Obtener información del requerimiento usando SP
+        # 1. Obtener informacin del requerimiento usando SP
         try:
             cursor.callproc('sp_ObtenerRequerimiento', [id_requerimiento])
         except Error as sp_error:
@@ -168,7 +168,7 @@ def obtener_requerimiento(id_requerimiento):
         }
         
         print(f"[OBTENER_REQUERIMIENTO] [OK] Requerimiento encontrado (via SP)")
-        print(f"[OBTENER_REQUERIMIENTO]   Código: {requerimiento.get('codigo')}")
+        print(f"[OBTENER_REQUERIMIENTO]   Cdigo: {requerimiento.get('codigo')}")
         print(f"[OBTENER_REQUERIMIENTO]   Solicitante: {requerimiento.get('usuario_completo')}")
         print(f"[OBTENER_REQUERIMIENTO]   Presupuesto: {requerimiento.get('numero_presupuesto')}")
         print(f"[OBTENER_REQUERIMIENTO]   Estado: {requerimiento.get('estado')}")
@@ -214,13 +214,13 @@ def obtener_requerimiento_detalles(id_requerimiento):
     connection = get_db_connection()
     if not connection:
         print(f"[OBTENER_REQUERIMIENTO_DETALLES] [ERROR] No se pudo conectar a BD")
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
         
-        # 1. Obtener información del requerimiento usando SP
-        print(f"[OBTENER_REQUERIMIENTO_DETALLES] Obteniendo información del requerimiento...")
+        # 1. Obtener informacin del requerimiento usando SP
+        print(f"[OBTENER_REQUERIMIENTO_DETALLES] Obteniendo informacin del requerimiento...")
         cursor.callproc('sp_ObtenerRequerimiento', [id_requerimiento])
         
         # Obtener resultado del SP
@@ -236,7 +236,7 @@ def obtener_requerimiento_detalles(id_requerimiento):
             connection.close()
             return jsonify({'success': False, 'error': 'Requerimiento no encontrado'}), 404
         
-        print(f"[OBTENER_REQUERIMIENTO_DETALLES] ✓ Requerimiento obtenido (via SP)")
+        print(f"[OBTENER_REQUERIMIENTO_DETALLES] [OK] Requerimiento obtenido (via SP)")
         
         # 2. Obtener detalles usando SP
         print(f"[OBTENER_REQUERIMIENTO_DETALLES] Obteniendo detalles...")
@@ -247,7 +247,7 @@ def obtener_requerimiento_detalles(id_requerimiento):
             detalles = result_set.fetchall()
             break
         
-        print(f"[OBTENER_REQUERIMIENTO_DETALLES] ✓ {len(detalles) if detalles else 0} detalles obtenidos")
+        print(f"[OBTENER_REQUERIMIENTO_DETALLES] [OK] {len(detalles) if detalles else 0} detalles obtenidos")
         
         # 3. Calcular resumen
         materiales = [d for d in detalles if d.get('tipo_item') == 'MATERIAL'] if detalles else []
@@ -261,7 +261,7 @@ def obtener_requerimiento_detalles(id_requerimiento):
             'cantidad_servicios': len(servicios)
         }
         
-        print(f"[OBTENER_REQUERIMIENTO_DETALLES] ✓ Resumen: {resumen}")
+        print(f"[OBTENER_REQUERIMIENTO_DETALLES] [OK] Resumen: {resumen}")
         print(f"{'='*80}\n")
         
         cursor.close()
@@ -309,17 +309,17 @@ def crear_requerimiento():
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         try:
             cursor = connection.cursor()
             
             print(f"\n{'='*80}")
-            print(f"[CREAR_REQUERIMIENTO] Iniciando creación con SP")
+            print(f"[CREAR_REQUERIMIENTO] Iniciando creacin con SP")
             print(f"{'='*80}")
             
-            # Obtener datos del usuario desde la sesión
-            num_usuario = session.get('user_id')  # ID numérico del usuario
+            # Obtener datos del usuario desde la sesin
+            num_usuario = session.get('user_id')  # ID numrico del usuario
             if not num_usuario:
                 return jsonify({'success': False, 'error': 'Usuario no autenticado'}), 401
             
@@ -330,11 +330,11 @@ def crear_requerimiento():
             detalles_json = json.dumps(items)
             
             print(f"[CREAR_REQUERIMIENTO] num_usuario: {num_usuario}")
-            print(f"[CREAR_REQUERIMIENTO] Descripción: {data['descripcion']}")
+            print(f"[CREAR_REQUERIMIENTO] Descripcin: {data['descripcion']}")
             print(f"[CREAR_REQUERIMIENTO] Items: {len(items)}")
             print(f"[CREAR_REQUERIMIENTO] id_presupuesto: {id_presupuesto}")
             print(f"[CREAR_REQUERIMIENTO] Items JSON: {detalles_json}")
-            print(f"[CREAR_REQUERIMIENTO] Estado: PENDIENTE (automático)")
+            print(f"[CREAR_REQUERIMIENTO] Estado: PENDIENTE (automtico)")
             
             # Llamar SP CON id_presupuesto
             resultado = cursor.callproc('sp_CrearRequerimientoCompleto', [
@@ -347,7 +347,7 @@ def crear_requerimiento():
             ])
             
             # Obtener el ID del requerimiento creado desde el OUT parameter
-            requerimiento_id = resultado[-1]  # El último valor en la tupla es el OUT parameter
+            requerimiento_id = resultado[-1]  # El ltimo valor en la tupla es el OUT parameter
             
             connection.commit()
             
@@ -392,15 +392,15 @@ def actualizar_requerimiento(id_requerimiento):
         
         # Validar campos obligatorios
         if not data.get('descripcion'):
-            print(f"[ACTUALIZAR_REQUERIMIENTO] ERROR: Descripción vacía")
-            return jsonify({'success': False, 'error': 'Descripción es requerida'}), 400
+            print(f"[ACTUALIZAR_REQUERIMIENTO] ERROR: Descripcin vaca")
+            return jsonify({'success': False, 'error': 'Descripcin es requerida'}), 400
         
         connection = get_db_connection()
         if not connection:
             print(f"[ACTUALIZAR_REQUERIMIENTO] ERROR: No se pudo conectar a BD")
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
-        print(f"[ACTUALIZAR_REQUERIMIENTO] Conexión BD: OK")
+        print(f"[ACTUALIZAR_REQUERIMIENTO] Conexin BD: OK")
         cursor = connection.cursor(dictionary=True)
         
         # Obtener detalles del request
@@ -422,7 +422,7 @@ def actualizar_requerimiento(id_requerimiento):
         
         try:
             # ================================================================
-            # LLAMAR SP - El parámetro OUT (p_resultado) se pasa como None
+            # LLAMAR SP - El parmetro OUT (p_resultado) se pasa como None
             # ================================================================
             p_resultado_param = [None]  # OUT parameter - pasado como None
             cursor.callproc('sp_ActualizarRequerimiento', [
@@ -436,30 +436,30 @@ def actualizar_requerimiento(id_requerimiento):
             print(f"[ACTUALIZAR_REQUERIMIENTO] SP llamado exitosamente")
             
             # ================================================================
-            # OBTENER RESULTADO DEL PARÁMETRO OUT
+            # OBTENER RESULTADO DEL PARMETRO OUT
             # ================================================================
-            # Después de callproc, la lista contiene el valor del parámetro OUT
+            # Despus de callproc, la lista contiene el valor del parmetro OUT
             if p_resultado_param and len(p_resultado_param) > 0:
                 p_resultado = p_resultado_param[0]
-                print(f"[ACTUALIZAR_REQUERIMIENTO] Parámetro OUT: {p_resultado} (tipo: {type(p_resultado)})")
+                print(f"[ACTUALIZAR_REQUERIMIENTO] Parmetro OUT: {p_resultado} (tipo: {type(p_resultado)})")
             else:
-                print(f"[ACTUALIZAR_REQUERIMIENTO] ⚠️ No se obtuvo parámetro OUT, intentando alternativas...")
+                print(f"[ACTUALIZAR_REQUERIMIENTO] [!] No se obtuvo parmetro OUT, intentando alternativas...")
                 # Intentar obtener del result set como backup
                 result_set = cursor.fetchall()
                 if result_set and len(result_set) > 0:
                     p_resultado = 1
-                    print(f"[ACTUALIZAR_REQUERIMIENTO] Result set encontrado, asumiendo éxito")
+                    print(f"[ACTUALIZAR_REQUERIMIENTO] Result set encontrado, asumiendo xito")
                 else:
                     p_resultado = 1
-                    print(f"[ACTUALIZAR_REQUERIMIENTO] Sin result set, asumiendo éxito")
+                    print(f"[ACTUALIZAR_REQUERIMIENTO] Sin result set, asumiendo xito")
             
             connection.commit()
             print(f"[ACTUALIZAR_REQUERIMIENTO] COMMIT realizado")
             
             if p_resultado == 1:
-                print(f"[ACTUALIZAR_REQUERIMIENTO] ✓ ÉXITO (resultado = 1)")
+                print(f"[ACTUALIZAR_REQUERIMIENTO] [OK] XITO (resultado = 1)")
             else:
-                print(f"[ACTUALIZAR_REQUERIMIENTO] ⚠️ SP retornó resultado = {p_resultado}")
+                print(f"[ACTUALIZAR_REQUERIMIENTO] [!] SP retorn resultado = {p_resultado}")
         
         except Exception as e:
             print(f"[ACTUALIZAR_REQUERIMIENTO] ERROR en SP: {type(e).__name__}: {str(e)}")
@@ -477,9 +477,9 @@ def actualizar_requerimiento(id_requerimiento):
             cursor2.fetchall()
             connection.commit()
             cursor2.close()
-            print(f"[ACTUALIZAR_REQUERIMIENTO] ✓ Flujo reiniciado")
+            print(f"[ACTUALIZAR_REQUERIMIENTO] [OK] Flujo reiniciado")
         except Exception as e:
-            print(f"[ACTUALIZAR_REQUERIMIENTO] ⚠️ Error en flujo: {str(e)}")
+            print(f"[ACTUALIZAR_REQUERIMIENTO] [!] Error en flujo: {str(e)}")
             try:
                 connection.rollback()
             except:
@@ -509,13 +509,13 @@ def actualizar_requerimiento(id_requerimiento):
 def eliminar_requerimiento(id_requerimiento):
     """Eliminar un requerimiento completamente usando SP (Hard Delete)"""
     print(f"\n{'='*80}")
-    print(f"[ELIMINAR_REQUERIMIENTO] ⚠️ FUNCIÓN LLAMADA - ID: {id_requerimiento}")
+    print(f"[ELIMINAR_REQUERIMIENTO] [!] FUNCIN LLAMADA - ID: {id_requerimiento}")
     print(f"{'='*80}")
     
     connection = get_db_connection()
     if not connection:
-        print(f"[ELIMINAR_REQUERIMIENTO] [ERROR] No hay conexión a BD")
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        print(f"[ELIMINAR_REQUERIMIENTO] [ERROR] No hay conexin a BD")
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor()
@@ -525,7 +525,7 @@ def eliminar_requerimiento(id_requerimiento):
         print(f"{'='*80}")
         
         try:
-            # Llamar al SP con parámetros OUT usando variables de sesión
+            # Llamar al SP con parmetros OUT usando variables de sesin
             cursor.execute("""
                 CALL sp_EliminarRequerimiento(
                     %s,
@@ -559,10 +559,10 @@ def eliminar_requerimiento(id_requerimiento):
             detalles_eliminados = result[1] or 0
             aprobaciones_eliminadas = result[2] or 0
             presupuesto_reversado = bool(result[3])
-            mensaje = result[4] or 'Operación completada'
+            mensaje = result[4] or 'Operacin completada'
             
         except Error as sp_error:
-            # Error específico del SP
+            # Error especfico del SP
             if sp_error.errno == 1305:  # PROCEDURE does not exist
                 print(f"[ELIMINAR_REQUERIMIENTO] [ERROR] SP no existe")
                 cursor.close()
@@ -575,12 +575,12 @@ def eliminar_requerimiento(id_requerimiento):
                 print(f"[ELIMINAR_REQUERIMIENTO] [ERROR] Error SQL: {sp_error}")
                 raise sp_error
         
-        print(f"\n[ELIMINAR_REQUERIMIENTO] [✅ OK] {mensaje}")
+        print(f"\n[ELIMINAR_REQUERIMIENTO] [[OK] OK] {mensaje}")
         print(f"[ELIMINAR_REQUERIMIENTO] RESUMEN:")
-        print(f"  - Código: {codigo}")
+        print(f"  - Cdigo: {codigo}")
         print(f"  - Detalles eliminados: {detalles_eliminados}")
         print(f"  - Aprobaciones eliminadas: {aprobaciones_eliminadas}")
-        print(f"  - Presupuesto reversado: {'Sí' if presupuesto_reversado else 'No'}")
+        print(f"  - Presupuesto reversado: {'S' if presupuesto_reversado else 'No'}")
         print(f"{'='*80}\n")
         
         cursor.close()
@@ -615,10 +615,10 @@ def eliminar_requerimiento(id_requerimiento):
 @main_bp.route('/api/requerimientos/flujo/<int:id_requerimiento>', methods=['GET'])
 @login_required
 def obtener_flujo_requerimiento(id_requerimiento):
-    """Obtener pasos del flujo de aprobación para componente visual"""
+    """Obtener pasos del flujo de aprobacin para componente visual"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -640,7 +640,7 @@ def obtener_flujo_requerimiento(id_requerimiento):
                 if paso.get('nombre_aprobador'):
                     paso['nombre_aprobador'] = ' '.join(paso['nombre_aprobador'].split())
         
-        print(f"[FLUJO_REQUERIMIENTO] ✓ {len(pasos)} pasos obtenidos")
+        print(f"[FLUJO_REQUERIMIENTO] [OK] {len(pasos)} pasos obtenidos")
         
         cursor.close()
         connection.close()
@@ -719,7 +719,7 @@ def aprobar_requerimiento(id_requerimiento):
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         cursor = connection.cursor()
         
@@ -729,7 +729,7 @@ def aprobar_requerimiento(id_requerimiento):
         print(f"{'='*80}")
         
         try:
-            # Llamar al SP usando variables de sesión para OUT
+            # Llamar al SP usando variables de sesin para OUT
             cursor.execute("""
                 CALL sp_AprobarRequerimiento(
                     %s,
@@ -807,7 +807,7 @@ def rechazar_requerimiento(id_requerimiento):
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         cursor = connection.cursor(dictionary=True)
         
@@ -836,11 +836,11 @@ def rechazar_requerimiento(id_requerimiento):
                 success = result.get('success', False)
                 mensaje = result.get('mensaje', 'Error desconocido')
                 
-                print(f"[RECHAZAR_REQUERIMIENTO] SP retornó: success={success}, mensaje={mensaje}")
+                print(f"[RECHAZAR_REQUERIMIENTO] SP retorn: success={success}, mensaje={mensaje}")
                 
                 if success:
                     connection.commit()
-                    print(f"[RECHAZAR_REQUERIMIENTO] ✓ Requerimiento rechazado exitosamente")
+                    print(f"[RECHAZAR_REQUERIMIENTO] [OK] Requerimiento rechazado exitosamente")
                     print(f"{'='*80}\n")
                     
                     cursor.close()
@@ -852,7 +852,7 @@ def rechazar_requerimiento(id_requerimiento):
                     }), 200
                 else:
                     connection.rollback()
-                    print(f"[RECHAZAR_REQUERIMIENTO] ❌ {mensaje}")
+                    print(f"[RECHAZAR_REQUERIMIENTO] [X] {mensaje}")
                     print(f"{'='*80}\n")
                     
                     cursor.close()
@@ -864,7 +864,7 @@ def rechazar_requerimiento(id_requerimiento):
                     }), 400
             else:
                 connection.rollback()
-                print(f"[RECHAZAR_REQUERIMIENTO] ❌ SP no retornó resultado")
+                print(f"[RECHAZAR_REQUERIMIENTO] [X] SP no retorn resultado")
                 print(f"{'='*80}\n")
                 
                 cursor.close()
@@ -877,7 +877,7 @@ def rechazar_requerimiento(id_requerimiento):
                 
         except Exception as sp_error:
             connection.rollback()
-            print(f"[RECHAZAR_REQUERIMIENTO] ❌ Error ejecutando SP: {sp_error}")
+            print(f"[RECHAZAR_REQUERIMIENTO] [X] Error ejecutando SP: {sp_error}")
             print(f"{'='*80}\n")
             
             cursor.close()

@@ -7,52 +7,52 @@ from functools import wraps
 from app.config import DatabaseConfig
 
 def get_db_connection():
-    """Crear conexión a la base de datos Kallpa"""
+    """Crear conexin a la base de datos Kallpa"""
     try:
         params = DatabaseConfig.get_connection_params()
         connection = mysql.connector.connect(**params)
         return connection
     except Error as e:
-        print(f"Error de conexión: {e}")
+        print(f"Error de conexin: {e}")
         return None
 
 def hash_password(password):
-    """Encriptar contraseña usando SHA-256"""
+    """Encriptar contrasea usando SHA-256"""
     return hashlib.sha256(password.encode()).hexdigest()
 
-# Decorador para requerir autenticación
+# Decorador para requerir autenticacin
 def login_required(f):
-    """Decorador para proteger rutas que requieren autenticación"""
+    """Decorador para proteger rutas que requieren autenticacin"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Verificar si está autenticado (puede ser user_email o user_documento)
+        # Verificar si est autenticado (puede ser user_email o user_documento)
         if 'user_documento' not in session and 'user_email' not in session:
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return {'success': False, 'message': 'No autenticado'}, 401
-            flash('Debes iniciar sesión para acceder a esta página', 'warning')
+            flash('Debes iniciar sesin para acceder a esta pgina', 'warning')
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
 
 # ============================================================================
-# FUNCIÓN: VALIDAR ACCESO A MENÚ/SUBMENÚ
+# FUNCIN: VALIDAR ACCESO A MEN/SUBMEN
 # ============================================================================
 
 def validar_acceso_usuario(num_documento, id_menu, id_submenu=None):
     """
-    Valida si un usuario tiene acceso a un menú o submenú específico
+    Valida si un usuario tiene acceso a un men o submen especfico
     
     Args:
         num_documento: Documento del usuario
-        id_menu: ID del menú
-        id_submenu: ID del submenú (None si es solo menú)
+        id_menu: ID del men
+        id_submenu: ID del submen (None si es solo men)
     
     Returns:
         Boolean: True si tiene acceso, False si no
     """
     connection = get_db_connection()
     if not connection:
-        print(f"[VALIDAR_ACCESO] ❌ Error: No se pudo conectar a la BD")
+        print(f"[VALIDAR_ACCESO] [X] Error: No se pudo conectar a la BD")
         return False
     
     try:
@@ -60,7 +60,7 @@ def validar_acceso_usuario(num_documento, id_menu, id_submenu=None):
         
         print(f"[VALIDAR_ACCESO] Validando: documento={num_documento}, menu={id_menu}, submenu={id_submenu}")
         
-        # Verificar si el usuario tiene acceso completo al menú
+        # Verificar si el usuario tiene acceso completo al men
         cursor.execute("""
             SELECT COUNT(*) as count
             FROM TblUsuarioAccesos
@@ -73,16 +73,16 @@ def validar_acceso_usuario(num_documento, id_menu, id_submenu=None):
         result = cursor.fetchone()
         count_completo = result['count']
         
-        print(f"[VALIDAR_ACCESO]   → Acceso completo (id_submenu IS NULL): {count_completo}")
+        print(f"[VALIDAR_ACCESO]    Acceso completo (id_submenu IS NULL): {count_completo}")
         
-        # Si tiene acceso completo al menú, permitir
+        # Si tiene acceso completo al men, permitir
         if count_completo > 0:
-            print(f"[VALIDAR_ACCESO]   ✅ PERMITIDO (acceso completo)")
+            print(f"[VALIDAR_ACCESO]   [OK] PERMITIDO (acceso completo)")
             cursor.close()
             connection.close()
             return True
         
-        # Si se especifica un submenú, verificar acceso específico
+        # Si se especifica un submen, verificar acceso especfico
         if id_submenu is not None:
             cursor.execute("""
                 SELECT COUNT(*) as count
@@ -96,41 +96,41 @@ def validar_acceso_usuario(num_documento, id_menu, id_submenu=None):
             result = cursor.fetchone()
             count_especifico = result['count']
             
-            print(f"[VALIDAR_ACCESO]   → Acceso específico (id_submenu={id_submenu}): {count_especifico}")
+            print(f"[VALIDAR_ACCESO]    Acceso especfico (id_submenu={id_submenu}): {count_especifico}")
             
             cursor.close()
             connection.close()
             
             if count_especifico > 0:
-                print(f"[VALIDAR_ACCESO]   ✅ PERMITIDO (acceso específico)")
+                print(f"[VALIDAR_ACCESO]   [OK] PERMITIDO (acceso especfico)")
                 return True
             else:
-                print(f"[VALIDAR_ACCESO]   ❌ DENEGADO (sin acceso)")
+                print(f"[VALIDAR_ACCESO]   [X] DENEGADO (sin acceso)")
                 return False
         
-        print(f"[VALIDAR_ACCESO]   ❌ DENEGADO (sin acceso completo ni específico)")
+        print(f"[VALIDAR_ACCESO]   [X] DENEGADO (sin acceso completo ni especfico)")
         cursor.close()
         connection.close()
         return False
     
     except Error as e:
-        print(f"[VALIDAR_ACCESO] ❌ Error SQL: {e}")
+        print(f"[VALIDAR_ACCESO] [X] Error SQL: {e}")
         if connection:
             connection.close()
         return False
 
 @main_bp.route('/')
 def index():
-    """Ruta raíz - SIEMPRE va a welcome"""
-    # IMPORTANTE: Siempre redirige a welcome, no importa si hay sesión
-    # La sesión se verifica en welcome o login, no en la ruta raíz
+    """Ruta raz - SIEMPRE va a welcome"""
+    # IMPORTANTE: Siempre redirige a welcome, no importa si hay sesin
+    # La sesin se verifica en welcome o login, no en la ruta raz
     return redirect(url_for('auth.show_welcome'))
 
 
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
-    """Dashboard con estadísticas y reportes"""
+    """Dashboard con estadsticas y reportes"""
     return render_template('dashboard.html')
 
 
@@ -141,19 +141,19 @@ def dashboard():
 @main_bp.route('/api/mi-acceso/obtener', methods=['GET'])
 @login_required
 def obtener_mi_acceso():
-    """Obtener menús y submenús a los que tiene acceso el usuario actual"""
+    """Obtener mens y submens a los que tiene acceso el usuario actual"""
     num_documento = session.get('user_documento')
     
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
         
         print(f"[MI_ACCESO] Obteniendo accesos para documento: {num_documento}")
         
-        # Obtener menús accesibles
+        # Obtener mens accesibles
         cursor.execute("""
             SELECT DISTINCT
                 m.id_menu,
@@ -170,7 +170,7 @@ def obtener_mi_acceso():
         
         menus = cursor.fetchall()
         
-        # Obtener submenús accesibles (específicos solamente)
+        # Obtener submens accesibles (especficos solamente)
         cursor.execute("""
             SELECT 
                 sm.id_submenu,
@@ -190,7 +190,7 @@ def obtener_mi_acceso():
         
         submenus_especificos = cursor.fetchall()
         
-        # Obtener menús con acceso COMPLETO (id_submenu = NULL)
+        # Obtener mens con acceso COMPLETO (id_submenu = NULL)
         cursor.execute("""
             SELECT DISTINCT id_menu
             FROM TblUsuarioAccesos
@@ -201,14 +201,14 @@ def obtener_mi_acceso():
         
         menus_completos = [row['id_menu'] for row in cursor.fetchall()]
         
-        print(f"[MI_ACCESO] {len(menus)} menús, {len(submenus_especificos)} submenús específicos, {len(menus_completos)} menús completos")
-        print(f"[MI_ACCESO] Menús con acceso completo: {menus_completos}")
+        print(f"[MI_ACCESO] {len(menus)} mens, {len(submenus_especificos)} submens especficos, {len(menus_completos)} mens completos")
+        print(f"[MI_ACCESO] Mens con acceso completo: {menus_completos}")
         
-        # Para menús con acceso COMPLETO, obtener TODOS sus submenús
-        submenus = list(submenus_especificos)  # Copiar submenús específicos
+        # Para mens con acceso COMPLETO, obtener TODOS sus submens
+        submenus = list(submenus_especificos)  # Copiar submens especficos
         
         for id_menu_completo in menus_completos:
-            print(f"[MI_ACCESO] Obteniendo todos los submenús para menú completo: {id_menu_completo}")
+            print(f"[MI_ACCESO] Obteniendo todos los submens para men completo: {id_menu_completo}")
             
             cursor.execute("""
                 SELECT 
@@ -225,10 +225,10 @@ def obtener_mi_acceso():
             """, (id_menu_completo,))
             
             submenus_menu_completo = cursor.fetchall()
-            print(f"[MI_ACCESO] Se agregaron {len(submenus_menu_completo)} submenús para menú {id_menu_completo}")
+            print(f"[MI_ACCESO] Se agregaron {len(submenus_menu_completo)} submens para men {id_menu_completo}")
             submenus.extend(submenus_menu_completo)
         
-        print(f"[MI_ACCESO] Total de submenús a mostrar: {len(submenus)}")
+        print(f"[MI_ACCESO] Total de submens a mostrar: {len(submenus)}")
         
         cursor.close()
         connection.close()
@@ -252,12 +252,12 @@ def obtener_mi_acceso():
 @main_bp.route('/vacaciones')
 @login_required
 def vacaciones():
-    """Vista de gestión de vacaciones"""
+    """Vista de gestin de vacaciones"""
     num_documento = session.get('user_documento')
     
-    # Validar acceso (Menú RR.HH = 1, asumiendo que Vacaciones será el siguiente submenu)
+    # Validar acceso (Men RR.HH = 1, asumiendo que Vacaciones ser el siguiente submenu)
     # if not validar_acceso_usuario(num_documento, 1, None):  # Ajustar id_submenu cuando se cree en BD
-    #     flash('No tienes acceso a este módulo', 'error')
+    #     flash('No tienes acceso a este mdulo', 'error')
     #     return redirect(url_for('main.dashboard'))
     
     return render_template('vacaciones.html')

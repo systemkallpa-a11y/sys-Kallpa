@@ -1,6 +1,6 @@
 """
-MÓDULO: Flujo de Aprobación
-DESCRIPCIÓN: Gestión de flujos de aprobación para presupuestos, OT, etc.
+MDULO: Flujo de Aprobacin
+DESCRIPCIN: Gestin de flujos de aprobacin para presupuestos, OT, etc.
 """
 
 from flask import render_template, request, jsonify, session, flash, redirect, url_for
@@ -13,36 +13,36 @@ from .main import validar_acceso_usuario
 from datetime import datetime
 
 def get_db_connection():
-    """Crear conexión a la base de datos Kallpa"""
+    """Crear conexin a la base de datos Kallpa"""
     try:
         params = DatabaseConfig.get_connection_params()
         connection = mysql.connector.connect(**params)
         return connection
     except Error as e:
-        print(f"Error de conexión: {e}")
+        print(f"Error de conexin: {e}")
         return None
 
-# Decorador para requerir autenticación
+# Decorador para requerir autenticacin
 def login_required(f):
-    """Decorador para proteger rutas que requieren autenticación"""
+    """Decorador para proteger rutas que requieren autenticacin"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_documento' not in session and 'user_email' not in session:
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return {'success': False, 'message': 'No autenticado'}, 401
-            flash('Debes iniciar sesión', 'warning')
+            flash('Debes iniciar sesin', 'warning')
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
 
 # ============================================================================
-# RUTA PRINCIPAL: FLUJO DE APROBACIÓN
+# RUTA PRINCIPAL: FLUJO DE APROBACIN
 # ============================================================================
 
 @main_bp.route('/flujo-de-aprobacion')
 @login_required
 def flujo_aprobacion():
-    """Página principal de gestión de flujos de aprobación"""
+    """Pgina principal de gestin de flujos de aprobacin"""
     num_documento = session.get('user_documento')
     
     print(f"\n{'='*80}")
@@ -51,25 +51,25 @@ def flujo_aprobacion():
     print(f"{'='*80}")
     
     # Validar acceso
-    # Menú 4 = Configuración, SubMenú 10 = Flujo de Aprobación
+    # Men 4 = Configuracin, SubMen 10 = Flujo de Aprobacin
     tiene_acceso = validar_acceso_usuario(num_documento, id_menu=4, id_submenu=10)
     
-    print(f"[FLUJO_APROBACION_ACCESS] ✅ Acceso permitido: {tiene_acceso}")
+    print(f"[FLUJO_APROBACION_ACCESS] [OK] Acceso permitido: {tiene_acceso}")
     
     if not tiene_acceso:
-        print(f"[FLUJO_APROBACION_ACCESS] ❌ ACCESO DENEGADO")
+        print(f"[FLUJO_APROBACION_ACCESS] [X] ACCESO DENEGADO")
         print(f"{'='*80}\n")
-        flash('No tienes acceso a Flujo de Aprobación', 'danger')
+        flash('No tienes acceso a Flujo de Aprobacin', 'danger')
         return redirect(url_for('main.dashboard'))
     
-    print(f"[FLUJO_APROBACION_ACCESS] ✅ ACCESO PERMITIDO - Cargando flujo_aprobacion.html")
+    print(f"[FLUJO_APROBACION_ACCESS] [OK] ACCESO PERMITIDO - Cargando flujo_aprobacion.html")
     print(f"{'='*80}\n")
     
     return render_template('flujo_aprobacion.html')
 
 
 # ============================================================================
-# ENDPOINTS API PARA FLUJO DE APROBACIÓN
+# ENDPOINTS API PARA FLUJO DE APROBACIN
 # ============================================================================
 
 @main_bp.route('/api/flujo-aprobacion/obtener-tipos', methods=['GET'])
@@ -78,7 +78,7 @@ def obtener_tipos_documentos():
     """Obtener lista de tipos de documentos"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -104,7 +104,7 @@ def obtener_tipos_documentos():
         
         tipos = cursor.fetchall()
         
-        print(f"[TIPOS_DOCUMENTO_LIST] [✓ OK] {len(tipos)} tipos de documentos obtenidos")
+        print(f"[TIPOS_DOCUMENTO_LIST] [[OK] OK] {len(tipos)} tipos de documentos obtenidos")
         
         cursor.close()
         connection.close()
@@ -119,15 +119,15 @@ def obtener_tipos_documentos():
 @main_bp.route('/api/flujo-aprobacion/obtener-flujos', methods=['GET'])
 @login_required
 def obtener_flujos_aprobacion():
-    """Obtener lista de flujos de aprobación desde TblFlujoAprobacionCargos"""
+    """Obtener lista de flujos de aprobacin desde TblFlujoAprobacionCargos"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
         
-        print(f"[FLUJO_APROBACION_LIST] Obteniendo flujos de aprobación desde TblFlujoAprobacionCargos")
+        print(f"[FLUJO_APROBACION_LIST] Obteniendo flujos de aprobacin desde TblFlujoAprobacionCargos")
         
         cursor.execute('''
             SELECT 
@@ -159,7 +159,7 @@ def obtener_flujos_aprobacion():
             flujo['es_requerido'] = bool(flujo['es_requerido'])
             flujo['permite_rechazo'] = bool(flujo['permite_rechazo'])
         
-        print(f"[FLUJO_APROBACION_LIST] ✓ OK - {len(flujos)} registros obtenidos")
+        print(f"[FLUJO_APROBACION_LIST] [OK] OK - {len(flujos)} registros obtenidos")
         
         cursor.close()
         connection.close()
@@ -174,10 +174,10 @@ def obtener_flujos_aprobacion():
 @main_bp.route('/api/flujo-aprobacion/obtener-cargos', methods=['GET'])
 @login_required
 def obtener_cargos_aprobacion():
-    """Obtener lista de cargos para asignar en flujos de aprobación"""
+    """Obtener lista de cargos para asignar en flujos de aprobacin"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -189,13 +189,13 @@ def obtener_cargos_aprobacion():
                 id_cargo,
                 nombre
             FROM TblCargo
-            WHERE activo = 1
+            WHERE estado = 'Activo'
             ORDER BY nombre ASC
         ''')
         
         cargos = cursor.fetchall()
         
-        print(f"[CARGOS_APROBACION] [✓ OK] {len(cargos)} cargos obtenidos")
+        print(f"[CARGOS_APROBACION] [[OK] OK] {len(cargos)} cargos obtenidos")
         
         cursor.close()
         connection.close()
@@ -210,15 +210,15 @@ def obtener_cargos_aprobacion():
 @main_bp.route('/api/flujo-aprobacion/area-para-cargo/<int:id_cargo>', methods=['GET'])
 @login_required
 def obtener_area_para_cargo(id_cargo):
-    """Obtener el área que pertenece un cargo específico"""
+    """Obtener el rea que pertenece un cargo especfico"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
         
-        print(f"[AREA_CARGO] Obteniendo área para cargo {id_cargo}")
+        print(f"[AREA_CARGO] Obteniendo rea para cargo {id_cargo}")
         
         cursor.execute('''
             SELECT 
@@ -234,9 +234,9 @@ def obtener_area_para_cargo(id_cargo):
         area = cursor.fetchone()
         
         if area:
-            print(f"[AREA_CARGO] [✓ OK] Área encontrada: {area['id_area']} - {area['area_nombre']}")
+            print(f"[AREA_CARGO] [[OK] OK] rea encontrada: {area['id_area']} - {area['area_nombre']}")
         else:
-            print(f"[AREA_CARGO] [⚠️] No se encontró área para cargo {id_cargo}")
+            print(f"[AREA_CARGO] [[!]] No se encontr rea para cargo {id_cargo}")
         
         cursor.close()
         connection.close()
@@ -257,7 +257,7 @@ def actualizar_tipo_documento(id_tipo):
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         cursor = connection.cursor()
         
@@ -292,12 +292,12 @@ def eliminar_tipo_documento(id_tipo):
     try:
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         cursor = connection.cursor()
         
         print(f"\n{'='*80}")
-        print(f"[ELIMINAR_TIPO_DOCUMENTO] Iniciando eliminación de tipo {id_tipo}")
+        print(f"[ELIMINAR_TIPO_DOCUMENTO] Iniciando eliminacin de tipo {id_tipo}")
         print(f"{'='*80}")
         
         # 1. Eliminar directamente de TblFlujoAprobacionCargos
@@ -307,9 +307,9 @@ def eliminar_tipo_documento(id_tipo):
         ''', (id_tipo,))
         
         cargos_eliminados = cursor.rowcount
-        print(f"[ELIMINAR_TIPO_DOCUMENTO] ✓ {cargos_eliminados} flujo(s)-cargo eliminado(s)")
+        print(f"[ELIMINAR_TIPO_DOCUMENTO] [OK] {cargos_eliminados} flujo(s)-cargo eliminado(s)")
         
-        print(f"[ELIMINAR_TIPO_DOCUMENTO] ✓ {cargos_eliminados} flujo(s)-cargo eliminado(s)")
+        print(f"[ELIMINAR_TIPO_DOCUMENTO] [OK] {cargos_eliminados} flujo(s)-cargo eliminado(s)")
         
         # 2. Eliminar el tipo de documento
         cursor.execute('''
@@ -321,7 +321,7 @@ def eliminar_tipo_documento(id_tipo):
         cursor.close()
         connection.close()
         
-        print(f"[ELIMINAR_TIPO_DOCUMENTO] ✅ Tipo de documento {id_tipo} eliminado")
+        print(f"[ELIMINAR_TIPO_DOCUMENTO] [OK] Tipo de documento {id_tipo} eliminado")
         print(f"[ELIMINAR_TIPO_DOCUMENTO] Total: 1 tipo + {cargos_eliminados} cargo(s)")
         print(f"{'='*80}\n")
         
@@ -338,13 +338,13 @@ def eliminar_tipo_documento(id_tipo):
 @main_bp.route('/api/flujo-aprobacion/actualizar-flujo/<int:id_flujo>', methods=['PUT'])
 @login_required
 def actualizar_flujo_aprobacion(id_flujo):
-    """Actualizar flujo de aprobación en TblFlujoAprobacionCargos"""
+    """Actualizar flujo de aprobacin en TblFlujoAprobacionCargos"""
     try:
         datos = request.get_json()
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         cursor = connection.cursor()
         
@@ -367,7 +367,7 @@ def actualizar_flujo_aprobacion(id_flujo):
         cursor.close()
         connection.close()
         
-        return jsonify({'success': True, 'message': 'Flujo de aprobación actualizado'}), 200
+        return jsonify({'success': True, 'message': 'Flujo de aprobacin actualizado'}), 200
     
     except Exception as e:
         print(f"[ACTUALIZAR_FLUJO] Error: {str(e)}")
@@ -377,12 +377,12 @@ def actualizar_flujo_aprobacion(id_flujo):
 @main_bp.route('/api/flujo-aprobacion/eliminar-flujo/<int:id_flujo>', methods=['DELETE'])
 @login_required
 def eliminar_flujo_aprobacion(id_flujo):
-    """Eliminar flujo de aprobación usando SP con validaciones"""
+    """Eliminar flujo de aprobacin usando SP con validaciones"""
     try:
         connection = get_db_connection()
         if not connection:
             print(f"[ELIMINAR_FLUJO] [ERROR] No se pudo conectar a BD")
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         cursor = connection.cursor(dictionary=True)
         
@@ -390,7 +390,7 @@ def eliminar_flujo_aprobacion(id_flujo):
         print(f"[ELIMINAR_FLUJO] Eliminando flujo-cargo ID {id_flujo}")
         print(f"{'='*80}")
         
-        # Obtener información del flujo antes de eliminar
+        # Obtener informacin del flujo antes de eliminar
         cursor.execute('''
             SELECT id_tipo_documento, numero_paso
             FROM TblFlujoAprobacionCargos
@@ -431,7 +431,7 @@ def eliminar_flujo_aprobacion(id_flujo):
         connection.close()
         
         if resultado and resultado.get('resultado') == 'OK':
-            print(f"[ELIMINAR_FLUJO] ✅ Flujo {id_flujo} eliminado exitosamente")
+            print(f"[ELIMINAR_FLUJO] [OK] Flujo {id_flujo} eliminado exitosamente")
             print(f"[ELIMINAR_FLUJO] Mensaje: {resultado.get('mensaje')}")
             print(f"{'='*80}\n")
             
@@ -445,7 +445,7 @@ def eliminar_flujo_aprobacion(id_flujo):
             print(f"[ELIMINAR_FLUJO] [{resultado_tipo}] {error_msg}")
             print(f"{'='*80}\n")
             
-            # ADVERTENCIA es una respuesta válida (no error HTTP), success=false pero status 200
+            # ADVERTENCIA es una respuesta vlida (no error HTTP), success=false pero status 200
             # ERROR es un error real, devolver success=false con status 400
             status_code = 200 if resultado_tipo == 'ADVERTENCIA' else 400
             
@@ -464,7 +464,7 @@ def eliminar_flujo_aprobacion(id_flujo):
 @main_bp.route('/api/flujo-aprobacion/guardar-cambios-flujo', methods=['POST'])
 @login_required
 def guardar_cambios_flujo_endpoint():
-    """Guardar múltiples cambios en un flujo (agregar/eliminar cargos)"""
+    """Guardar mltiples cambios en un flujo (agregar/eliminar cargos)"""
     from .guardar_cambios_flujo import guardar_cambios_flujo
     return guardar_cambios_flujo()
 
@@ -483,7 +483,7 @@ def crear_tipo_documento():
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         cursor = connection.cursor(dictionary=True)
         
@@ -502,7 +502,7 @@ def crear_tipo_documento():
         
         connection.commit()
         
-        print(f"[CREAR_TIPO_DOCUMENTO] ✓ Tipo de documento creado")
+        print(f"[CREAR_TIPO_DOCUMENTO] [OK] Tipo de documento creado")
         
         cursor.close()
         connection.close()
@@ -513,14 +513,14 @@ def crear_tipo_documento():
         }), 201
     
     except Exception as e:
-        print(f"[CREAR_TIPO_DOCUMENTO] ❌ ERROR: {str(e)}")
+        print(f"[CREAR_TIPO_DOCUMENTO] [X] ERROR: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @main_bp.route('/api/flujo-aprobacion/crear-flujo', methods=['POST'])
 @login_required
 def crear_flujo_aprobacion():
-    """Crear nuevo flujo de aprobación en TblFlujoAprobacionCargos"""
+    """Crear nuevo flujo de aprobacin en TblFlujoAprobacionCargos"""
     print(f"\n{'='*80}")
     print(f"[CREAR_FLUJO_APROBACION] Iniciando...")
     print(f"{'='*80}")
@@ -531,7 +531,7 @@ def crear_flujo_aprobacion():
         
         connection = get_db_connection()
         if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         cursor = connection.cursor(dictionary=True)
         
@@ -556,10 +556,10 @@ def crear_flujo_aprobacion():
         if cursor.fetchone():
             cursor.close()
             connection.close()
-            print(f"[CREAR_FLUJO_APROBACION] ⚠️ Cargo {id_cargo} ya existe en paso {numero_paso}")
+            print(f"[CREAR_FLUJO_APROBACION] [!] Cargo {id_cargo} ya existe en paso {numero_paso}")
             return jsonify({
                 'success': False,
-                'error': 'Este cargo ya está asignado a este paso'
+                'error': 'Este cargo ya est asignado a este paso'
             }), 409
         
         # Insertar nuevo flujo-cargo en TblFlujoAprobacionCargos
@@ -580,7 +580,7 @@ def crear_flujo_aprobacion():
         id_flujo_cargo = cursor.lastrowid
         connection.commit()
         
-        print(f"[CREAR_FLUJO_APROBACION] ✓ Flujo-cargo creado (ID: {id_flujo_cargo})")
+        print(f"[CREAR_FLUJO_APROBACION] [OK] Flujo-cargo creado (ID: {id_flujo_cargo})")
         print(f"{'='*80}\n")
         
         cursor.close()
@@ -588,40 +588,57 @@ def crear_flujo_aprobacion():
         
         return jsonify({
             'success': True,
-            'message': 'Flujo de aprobación creado correctamente',
+            'message': 'Flujo de aprobacin creado correctamente',
             'id_flujo_cargo': id_flujo_cargo
         }), 201
     
     except Exception as e:
-        print(f"[CREAR_FLUJO_APROBACION] ❌ ERROR: {str(e)}")
+        print(f"[CREAR_FLUJO_APROBACION] [X] ERROR: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # ============================================================================
-# NUEVOS ENDPOINTS PARA GESTIÓN DE FLUJOS CONECTADOS A BD
+# NUEVOS ENDPOINTS PARA GESTIN DE FLUJOS CONECTADOS A BD
 # ============================================================================
 
 @main_bp.route('/api/flujo-aprobacion/detalle/<int:id_tipo_documento>', methods=['GET'])
 @login_required
 def obtener_detalle_flujo(id_tipo_documento):
-    """Obtener detalle del flujo de aprobación para un tipo de documento"""
+    """Obtener detalle del flujo de aprobacin para un tipo de documento"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
         
         print(f"[FLUJO_DETALLE] Obteniendo detalle para tipo: {id_tipo_documento}")
         
-        # Llamar SP para obtener flujo
-        cursor.callproc('sp_ObtenerFlujoAprobacion', [id_tipo_documento])
+        # Query directa (SP no existe en BD)
+        cursor.execute('''
+            SELECT 
+                fac.id_flujo_cargo,
+                fac.id_tipo_documento,
+                fac.numero_paso,
+                fac.nombre_paso,
+                fac.descripcion,
+                fac.es_final,
+                fac.es_requerido,
+                fac.permite_rechazo,
+                fac.orden_visualizacion,
+                fac.id_cargo,
+                c.nombre as cargo_nombre,
+                a.nombre as area_nombre
+            FROM TblFlujoAprobacionCargos fac
+            LEFT JOIN TblCargo c ON fac.id_cargo = c.id_cargo
+            LEFT JOIN TblArea a ON c.id_area = a.id_area
+            WHERE fac.id_tipo_documento = %s AND fac.activo = 1
+            ORDER BY fac.numero_paso ASC, COALESCE(fac.orden_visualizacion, 0) ASC
+        ''', (id_tipo_documento,))
         
-        pasos = []
-        for result in cursor.stored_results():
-            pasos = result.fetchall()
+        pasos = cursor.fetchall()
         
-        print(f"[FLUJO_DETALLE] [✓ OK] {len(pasos)} pasos obtenidos")
+        print(f"[FLUJO_DETALLE] [[OK] OK] {len(pasos)} pasos obtenidos")
         
         cursor.close()
         connection.close()
@@ -639,7 +656,7 @@ def obtener_detalle_flujo(id_tipo_documento):
 @main_bp.route('/api/flujo-aprobacion/registrar-aprobacion', methods=['POST'])
 @login_required
 def registrar_aprobacion():
-    """Registrar aprobación de un paso del flujo - CON VALIDACIÓN DE FLUJO COMPLETO"""
+    """Registrar aprobacin de un paso del flujo - CON VALIDACIN DE FLUJO COMPLETO"""
     num_documento = session.get('user_documento')
     
     print(f"\n{'='*80}")
@@ -650,7 +667,7 @@ def registrar_aprobacion():
         datos = request.get_json()
         print(f"[REGISTRAR_APROBACION] Datos recibidos: {datos}")
         
-        # Parámetros
+        # Parmetros
         id_tipo_documento = datos.get('id_tipo_documento')
         id_documento_referencia = datos.get('id_documento_referencia')
         numero_paso = datos.get('numero_paso')
@@ -658,21 +675,21 @@ def registrar_aprobacion():
         num_documento_aprobador = int(num_documento)
         comentario = datos.get('comentario', '')
         
-        print(f"[REGISTRAR_APROBACION] Parámetros:")
+        print(f"[REGISTRAR_APROBACION] Parmetros:")
         print(f"  - Tipo Documento: {id_tipo_documento}")
         print(f"  - ID Documento: {id_documento_referencia}")
         print(f"  - Paso: {numero_paso}")
         print(f"  - Usuario: {num_documento_aprobador}")
         
-        # PASO 1: Importar funciones de validación
+        # PASO 1: Importar funciones de validacin
         from app.funciones.validar_flujo_aprobacion import (
             registrar_aprobacion_en_flujo,
             validar_flujo_completo,
             actualizar_estado_documento
         )
         
-        # PASO 2: Registrar aprobación en TblRegistroAprobacion
-        print(f"[REGISTRAR_APROBACION] Registrando aprobación en TblRegistroAprobacion...")
+        # PASO 2: Registrar aprobacin en TblRegistroAprobacion
+        print(f"[REGISTRAR_APROBACION] Registrando aprobacin en TblRegistroAprobacion...")
         result_registro = registrar_aprobacion_en_flujo(
             id_tipo_documento=id_tipo_documento,
             id_documento_referencia=id_documento_referencia,
@@ -686,10 +703,10 @@ def registrar_aprobacion():
             print(f"[REGISTRAR_APROBACION] Error al registrar: {result_registro['message']}")
             return jsonify({'success': False, 'error': result_registro['message']}), 400
         
-        print(f"[REGISTRAR_APROBACION] ✓ Aprobación registrada en TblRegistroAprobacion")
+        print(f"[REGISTRAR_APROBACION] [OK] Aprobacin registrada en TblRegistroAprobacion")
         
-        # PASO 3: Validar si flujo está completo
-        print(f"[REGISTRAR_APROBACION] Validando si flujo está completo...")
+        # PASO 3: Validar si flujo est completo
+        print(f"[REGISTRAR_APROBACION] Validando si flujo est completo...")
         flujo_info = validar_flujo_completo(id_tipo_documento, id_documento_referencia)
         
         print(f"[REGISTRAR_APROBACION] Estado del flujo:")
@@ -711,14 +728,14 @@ def registrar_aprobacion():
         if not result_actualizacion['success']:
             print(f"[REGISTRAR_APROBACION] Warning: No se pudo actualizar estado: {result_actualizacion['message']}")
         else:
-            print(f"[REGISTRAR_APROBACION] ✓ Estado actualizado a {nuevo_estado}")
+            print(f"[REGISTRAR_APROBACION] [OK] Estado actualizado a {nuevo_estado}")
         
         # PASO 5: Determinar si puede notificar siguiente paso
         puede_notificar = flujo_info['estado'] == 'PENDIENTE'  # Solo si falta algo (no rechazado ni aprobado final)
         
-        print(f"[REGISTRAR_APROBACION] ¿Puede notificar siguiente paso?: {puede_notificar}")
+        print(f"[REGISTRAR_APROBACION] Puede notificar siguiente paso?: {puede_notificar}")
         
-        print(f"[REGISTRAR_APROBACION] [✓ OK] Aprobación completada exitosamente")
+        print(f"[REGISTRAR_APROBACION] [[OK] OK] Aprobacin completada exitosamente")
         print(f"{'='*80}\n")
         
         return jsonify({
@@ -751,7 +768,7 @@ def registrar_rechazo():
         datos = request.get_json()
         print(f"[REGISTRAR_RECHAZO] Datos recibidos: {datos}")
         
-        # Parámetros
+        # Parmetros
         id_tipo_documento = datos.get('id_tipo_documento')
         id_documento_referencia = datos.get('id_documento_referencia')
         numero_paso = datos.get('numero_paso')
@@ -759,14 +776,14 @@ def registrar_rechazo():
         num_documento_aprobador = int(num_documento)
         comentario = datos.get('comentario', '')
         
-        print(f"[REGISTRAR_RECHAZO] Parámetros:")
+        print(f"[REGISTRAR_RECHAZO] Parmetros:")
         print(f"  - Tipo Documento: {id_tipo_documento}")
         print(f"  - ID Documento: {id_documento_referencia}")
         print(f"  - Paso: {numero_paso}")
         print(f"  - Usuario: {num_documento_aprobador}")
         print(f"  - Comentario: {comentario[:50]}..." if len(comentario) > 50 else f"  - Comentario: {comentario}")
         
-        # PASO 1: Importar funciones de validación
+        # PASO 1: Importar funciones de validacin
         from app.funciones.validar_flujo_aprobacion import (
             registrar_rechazo_en_flujo,
             actualizar_estado_documento
@@ -787,7 +804,7 @@ def registrar_rechazo():
             print(f"[REGISTRAR_RECHAZO] Error al registrar: {result_registro['message']}")
             return jsonify({'success': False, 'error': result_registro['message']}), 400
         
-        print(f"[REGISTRAR_RECHAZO] ✓ Rechazo registrado en TblRegistroAprobacion")
+        print(f"[REGISTRAR_RECHAZO] [OK] Rechazo registrado en TblRegistroAprobacion")
         
         # PASO 3: Cambiar estado a RECHAZADO INMEDIATAMENTE (no espera otros pasos)
         print(f"[REGISTRAR_RECHAZO] Actualizando estado del documento a RECHAZADO...")
@@ -801,9 +818,9 @@ def registrar_rechazo():
         if not result_actualizacion['success']:
             print(f"[REGISTRAR_RECHAZO] Warning: No se pudo actualizar estado: {result_actualizacion['message']}")
         else:
-            print(f"[REGISTRAR_RECHAZO] ✓ Estado actualizado a RECHAZADO")
+            print(f"[REGISTRAR_RECHAZO] [OK] Estado actualizado a RECHAZADO")
         
-        print(f"[REGISTRAR_RECHAZO] [✓ OK] Rechazo procesado exitosamente")
+        print(f"[REGISTRAR_RECHAZO] [[OK] OK] Rechazo procesado exitosamente")
         print(f"{'='*80}\n")
         
         return jsonify({
@@ -826,27 +843,43 @@ def obtener_historial_aprobacion(id_tipo_documento, id_documento):
     """Obtener historial de aprobaciones de un documento"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
         
         print(f"[HISTORIAL_APROBACION] Obteniendo historial: tipo={id_tipo_documento}, doc={id_documento}")
         
-        # Llamar SP
-        cursor.callproc('sp_ObtenerHistorialAprobacion', [id_tipo_documento, id_documento])
+        # Query directa (SP no existe en BD)
+        cursor.execute('''
+            SELECT 
+                ra.id_registro,
+                ra.id_tipo_documento,
+                ra.id_documento_referencia,
+                ra.numero_paso,
+                ra.id_cargo_aprobador,
+                ra.num_documento_aprobador,
+                ra.estado_aprobacion,
+                ra.comentario,
+                ra.fecha_aprobacion,
+                ra.fecha_asignacion,
+                c.nombre as cargo_nombre,
+                CONCAT(p.nombres, ' ', p.apellido_paterno) as nombre_aprobador
+            FROM TblRegistroAprobacion ra
+            LEFT JOIN TblCargo c ON ra.id_cargo_aprobador = c.id_cargo
+            LEFT JOIN TblPersona p ON ra.num_documento_aprobador = p.num_documento
+            WHERE ra.id_tipo_documento = %s AND ra.id_documento_referencia = %s
+            ORDER BY ra.numero_paso ASC, ra.fecha_asignacion ASC
+        ''', (id_tipo_documento, id_documento))
         
-        historial = []
-        for result in cursor.stored_results():
-            historial = result.fetchall()
-            # Convertir timestamp a ISO format
-            for reg in historial:
-                if reg['fecha_aprobacion']:
-                    reg['fecha_aprobacion'] = reg['fecha_aprobacion'].isoformat()
-                if reg['fecha_asignacion']:
-                    reg['fecha_asignacion'] = reg['fecha_asignacion'].isoformat()
+        historial = cursor.fetchall()
+        for reg in historial:
+            if reg['fecha_aprobacion']:
+                reg['fecha_aprobacion'] = reg['fecha_aprobacion'].isoformat()
+            if reg['fecha_asignacion']:
+                reg['fecha_asignacion'] = reg['fecha_asignacion'].isoformat()
         
-        print(f"[HISTORIAL_APROBACION] [✓ OK] {len(historial)} registros")
+        print(f"[HISTORIAL_APROBACION] [[OK] OK] {len(historial)} registros")
         
         cursor.close()
         connection.close()
@@ -864,42 +897,64 @@ def obtener_historial_aprobacion(id_tipo_documento, id_documento):
 @main_bp.route('/api/flujo-aprobacion/proximo-paso/<int:id_tipo_documento>/<int:id_documento>', methods=['GET'])
 @login_required
 def obtener_proximo_paso(id_tipo_documento, id_documento):
-    """Obtener el próximo paso de aprobación pendiente - VALIDANDO QUE PASO ANTERIOR ESTÉ APROBADO"""
+    """Obtener el prximo paso de aprobacin pendiente - VALIDANDO QUE PASO ANTERIOR EST APROBADO"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
         
-        print(f"\n[PROXIMO_PASO] Obteniendo próximo paso: tipo={id_tipo_documento}, doc={id_documento}")
+        print(f"\n[PROXIMO_PASO] Obteniendo prximo paso: tipo={id_tipo_documento}, doc={id_documento}")
         
-        # Llamar SP para obtener próximo paso
-        cursor.callproc('sp_ObtenerProximoPasoAprobacion', [id_tipo_documento, id_documento])
+        # Query directa (SP no existe en BD)
+        cursor.execute('''
+            SELECT 
+                fac.numero_paso,
+                fac.nombre_paso,
+                fac.descripcion,
+                fac.id_cargo,
+                c.nombre as cargo_nombre,
+                a.nombre as area_nombre,
+                fac.es_final,
+                fac.es_requerido,
+                fac.permite_rechazo
+            FROM TblFlujoAprobacionCargos fac
+            LEFT JOIN TblCargo c ON fac.id_cargo = c.id_cargo
+            LEFT JOIN TblArea a ON c.id_area = a.id_area
+            WHERE fac.id_tipo_documento = %s AND fac.activo = 1
+            AND fac.numero_paso > COALESCE(
+                (SELECT MAX(ra.numero_paso) 
+                 FROM TblRegistroAprobacion ra 
+                 WHERE ra.id_tipo_documento = %s 
+                 AND ra.id_documento_referencia = %s 
+                 AND ra.estado_aprobacion = 'APROBADO'), 0)
+            ORDER BY fac.numero_paso ASC
+            LIMIT 1
+        ''', (id_tipo_documento, id_tipo_documento, id_documento))
         
         proximo_paso = None
-        for result in cursor.stored_results():
-            pasos = result.fetchall()
-            if pasos:
-                proximo_paso = pasos[0]
+        pasos = cursor.fetchall()
+        if pasos:
+            proximo_paso = pasos[0]
         
-        # Si no hay próximo paso, retornar
+        # Si no hay prximo paso, retornar
         if not proximo_paso:
-            print(f"[PROXIMO_PASO] [✓ OK] No hay próximo paso (flujo completo)")
+            print(f"[PROXIMO_PASO] [[OK] OK] No hay prximo paso (flujo completo)")
             cursor.close()
             connection.close()
             return jsonify({
                 'success': False,
-                'message': 'Flujo de aprobación completado',
+                'message': 'Flujo de aprobacin completado',
                 'data': None
             }), 200
         
         numero_paso_siguiente = proximo_paso['numero_paso']
-        print(f"[PROXIMO_PASO] Próximo paso encontrado: {numero_paso_siguiente}")
+        print(f"[PROXIMO_PASO] Prximo paso encontrado: {numero_paso_siguiente}")
         
-        # VALIDACIÓN NUEVA: Verificar que el paso anterior está APROBADO
+        # VALIDACIN NUEVA: Verificar que el paso anterior est APROBADO
         if numero_paso_siguiente > 1:
-            print(f"[PROXIMO_PASO] Validando que paso anterior ({numero_paso_siguiente - 1}) está APROBADO...")
+            print(f"[PROXIMO_PASO] Validando que paso anterior ({numero_paso_siguiente - 1}) est APROBADO...")
             
             cursor.execute('''
                 SELECT estado_aprobacion FROM TblRegistroAprobacion
@@ -912,17 +967,17 @@ def obtener_proximo_paso(id_tipo_documento, id_documento):
             paso_anterior = cursor.fetchone()
             
             if not paso_anterior:
-                print(f"[PROXIMO_PASO] ❌ Paso anterior NO tiene registro")
+                print(f"[PROXIMO_PASO] [X] Paso anterior NO tiene registro")
                 cursor.close()
                 connection.close()
                 return jsonify({
                     'success': False,
-                    'error': f'Paso {numero_paso_siguiente - 1} no ha sido procesado aún',
+                    'error': f'Paso {numero_paso_siguiente - 1} no ha sido procesado an',
                     'message': 'Debe aprobar el paso anterior primero'
                 }), 403
             
             if paso_anterior['estado_aprobacion'] != 'APROBADO':
-                print(f"[PROXIMO_PASO] ❌ Paso anterior estado: {paso_anterior['estado_aprobacion']}")
+                print(f"[PROXIMO_PASO] [X] Paso anterior estado: {paso_anterior['estado_aprobacion']}")
                 cursor.close()
                 connection.close()
                 return jsonify({
@@ -932,9 +987,9 @@ def obtener_proximo_paso(id_tipo_documento, id_documento):
                     'message': 'El paso anterior debe ser aprobado antes de proceder'
                 }), 403
             
-            print(f"[PROXIMO_PASO] ✓ Paso anterior está APROBADO")
+            print(f"[PROXIMO_PASO] [OK] Paso anterior est APROBADO")
         
-        print(f"[PROXIMO_PASO] [✓ OK] Próximo paso habilitado para aprobación")
+        print(f"[PROXIMO_PASO] [[OK] OK] Prximo paso habilitado para aprobacin")
         
         cursor.close()
         connection.close()
@@ -951,13 +1006,13 @@ def obtener_proximo_paso(id_tipo_documento, id_documento):
 
 
 # ============================================================================
-# NUEVO ENDPOINT: NOTIFICACIONES DE APROBACIÓN
+# NUEVO ENDPOINT: NOTIFICACIONES DE APROBACIN
 # ============================================================================
 
 @main_bp.route('/api/notificaciones/pendientes', methods=['GET'])
 @login_required
 def obtener_notificaciones_pendientes():
-    """Obtener notificaciones de documentos pendientes de aprobación para el usuario"""
+    """Obtener notificaciones de documentos pendientes de aprobacin para el usuario"""
     num_documento = session.get('user_documento')
     
     print(f"\n{'='*80}")
@@ -966,7 +1021,7 @@ def obtener_notificaciones_pendientes():
     
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -986,7 +1041,7 @@ def obtener_notificaciones_pendientes():
         cargo_result = cursor.fetchone()
         
         if not cargo_result:
-            print(f"[NOTIFICACIONES] ⚠️ Usuario no tiene cargo asignado")
+            print(f"[NOTIFICACIONES] [!] Usuario no tiene cargo asignado")
             cursor.close()
             connection.close()
             return jsonify({
@@ -997,12 +1052,12 @@ def obtener_notificaciones_pendientes():
         id_cargo = cargo_result['id_cargo']
         cargo_nombre = cargo_result['cargo_nombre']
         
-        print(f"[NOTIFICACIONES] ✓ Cargo encontrado: {id_cargo} - {cargo_nombre}")
+        print(f"[NOTIFICACIONES] [OK] Cargo encontrado: {id_cargo} - {cargo_nombre}")
         
-        # 2. Llamar SP para obtener notificaciones - VERSIÓN CORREGIDA
+        # 2. Llamar SP para obtener notificaciones - VERSIN CORREGIDA
         print(f"[NOTIFICACIONES] Obteniendo notificaciones para cargo: {id_cargo}")
         
-        # DEBUG: Primero, ver qué flujos existen para este cargo
+        # DEBUG: Primero, ver qu flujos existen para este cargo
         cursor.execute("""
             SELECT DISTINCT
                 fac.id_tipo_documento,
@@ -1029,8 +1084,8 @@ def obtener_notificaciones_pendientes():
         
         # NUEVA QUERY: Buscar registros PENDIENTE en TblRegistroAprobacion para ANY paso (no solo paso 1)
         # Esto permite que usuarios vean notificaciones para cualquier paso del flujo donde son aprobadores
-        # IMPORTANTE: Solo incluir documentos donde TODOS los pasos anteriores estén APROBADOS
-        # ⭐ CORREGIDO: Excluir documentos con estado ELIMINADO
+        # IMPORTANTE: Solo incluir documentos donde TODOS los pasos anteriores estn APROBADOS
+        # [*] CORREGIDO: Excluir documentos con estado ELIMINADO
         cursor.execute("""
             SELECT 
                 tda.id_tipo_documento,
@@ -1052,7 +1107,7 @@ def obtener_notificaciones_pendientes():
                 TblRegistroAprobacion ra ON tda.id_tipo_documento = ra.id_tipo_documento 
                     AND ra.numero_paso = fac.numero_paso 
                     AND ra.estado_aprobacion = 'PENDIENTE'
-            -- ⭐ NUEVO: JOIN con tablas de documentos para verificar estado
+            -- [*] NUEVO: JOIN con tablas de documentos para verificar estado
             LEFT JOIN 
                 TblPresupuesto p ON ra.id_tipo_documento = 1 AND ra.id_documento_referencia = p.id_presupuesto
             LEFT JOIN 
@@ -1063,13 +1118,13 @@ def obtener_notificaciones_pendientes():
                 AND fac.es_requerido = 1
                 AND tda.activo = 1
                 AND tda.requiere_aprobacion = 1
-                -- ⭐ NUEVO: Excluir documentos ELIMINADOS o que no existen
+                -- [*] NUEVO: Excluir documentos ELIMINADOS o que no existen
                 AND (
                     (ra.id_tipo_documento = 1 AND p.id_presupuesto IS NOT NULL AND p.estado <> 'ELIMINADO')
                     OR (ra.id_tipo_documento = 2 AND r.id_requerimiento IS NOT NULL AND r.estado <> 'ELIMINADO')
                     OR (ra.id_tipo_documento NOT IN (1, 2))
                 )
-                -- CRÍTICO: Verificar que TODOS los pasos anteriores estén APROBADOS
+                -- CRTICO: Verificar que TODOS los pasos anteriores estn APROBADOS
                 AND NOT EXISTS (
                     SELECT 1 
                     FROM TblRegistroAprobacion ra_prev
@@ -1095,7 +1150,7 @@ def obtener_notificaciones_pendientes():
         
         notificaciones = cursor.fetchall()
         
-        print(f"[NOTIFICACIONES] ✓ Obtenidas {len(notificaciones)} notificaciones")
+        print(f"[NOTIFICACIONES] [OK] Obtenidas {len(notificaciones)} notificaciones")
         
         # Convertir timestamps a strings para JSON
         for notif in notificaciones:
@@ -1119,7 +1174,7 @@ def obtener_notificaciones_pendientes():
         
         # Log de notificaciones
         for notif in notificaciones:
-            print(f"[NOTIFICACIONES]   • {notif['nombre_documento']}: {notif['cantidad_pendientes']} pendiente(s)")
+            print(f"[NOTIFICACIONES]    {notif['nombre_documento']}: {notif['cantidad_pendientes']} pendiente(s)")
         
         cursor.close()
         connection.close()
@@ -1131,19 +1186,19 @@ def obtener_notificaciones_pendientes():
         }), 200
     
     except Error as e:
-        print(f"[NOTIFICACIONES] ❌ ERROR: {e}")
+        print(f"[NOTIFICACIONES] [X] ERROR: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @main_bp.route('/api/notificaciones/contar', methods=['GET'])
 @login_required
 def contar_notificaciones():
-    """Obtener la cantidad total de documentos pendientes de aprobación"""
+    """Obtener la cantidad total de documentos pendientes de aprobacin"""
     num_documento = session.get('user_documento')
     
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -1204,7 +1259,7 @@ def obtener_detalles_pendientes(id_tipo_documento):
     connection = get_db_connection()
     if not connection:
         print(f"[DETALLES_PENDIENTES] ERROR: No connection")
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
@@ -1232,7 +1287,7 @@ def obtener_detalles_pendientes(id_tipo_documento):
         print(f"[DETALLES_PENDIENTES] Cargo encontrado: {id_cargo}")
         print(f"[DETALLES_PENDIENTES] DEBUG: user_documento={num_documento}, id_cargo={id_cargo}")
         
-        # Obtener nombre del cargo para verificación
+        # Obtener nombre del cargo para verificacin
         cursor.execute("""
             SELECT nombre FROM TblCargo WHERE id_cargo = %s
         """, (id_cargo,))
@@ -1240,11 +1295,11 @@ def obtener_detalles_pendientes(id_tipo_documento):
         cargo_name = cargo_name_result['nombre'] if cargo_name_result else 'DESCONOCIDO'
         print(f"[DETALLES_PENDIENTES] Cargo nombre: {cargo_name}")
         
-        # Procesar según tipo de documento
+        # Procesar segn tipo de documento
         if id_tipo_documento == 1:  # PRESUPUESTO
-            print(f"[DETALLES_PENDIENTES] Rama: PRESUPUESTOS - Usando SP genérico")
+            print(f"[DETALLES_PENDIENTES] Rama: PRESUPUESTOS - Usando SP genrico")
             
-            # Llamar SP genérico que filtra por cargo
+            # Llamar SP genrico que filtra por cargo
             print(f"[DETALLES_PENDIENTES] Ejecutando: sp_ObtenerDocumentosPendientesPorCargo({id_cargo}, {id_tipo_documento})")
             cursor.callproc('sp_ObtenerDocumentosPendientesPorCargo', [id_cargo, id_tipo_documento])
             
@@ -1253,7 +1308,7 @@ def obtener_detalles_pendientes(id_tipo_documento):
             for result_set in cursor.stored_results():
                 documentos_raw = result_set.fetchall()
             
-            print(f"[DETALLES_PENDIENTES] SP retornó {len(documentos_raw)} documentos raw")
+            print(f"[DETALLES_PENDIENTES] SP retorn {len(documentos_raw)} documentos raw")
             
             # Para presupuestos, necesitamos obtener monto, obra, responsable
             # Hacer query adicional para enriquecer los datos
@@ -1264,7 +1319,7 @@ def obtener_detalles_pendientes(id_tipo_documento):
                     id_doc = doc_base['id_documento']  # From SP result dict
                     numero_paso = doc_base.get('numero_paso')
                     
-                    # VERIFICAR: que el documento esté PENDIENTE en este paso específico
+                    # VERIFICAR: que el documento est PENDIENTE en este paso especfico
                     cursor.execute("""
                         SELECT estado_aprobacion 
                         FROM TblRegistroAprobacion
@@ -1276,11 +1331,11 @@ def obtener_detalles_pendientes(id_tipo_documento):
                     
                     estado_check = cursor.fetchone()
                     if not estado_check or estado_check['estado_aprobacion'] != 'PENDIENTE':
-                        print(f"[DETALLES_PENDIENTES] ⚠️  Documento {id_doc} paso {numero_paso} NO está PENDIENTE, skipping")
+                        print(f"[DETALLES_PENDIENTES] [!]  Documento {id_doc} paso {numero_paso} NO est PENDIENTE, skipping")
                         continue
                     
                     # Obtener detalles del presupuesto
-                    # ⭐ IMPORTANTE: Excluir presupuestos ELIMINADOS
+                    # [*] IMPORTANTE: Excluir presupuestos ELIMINADOS
                     cursor.execute("""
                         SELECT 
                             p.numero_presupuesto,
@@ -1310,12 +1365,12 @@ def obtener_detalles_pendientes(id_tipo_documento):
                             'fecha_asignacion': doc_base.get('fecha_asignacion')
                         })
             
-            print(f"[DETALLES_PENDIENTES] ✓ Presupuestos encontrados para cargo {id_cargo}: {len(documentos)}")
+            print(f"[DETALLES_PENDIENTES] [OK] Presupuestos encontrados para cargo {id_cargo}: {len(documentos)}")
             
         elif id_tipo_documento == 2:  # REQUERIMIENTO
-            print(f"[DETALLES_PENDIENTES] Rama: REQUERIMIENTOS - Usando SP genérico")
+            print(f"[DETALLES_PENDIENTES] Rama: REQUERIMIENTOS - Usando SP genrico")
             
-            # Llamar SP genérico que filtra por cargo
+            # Llamar SP genrico que filtra por cargo
             print(f"[DETALLES_PENDIENTES] Ejecutando: sp_ObtenerDocumentosPendientesPorCargo({id_cargo}, {id_tipo_documento})")
             cursor.callproc('sp_ObtenerDocumentosPendientesPorCargo', [id_cargo, id_tipo_documento])
             
@@ -1324,14 +1379,14 @@ def obtener_detalles_pendientes(id_tipo_documento):
             for result_set in cursor.stored_results():
                 documentos_raw = result_set.fetchall()
             
-            # Para requerimientos, necesitamos obtener código, cantidad, descripción
+            # Para requerimientos, necesitamos obtener cdigo, cantidad, descripcin
             documentos = []
             if documentos_raw:
                 for doc_base in documentos_raw:
                     id_doc = doc_base['id_documento']  # From SP result dict
                     
                     # Obtener detalles del requerimiento
-                    # ⭐ IMPORTANTE: Excluir requerimientos ELIMINADOS
+                    # [*] IMPORTANTE: Excluir requerimientos ELIMINADOS
                     cursor.execute("""
                         SELECT 
                             r.codigo,
@@ -1360,9 +1415,9 @@ def obtener_detalles_pendientes(id_tipo_documento):
                             'fecha_asignacion': doc_base['fecha_asignacion']
                         })
             
-            print(f"[DETALLES_PENDIENTES] ✓ Requerimientos encontrados para cargo {id_cargo}: {len(documentos)}")
+            print(f"[DETALLES_PENDIENTES] [OK] Requerimientos encontrados para cargo {id_cargo}: {len(documentos)}")
         else:
-            print(f"[DETALLES_PENDIENTES] ⚠️ TIPO DE DOCUMENTO NO VÁLIDO: {id_tipo_documento}")
+            print(f"[DETALLES_PENDIENTES] [!] TIPO DE DOCUMENTO NO VLIDO: {id_tipo_documento}")
         
         # Convertir datetime a string para JSON
         from datetime import datetime
@@ -1372,7 +1427,7 @@ def obtener_detalles_pendientes(id_tipo_documento):
             if isinstance(doc.get('fecha_asignacion'), datetime):
                 doc['fecha_asignacion'] = doc['fecha_asignacion'].isoformat()
         
-        print(f"[DETALLES_PENDIENTES] ✓ Retornando {len(documentos)} documentos")
+        print(f"[DETALLES_PENDIENTES] [OK] Retornando {len(documentos)} documentos")
         
         cursor.close()
         connection.close()
@@ -1384,14 +1439,14 @@ def obtener_detalles_pendientes(id_tipo_documento):
         }), 200
     
     except Error as e:
-        print(f"[DETALLES_PENDIENTES] ❌ ERROR SQL: {e}")
+        print(f"[DETALLES_PENDIENTES] [X] ERROR SQL: {e}")
         import traceback
         traceback.print_exc()
         cursor.close()
         connection.close()
         return jsonify({'success': False, 'error': str(e)}), 500
     except Exception as e:
-        print(f"[DETALLES_PENDIENTES] ❌ ERROR GENERAL: {e}")
+        print(f"[DETALLES_PENDIENTES] [X] ERROR GENERAL: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500

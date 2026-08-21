@@ -1,8 +1,8 @@
 """
 Module: requerimientos_pdf.py
-Propósito: Generar PDFs profesionales de requerimientos
+Propsito: Generar PDFs profesionales de requerimientos
 Fecha: 3 Agosto 2026
-Actualizado: Logo dinámico según empresa + estructura mejorada
+Actualizado: Logo dinmico segn empresa + estructura mejorada
 """
 
 from flask import Blueprint, jsonify, request
@@ -21,7 +21,7 @@ try:
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
-    print("⚠️ Warning: reportlab not available - PDF generation will not work")
+    print("[!] Warning: reportlab not available - PDF generation will not work")
 
 from datetime import datetime
 from app.config import DatabaseConfig
@@ -34,25 +34,25 @@ requerimientos_pdf_bp = Blueprint('requerimientos_pdf', __name__)
 
 
 def get_db_connection():
-    """Crear conexión a la base de datos Kallpa"""
+    """Crear conexin a la base de datos Kallpa"""
     try:
         params = DatabaseConfig.get_connection_params()
         connection = mysql.connector.connect(**params)
         return connection
     except Error as e:
-        print(f"Error de conexión: {e}")
+        print(f"Error de conexin: {e}")
         return None
 
 
 def login_required(f):
-    """Decorador para proteger rutas que requieren autenticación"""
+    """Decorador para proteger rutas que requieren autenticacin"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         from flask import session, redirect, url_for, flash
         if 'user_documento' not in session and 'user_email' not in session:
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return {'success': False, 'message': 'No autenticado'}, 401
-            flash('Debes iniciar sesión', 'warning')
+            flash('Debes iniciar sesin', 'warning')
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -61,15 +61,15 @@ def login_required(f):
 @requerimientos_pdf_bp.route('/api/requerimientos/descargar/<int:id_requerimiento>', methods=['GET'])
 @login_required
 def descargar_requerimiento_pdf(id_requerimiento):
-    """Generar y descargar requerimiento en PDF con logo dinámico de empresa"""
+    """Generar y descargar requerimiento en PDF con logo dinmico de empresa"""
     connection = get_db_connection()
     if not connection:
-        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        return jsonify({'success': False, 'error': 'Error de conexin'}), 500
     
     try:
         cursor = connection.cursor(dictionary=True)
         
-        print(f"\n[PDF-REQ] Iniciando generación de PDF para requerimiento: {id_requerimiento}")
+        print(f"\n[PDF-REQ] Iniciando generacin de PDF para requerimiento: {id_requerimiento}")
         
         # Obtener datos del requerimiento usando SP (incluye solicitante)
         print(f"[PDF-REQ] Llamando a sp_ObtenerRequerimiento({id_requerimiento})")
@@ -96,11 +96,11 @@ def descargar_requerimiento_pdf(id_requerimiento):
         if not requerimiento:
             cursor.close()
             connection.close()
-            print(f"[PDF-REQ] ❌ Requerimiento no encontrado: {id_requerimiento}")
+            print(f"[PDF-REQ] [X] Requerimiento no encontrado: {id_requerimiento}")
             return jsonify({'success': False, 'error': 'Requerimiento no encontrado'}), 404
         
-        print(f"[PDF-REQ] ✓ Requerimiento encontrado: {requerimiento['codigo']}")
-        print(f"[PDF-REQ] ✓ Solicitante: {requerimiento.get('usuario_completo', 'N/A')}")
+        print(f"[PDF-REQ] [OK] Requerimiento encontrado: {requerimiento['codigo']}")
+        print(f"[PDF-REQ] [OK] Solicitante: {requerimiento.get('usuario_completo', 'N/A')}")
         
         # Obtener datos de empresa y logo (si tiene presupuesto asociado)
         nombre_empresa = 'KALLPA'
@@ -121,7 +121,7 @@ def descargar_requerimiento_pdf(id_requerimiento):
             if empresa_data:
                 nombre_empresa = empresa_data.get('nombre_empresa') or 'KALLPA'
                 empresa_logo = empresa_data.get('empresa_logo')
-                print(f"[PDF-REQ] ✓ Empresa: {nombre_empresa}")
+                print(f"[PDF-REQ] [OK] Empresa: {nombre_empresa}")
         
         # Agregar datos de empresa al dict de requerimiento
         requerimiento['nombre_empresa'] = nombre_empresa
@@ -135,12 +135,12 @@ def descargar_requerimiento_pdf(id_requerimiento):
             detalles = result.fetchall()
             break
         
-        print(f"[PDF-REQ] ✓ Detalles obtenidos: {len(detalles)} items")
+        print(f"[PDF-REQ] [OK] Detalles obtenidos: {len(detalles)} items")
         
         cursor.close()
         connection.close()
         
-        # Generar PDF (márgenes mínimos como presupuesto)
+        # Generar PDF (mrgenes mnimos como presupuesto)
         pdf_buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             pdf_buffer,
@@ -175,7 +175,7 @@ def descargar_requerimiento_pdf(id_requerimiento):
         
         # ==================== CONTENIDO DEL PDF ====================
         
-        # 1. ENCABEZADO CON LOGO DINÁMICO DE LA EMPRESA (como presupuesto)
+        # 1. ENCABEZADO CON LOGO DINMICO DE LA EMPRESA (como presupuesto)
         logo_path = None
         
         if requerimiento.get('empresa_logo'):
@@ -201,9 +201,9 @@ def descargar_requerimiento_pdf(id_requerimiento):
                 image.save(temp_logo.name, 'PNG')
                 temp_logo.close()
                 logo_path = temp_logo.name
-                print(f"[PDF-REQ] ✓ Logo de empresa cargado dinámicamente")
+                print(f"[PDF-REQ] [OK] Logo de empresa cargado dinmicamente")
             except Exception as e:
-                print(f"[PDF-REQ] ⚠ Error al cargar logo de empresa: {e}")
+                print(f"[PDF-REQ] [!] Error al cargar logo de empresa: {e}")
                 logo_path = None
         
         # Si no hay logo de empresa, usar logo por defecto
@@ -211,7 +211,7 @@ def descargar_requerimiento_pdf(id_requerimiento):
             default_logo_path = os.path.join(os.path.dirname(__file__), '..', 'static', 'images', 'Logo Kallpa.png')
             if os.path.exists(default_logo_path):
                 logo_path = default_logo_path
-                print(f"[PDF-REQ] ✓ Logo por defecto cargado")
+                print(f"[PDF-REQ] [OK] Logo por defecto cargado")
         
         # Crear tabla con logo
         header_table_data = []
@@ -222,20 +222,20 @@ def descargar_requerimiento_pdf(id_requerimiento):
                 header_table_data.append([
                     logo,
                     Paragraph(
-                        f"<b>{company_name}</b><br/><font size=9>Sistema de Gestión de Requerimientos</font>",
+                        f"<b>{company_name}</b><br/><font size=9>Sistema de Gestin de Requerimientos</font>",
                         header_style
                     )
                 ])
             except Exception as e:
-                print(f"[PDF-REQ] ⚠ Error al insertar logo: {e}")
+                print(f"[PDF-REQ] [!] Error al insertar logo: {e}")
                 company_name = requerimiento.get('nombre_empresa', 'KALLPA')
                 header_table_data.append([
-                    Paragraph(f"<b>{company_name}</b><br/><font size=9>Sistema de Gestión</font>", header_style)
+                    Paragraph(f"<b>{company_name}</b><br/><font size=9>Sistema de Gestin</font>", header_style)
                 ])
         else:
             company_name = requerimiento.get('nombre_empresa', 'KALLPA')
             header_table_data.append([
-                Paragraph(f"<b>{company_name}</b><br/><font size=9>Sistema de Gestión</font>", header_style)
+                Paragraph(f"<b>{company_name}</b><br/><font size=9>Sistema de Gestin</font>", header_style)
             ])
         
         header_table = Table(header_table_data, colWidths=[1.2*inch, 6.15*inch])
@@ -251,7 +251,7 @@ def descargar_requerimiento_pdf(id_requerimiento):
         story.append(header_table)
         story.append(Spacer(1, 0.05*inch))
         
-        # Línea separadora con colores Quska
+        # Lnea separadora con colores Quska
         sep_data = [['_' * 120]]
         sep_table = Table(sep_data, colWidths=[7.35*inch])
         sep_table.setStyle(TableStyle([
@@ -265,7 +265,7 @@ def descargar_requerimiento_pdf(id_requerimiento):
         story.append(sep_table)
         story.append(Spacer(1, 0.08*inch))
         
-        # 2. INFORMACIÓN DEL REQUERIMIENTO Y RESPONSABLE - USAR FUNCIONES HELPER
+        # 2. INFORMACIN DEL REQUERIMIENTO Y RESPONSABLE - USAR FUNCIONES HELPER
         from .pdf_helpers import PDFStyles, crear_tabla_materiales, crear_tabla_servicios, crear_observaciones
         
         # Obtener estilos centralizados
@@ -275,9 +275,9 @@ def descargar_requerimiento_pdf(id_requerimiento):
         fecha_str = requerimiento['fecha_creacion'].strftime('%d/%m/%Y') if requerimiento['fecha_creacion'] else 'N/A'
         numero_pres = requerimiento.get('numero_presupuesto') or 'N/A'
         
-        # Tabla 1: CÓDIGO, ESTADO, FECHA (ancho total: 8.0 inches - ALINEADO CON MATERIALES)
+        # Tabla 1: CDIGO, ESTADO, FECHA (ancho total: 8.0 inches - ALINEADO CON MATERIALES)
         info_data_1 = [
-            ['CÓDIGO:', requerimiento['codigo'], 'ESTADO:', requerimiento['estado'], 'FECHA:', fecha_str],
+            ['CDIGO:', requerimiento['codigo'], 'ESTADO:', requerimiento['estado'], 'FECHA:', fecha_str],
         ]
         
         # Total: 0.7 + 2.3 + 0.7 + 2.3 + 0.6 + 1.4 = 8.0"
@@ -351,11 +351,11 @@ def descargar_requerimiento_pdf(id_requerimiento):
         story.append(info_table_2)
         story.append(Spacer(1, 0.05*inch))
         
-        # Tabla 3: DESCRIPCIÓN (ancho total: 8.0 inches - ALINEADO CON MATERIALES)
+        # Tabla 3: DESCRIPCIN (ancho total: 8.0 inches - ALINEADO CON MATERIALES)
         descripcion = requerimiento.get('descripcion') or 'N/A'
         
         info_data_3 = [
-            ['DESCRIPCIÓN:', descripcion],
+            ['DESCRIPCIN:', descripcion],
         ]
         
         # Total: 1.05 + 6.95 = 8.0"
@@ -427,8 +427,8 @@ def descargar_requerimiento_pdf(id_requerimiento):
                     story.append(table_svc)
                     story.append(Spacer(1, 0.1*inch))
         
-        # 4. OBSERVACIONES - USAR FUNCIÓN HELPER
-        # Crear un diccionario simulando presupuesto para reusar la función
+        # 4. OBSERVACIONES - USAR FUNCIN HELPER
+        # Crear un diccionario simulando presupuesto para reusar la funcin
         req_obs = {'observaciones': requerimiento.get('observaciones')}
         header_obs, table_obs = crear_observaciones(req_obs, pdf_styles)
         if header_obs and table_obs:
@@ -436,9 +436,9 @@ def descargar_requerimiento_pdf(id_requerimiento):
             story.append(table_obs)
             story.append(Spacer(1, 0.1*inch))
         
-        # 5. PIE DE PÁGINA
+        # 5. PIE DE PGINA
         story.append(Spacer(1, 0.2*inch))
-        footer_text = f"Generado el {datetime.now().strftime('%d/%m/%Y a las %H:%M:%S')} | {company_name} - Sistema de Gestión"
+        footer_text = f"Generado el {datetime.now().strftime('%d/%m/%Y a las %H:%M:%S')} | {company_name} - Sistema de Gestin"
         footer_paragraph = Paragraph(footer_text, ParagraphStyle(
             'Footer',
             parent=styles['Normal'],
@@ -456,15 +456,15 @@ def descargar_requerimiento_pdf(id_requerimiento):
         if logo_path and logo_path != default_logo_path and os.path.exists(logo_path):
             try:
                 os.unlink(logo_path)
-                print(f"[PDF-REQ] ✓ Logo temporal eliminado")
+                print(f"[PDF-REQ] [OK] Logo temporal eliminado")
             except Exception as e:
-                print(f"[PDF-REQ] ⚠ Error al eliminar logo temporal: {e}")
+                print(f"[PDF-REQ] [!] Error al eliminar logo temporal: {e}")
         
         # Enviar PDF
         pdf_buffer.seek(0)
         filename = f"Requerimiento_{requerimiento['codigo'].replace('/', '_').replace('\\', '_')}.pdf"
         
-        print(f"[PDF-REQ] ✅ PDF generado exitosamente: {filename}")
+        print(f"[PDF-REQ] [OK] PDF generado exitosamente: {filename}")
         
         return pdf_buffer.getvalue(), 200, {
             'Content-Type': 'application/pdf',
@@ -473,11 +473,11 @@ def descargar_requerimiento_pdf(id_requerimiento):
         
     except Error as e:
         import traceback
-        print(f"[PDF-REQ] ❌ Error SQL: {e}")
+        print(f"[PDF-REQ] [X] Error SQL: {e}")
         print(f"[PDF-REQ] Traceback: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': str(e)}), 500
     except Exception as e:
         import traceback
-        print(f"[PDF-REQ] ❌ Error general: {e}")
+        print(f"[PDF-REQ] [X] Error general: {e}")
         print(f"[PDF-REQ] Traceback: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': str(e)}), 500
