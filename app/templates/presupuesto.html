@@ -228,42 +228,20 @@
 <script>document.addEventListener('DOMContentLoaded', function() {cargarPresupuestos();cargarProyectos();document.getElementById('filtro-proyecto').addEventListener('change', cargarObrasFiltro);document.getElementById('btn-crear-presupuesto').addEventListener('click', function() {
     console.log('🎯 [CLICK] Botón Crear Presupuesto clickeado');
     
-    // VERIFICAR ESTADO ANTES DE LIMPIAR
-    console.log('📊 Estado ANTES de limpiar:', {
-        materiales: materiales_agregados ? materiales_agregados.length : 'undefined',
-        servicios: servicios_agregados ? servicios_agregados.length : 'undefined',
-        contador_mat: id_contador_material,
-        contador_serv: id_contador_servicio,
-        gastos_val: document.getElementById('gastos-generales')?.value,
-        utilidad_val: document.getElementById('utilidad')?.value,
-        buscador_val: document.getElementById('buscador-material')?.value
-    });
+    // ✅ USAR LA FUNCIÓN CORRECTA QUE CONFIGURA LOS EVENT LISTENERS
+    abrirModalPresupuesto();
     
-    limpiarForm();
-    
-    // VERIFICAR ESTADO DESPUÉS DE LIMPIAR
-    console.log('📊 Estado DESPUÉS de limpiar:', {
-        materiales: materiales_agregados ? materiales_agregados.length : 'undefined',
-        servicios: servicios_agregados ? servicios_agregados.length : 'undefined',
-        contador_mat: id_contador_material,
-        contador_serv: id_contador_servicio,
-        gastos_val: document.getElementById('gastos-generales')?.value,
-        utilidad_val: document.getElementById('utilidad')?.value,
-        buscador_val: document.getElementById('buscador-material')?.value
-    });
-    
+    // Cargar datos maestros
     cargarEmpresas();
     cargarProyectos();
-    cargarCategorias();
     
+    // Configurar título y modo
     document.getElementById('modal-titulo').textContent = 'Crear Nuevo Presupuesto';
     const formulario = document.getElementById('form-presupuesto');
     delete formulario.dataset.id_presupuesto;
     delete formulario.dataset.modo;
     
-    document.getElementById('modal-presupuesto').classList.remove('hidden');
-    
-    console.log('✅ Modal abierto y limpieza completada');
+    console.log('✅ Modal abierto con event listeners configurados');
 });
 
 // ============================================================================

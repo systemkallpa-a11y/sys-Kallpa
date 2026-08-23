@@ -764,16 +764,17 @@ def combo_categorias():
         cursor = connection.cursor(dictionary=True)
         
         print(f"[COMBO_CATEGORIAS] Llamando SP: sp_ObtenerCategoriasMaterial()")
-        # Llamar al SP
+        # Llamar al SP con callproc
         try:
-            cursor.execute('CALL sp_ObtenerCategoriasMaterial()', multi=True)
-            categorias = cursor.fetchall()
+            cursor.callproc('sp_ObtenerCategoriasMaterial')
             
-            print(f"[COMBO_CATEGORIAS] [OK] {len(categorias)} categoras obtenidas")
+            # Obtener resultados del SP
+            categorias = []
+            for result in cursor.stored_results():
+                categorias = result.fetchall()
+                break
             
-            # Consumir resultsets adicionales si los hay
-            while cursor.nextset():
-                pass
+            print(f"[COMBO_CATEGORIAS] [OK] {len(categorias)} categorías obtenidas")
             
             cursor.close()
             connection.close()
@@ -799,23 +800,28 @@ def combo_categorias():
 @main_bp.route('/api/presupuestos/combo/materiales', methods=['GET'])
 @login_required
 def combo_materiales():
-    """Obtener lista de materiales para dropdown - con filtros dinmicos"""
+    """Obtener lista de materiales para dropdown - con filtros dinámicos"""
     print(f"\n[COMBO_MATERIALES] Iniciando...")
     
-    # Obtener parmetros de bsqueda
+    # Obtener parámetros de búsqueda
     termino_busqueda = request.args.get('termino', '').strip()
     id_categoria = request.args.get('categoria', '0')
     
-    print(f"[COMBO_MATERIALES] Parmetros recibidos:")
+    print(f"[COMBO_MATERIALES] Parámetros recibidos:")
     print(f"  - termino_busqueda: '{termino_busqueda}' (tipo: {type(termino_busqueda).__name__}, len: {len(termino_busqueda)})")
     print(f"  - id_categoria: '{id_categoria}' (tipo: {type(id_categoria).__name__})")
+    
+    # Si el término está vacío, retornar array vacío (no llamar al SP)
+    if not termino_busqueda or len(termino_busqueda) == 0:
+        print(f"[COMBO_MATERIALES] [INFO] Término vacío, retornando array vacío")
+        return jsonify({'success': True, 'data': []}), 200
     
     connection = None
     try:
         connection = get_db_connection()
         if not connection:
             print(f"[COMBO_MATERIALES] [ERROR] No se pudo conectar a BD")
-            return jsonify({'success': False, 'error': 'Error de conexin a base de datos'}), 500
+            return jsonify({'success': False, 'error': 'Error de conexión a base de datos'}), 500
         
         cursor = connection.cursor(dictionary=True)
         
@@ -823,23 +829,24 @@ def combo_materiales():
         try:
             id_categoria_int = int(id_categoria)
         except (ValueError, TypeError) as e:
-            print(f"[COMBO_MATERIALES] [ERROR] id_categoria invlido: {e}")
+            print(f"[COMBO_MATERIALES] [ERROR] id_categoria inválido: {e}")
             cursor.close()
             connection.close()
-            return jsonify({'success': False, 'error': f'Parmetro categoria invlido: {id_categoria}'}), 400
+            return jsonify({'success': False, 'error': f'Parámetro categoria inválido: {id_categoria}'}), 400
         
         print(f"[COMBO_MATERIALES] Llamando SP: sp_BuscarMateriales(termino='{termino_busqueda}', categoria={id_categoria_int})")
         
-        # Llamar al SP con parmetros
+        # Llamar al SP con parámetros
         try:
-            cursor.execute('CALL sp_BuscarMateriales(%s, %s)', (termino_busqueda, id_categoria_int), multi=True)
-            materiales = cursor.fetchall()
+            cursor.callproc('sp_BuscarMateriales', (termino_busqueda, id_categoria_int))
+            
+            # Obtener resultados
+            materiales = []
+            for result in cursor.stored_results():
+                materiales = result.fetchall()
+                break
             
             print(f"[COMBO_MATERIALES] [OK] {len(materiales)} materiales encontrados")
-            
-            # Consumir resultsets adicionales si los hay
-            while cursor.nextset():
-                pass
             
             cursor.close()
             connection.close()
@@ -847,8 +854,8 @@ def combo_materiales():
             return jsonify({'success': True, 'data': materiales}), 200
         
         except Error as db_error:
-            print(f"[COMBO_MATERIALES] [ERROR] Error en ejecucin de SP: {db_error}")
-            print(f"[COMBO_MATERIALES] [ERROR] Cdigo de error: {getattr(db_error, 'errno', 'N/A')}")
+            print(f"[COMBO_MATERIALES] [ERROR] Error en ejecución de SP: {db_error}")
+            print(f"[COMBO_MATERIALES] [ERROR] Código de error: {getattr(db_error, 'errno', 'N/A')}")
             print(f"[COMBO_MATERIALES] [ERROR] SQL State: {getattr(db_error, 'sqlstate', 'N/A')}")
             
             cursor.close()
@@ -858,7 +865,7 @@ def combo_materiales():
             return jsonify({'success': False, 'error': f'Error en base de datos: {str(db_error)}'}), 500
     
     except Exception as e:
-        print(f"[COMBO_MATERIALES] [ERROR] Excepcin general: {e}")
+        print(f"[COMBO_MATERIALES] [ERROR] Excepción general: {e}")
         import traceback
         print(f"[COMBO_MATERIALES] [TRACEBACK]:\n{traceback.format_exc()}")
         
@@ -3176,3 +3183,268 @@ def importar_presupuesto_excel():
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': f'Error al procesar el Excel: {str(e)}'}), 500
+
+
+# ============================================================================
+# API: SISTEMA DE VERSIONES DE PRESUPUESTO
+# ============================================================================
+
+@main_bp.route('/api/presupuestos/guardar-snapshot', methods=['POST'])
+@login_required
+def guardar_snapshot_presupuesto():
+    """
+    Guardar snapshot del presupuesto actual ANTES de editar.
+    Se ejecuta automáticamente al hacer clic en "Editar"
+    """
+    try:
+        data = request.get_json()
+        id_presupuesto = data.get('id_presupuesto')
+        user_documento = session.get('user_documento')
+        
+        if not id_presupuesto:
+            return jsonify({'success': False, 'error': 'ID de presupuesto requerido'}), 400
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            print(f"[VERSIONES] 📸 Guardando snapshot de presupuesto {id_presupuesto}")
+            
+            # Llamar SP para guardar snapshot
+            cursor.callproc('sp_GuardarSnapshotAntesDeEditar', (id_presupuesto, user_documento))
+            
+            # ✅ Consumir resultados (aunque el SP ya no retorna SELECT)
+            for res in cursor.stored_results():
+                res.fetchall()  # Consumir cualquier resultado pendiente
+            
+            connection.commit()
+            cursor.close()
+            connection.close()
+            
+            # ✅ El SP no retorna datos, pero si llegamos aquí, se ejecutó exitosamente
+            print(f"[VERSIONES] ✅ Snapshot guardado exitosamente")
+            return jsonify({
+                'success': True,
+                'mensaje': 'Snapshot guardado correctamente'
+            }), 200
+                
+        except Error as e:
+            print(f"[VERSIONES] ❌ Error SQL: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+            
+    except Exception as e:
+        print(f"[VERSIONES] ❌ Error general: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@main_bp.route('/api/presupuestos/<int:id_presupuesto>/versiones', methods=['GET'])
+@login_required
+def obtener_historial_versiones(id_presupuesto):
+    """Obtener historial de versiones de un presupuesto"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            print(f"[VERSIONES] 📋 Obteniendo historial de presupuesto {id_presupuesto}")
+            
+            # Llamar SP para obtener historial
+            cursor.callproc('sp_ObtenerHistorialVersiones', (id_presupuesto,))
+            
+            versiones = []
+            for result in cursor.stored_results():
+                versiones = result.fetchall()
+                break
+            
+            # Serializar fechas
+            for version in versiones:
+                if version.get('fecha_version'):
+                    version['fecha_version'] = version['fecha_version'].isoformat()
+            
+            cursor.close()
+            connection.close()
+            
+            print(f"[VERSIONES] ✅ {len(versiones)} versiones encontradas")
+            
+            return jsonify({
+                'success': True,
+                'versiones': versiones
+            }), 200
+                
+        except Error as e:
+            print(f"[VERSIONES] ❌ Error SQL: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+            
+    except Exception as e:
+        print(f"[VERSIONES] ❌ Error general: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@main_bp.route('/api/presupuestos/<int:id_presupuesto>/versiones/<int:numero_version>', methods=['GET'])
+@login_required
+def obtener_version_especifica(id_presupuesto, numero_version):
+    """Obtener una versión específica del presupuesto con su detalle"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            print(f"[VERSIONES] 📄 Obteniendo versión {numero_version} de presupuesto {id_presupuesto}")
+            
+            # Llamar SP para obtener versión específica
+            cursor.callproc('sp_ObtenerVersionPresupuesto', (id_presupuesto, numero_version))
+            
+            # Primer resultset: datos de la versión
+            version_data = None
+            for result in cursor.stored_results():
+                version_data = result.fetchone()
+                break
+            
+            # Segundo resultset: detalle de partidas
+            cursor.callproc('sp_ObtenerVersionPresupuesto', (id_presupuesto, numero_version))
+            partidas = []
+            result_count = 0
+            for result in cursor.stored_results():
+                if result_count == 1:  # Segundo resultset
+                    partidas = result.fetchall()
+                result_count += 1
+            
+            cursor.close()
+            connection.close()
+            
+            if not version_data:
+                return jsonify({'success': False, 'error': 'Versión no encontrada'}), 404
+            
+            # Serializar fechas
+            for key, value in version_data.items():
+                if isinstance(value, datetime):
+                    version_data[key] = value.isoformat()
+                elif hasattr(value, 'isoformat'):
+                    version_data[key] = value.isoformat()
+            
+            for partida in partidas:
+                for key, value in partida.items():
+                    if isinstance(value, Decimal):
+                        partida[key] = float(value)
+            
+            print(f"[VERSIONES] ✅ Versión {numero_version} obtenida con {len(partidas)} partidas")
+            
+            return jsonify({
+                'success': True,
+                'version': version_data,
+                'partidas': partidas
+            }), 200
+                
+        except Error as e:
+            print(f"[VERSIONES] ❌ Error SQL: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+            
+    except Exception as e:
+        print(f"[VERSIONES] ❌ Error general: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@main_bp.route('/api/presupuestos/<int:id_presupuesto>/version-actual', methods=['GET'])
+@login_required
+def obtener_version_actual(id_presupuesto):
+    """Obtener número de versión actual del presupuesto"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            # Llamar SP para obtener versión actual
+            cursor.callproc('sp_ObtenerVersionActual', (id_presupuesto,))
+            
+            result = None
+            for res in cursor.stored_results():
+                result = res.fetchone()
+                break
+            
+            cursor.close()
+            connection.close()
+            
+            return jsonify({
+                'success': True,
+                'version_actual': result.get('version_actual', 0) if result else 0,
+                'total_versiones': result.get('total_versiones', 0) if result else 0
+            }), 200
+                
+        except Error as e:
+            print(f"[VERSIONES] ❌ Error SQL: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+            
+    except Exception as e:
+        print(f"[VERSIONES] ❌ Error general: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@main_bp.route('/api/presupuestos/comparar-versiones', methods=['POST'])
+@login_required
+def comparar_versiones():
+    """Comparar dos versiones de un presupuesto"""
+    try:
+        data = request.get_json()
+        id_presupuesto = data.get('id_presupuesto')
+        version1 = data.get('version1')
+        version2 = data.get('version2')
+        
+        if not all([id_presupuesto, version1, version2]):
+            return jsonify({'success': False, 'error': 'Faltan parámetros requeridos'}), 400
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            print(f"[VERSIONES] 🔄 Comparando v{version1} vs v{version2} de presupuesto {id_presupuesto}")
+            
+            # Llamar SP para comparar versiones
+            cursor.callproc('sp_CompararVersionesPresupuesto', (id_presupuesto, version1, version2))
+            
+            comparacion = None
+            for result in cursor.stored_results():
+                comparacion = result.fetchone()
+                break
+            
+            cursor.close()
+            connection.close()
+            
+            if not comparacion:
+                return jsonify({'success': False, 'error': 'No se pudo comparar las versiones'}), 500
+            
+            # Serializar fechas
+            for key, value in comparacion.items():
+                if isinstance(value, datetime):
+                    comparacion[key] = value.isoformat()
+                elif isinstance(value, Decimal):
+                    comparacion[key] = float(value)
+            
+            print(f"[VERSIONES] ✅ Comparación realizada")
+            
+            return jsonify({
+                'success': True,
+                'comparacion': comparacion
+            }), 200
+                
+        except Error as e:
+            print(f"[VERSIONES] ❌ Error SQL: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+            
+    except Exception as e:
+        print(f"[VERSIONES] ❌ Error general: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500

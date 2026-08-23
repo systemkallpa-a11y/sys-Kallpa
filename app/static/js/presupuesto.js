@@ -10,6 +10,10 @@ let id_contador_servicio = 0;
 let materiales_disponibles = [];
 let desglose_editado_manualmente = false; // ⭐ Detecta si usuario editó campos manualmente
 
+// ⭐ DEBOUNCE: Variables para controlar búsquedas
+let busqueda_timeout = null;
+let busqueda_controller = null;
+
 // Porcentajes extraídos del PDF (valores por defecto si no se extraen)
 let porcentajes_pdf = {
     gastos_generales: 10,  // Default 10%
@@ -20,31 +24,7 @@ let porcentajes_pdf = {
 
 // Inicializar cuando carga la página
 document.addEventListener('DOMContentLoaded', function() {
-    // ⭐ CONFIGURAR EVENT LISTENERS PARA BÚSQUEDA DE MATERIALES INMEDIATAMENTE
-    const buscadorMaterial = document.getElementById('buscador-material');
-    const filtroCategoria = document.getElementById('filtro-categoria');
-    
-    if (buscadorMaterial) {
-        console.log('[INIT] Configurando event listener para buscador de materiales');
-        buscadorMaterial.addEventListener('input', function() {
-            console.log('[BUSCAR] Input detectado:', this.value);
-            buscarMaterialesDinamico();
-        });
-    } else {
-        console.warn('[INIT] ❌ No se encontró el elemento buscador-material');
-    }
-    
-    if (filtroCategoria) {
-        console.log('[INIT] Configurando event listener para filtro de categorías');
-        filtroCategoria.addEventListener('change', function() {
-            console.log('[BUSCAR] Cambio de categoría detectado:', this.value);
-            buscarMaterialesDinamico();
-        });
-    } else {
-        console.warn('[INIT] ❌ No se encontró el elemento filtro-categoria');
-    }
-    
-    // ⭐ AGREGAR EVENT LISTENERS PARA CAMPOS EDITABLES DEL DESGLOSE
+    // ⭐ CONFIGURAR EVENT LISTENERS PARA CAMPOS EDITABLES DEL DESGLOSE
     const campos_desglose = ['gastos-generales', 'utilidad', 'supervision-obra'];
     
     campos_desglose.forEach(campo_id => {
@@ -93,6 +73,88 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// ⭐ FUNCIÓN PARA CONFIGURAR EVENT LISTENERS DE MATERIALES
+// Se llama al abrir el modal para asegurar que los elementos existan
+function configurarEventListenersMateriales() {
+    console.log('[CONFIG] ==== CONFIGURANDO EVENT LISTENERS ====');
+    
+    const buscadorMaterial = document.getElementById('buscador-material');
+    const filtroCategoria = document.getElementById('filtro-categoria');
+    
+    console.log('[CONFIG] Estado de elementos:');
+    console.log('  - buscador-material existe:', !!buscadorMaterial);
+    console.log('  - filtro-categoria existe:', !!filtroCategoria);
+    
+    if (buscadorMaterial) {
+        console.log('[CONFIG] ✅ Configurando listener para buscador de materiales');
+        console.log('[CONFIG] Valor actual del buscador:', buscadorMaterial.value);
+        
+        // Remover listeners anteriores clonando el elemento
+        const nuevoInput = buscadorMaterial.cloneNode(true);
+        buscadorMaterial.parentNode.replaceChild(nuevoInput, buscadorMaterial);
+        
+        // ⭐ AGREGAR LISTENER CON DEBOUNCING (espera 500ms después de que el usuario deje de escribir)
+        nuevoInput.addEventListener('input', function(e) {
+            console.log('[BUSCAR] ✨ EVENT INPUT DETECTADO ✨');
+            console.log('[BUSCAR] Valor:', this.value);
+            
+            // ⭐ CANCELAR BÚSQUEDA ANTERIOR
+            if (busqueda_timeout) {
+                console.log('[BUSCAR] ⏱️ Cancelando búsqueda anterior (debounce)');
+                clearTimeout(busqueda_timeout);
+            }
+            
+            if (busqueda_controller) {
+                console.log('[BUSCAR] ⏱️ Abortando fetch anterior');
+                busqueda_controller.abort();
+                busqueda_controller = null;
+            }
+            
+            // ⭐ ESPERAR 500ms ANTES DE BUSCAR
+            busqueda_timeout = setTimeout(() => {
+                console.log('[BUSCAR] 🚀 Ejecutando búsqueda después del debounce');
+                buscarMaterialesDinamico();
+            }, 500);
+        });
+        
+        console.log('[CONFIG] ✅ Listener configurado con debouncing (500ms)');
+    } else {
+        console.error('[CONFIG] ❌ No se encontró el elemento buscador-material');
+    }
+    
+    if (filtroCategoria) {
+        console.log('[CONFIG] ✅ Configurando listener para filtro de categorías');
+        
+        // Remover listeners anteriores
+        const nuevoSelect = filtroCategoria.cloneNode(true);
+        filtroCategoria.parentNode.replaceChild(nuevoSelect, filtroCategoria);
+        
+        // Agregar nuevo listener (sin debounce porque es un select)
+        nuevoSelect.addEventListener('change', function(e) {
+            console.log('[BUSCAR] ✨ EVENT CHANGE DETECTADO (categoría) ✨');
+            console.log('[BUSCAR] Categoría seleccionada:', this.value);
+            
+            // ⭐ CANCELAR BÚSQUEDA ANTERIOR
+            if (busqueda_timeout) {
+                clearTimeout(busqueda_timeout);
+            }
+            if (busqueda_controller) {
+                busqueda_controller.abort();
+                busqueda_controller = null;
+            }
+            
+            // Ejecutar inmediatamente (sin debounce)
+            buscarMaterialesDinamico();
+        });
+        
+        console.log('[CONFIG] ✅ Listener de categoría configurado');
+    } else {
+        console.error('[CONFIG] ❌ No se encontró el elemento filtro-categoria');
+    }
+    
+    console.log('[CONFIG] ==== CONFIGURACIÓN COMPLETADA ====');
+}
 
 // ============================================================================
 // FUNCIÓN MEJORADA DE CARGA DE DATOS PARA EDITAR
@@ -230,6 +292,11 @@ async function cargarDatosPresupuestoParaEditar(id_presupuesto) {
         document.getElementById('form-presupuesto').dataset.modo = 'edicion';
         document.getElementById('modal-presupuesto').classList.remove('hidden');
         
+        // ✅ CONFIGURAR EVENT LISTENERS DESPUÉS DE ABRIR EL MODAL
+        setTimeout(() => {
+            configurarEventListenersMateriales();
+        }, 100);
+        
         console.log('[EDITAR] ✓ Presupuesto cargado correctamente en modo edición');
         
     } catch (error) {
@@ -272,12 +339,6 @@ async function buscarMaterialesDinamico() {
     
     console.log('🔍 [BUSCAR_MATERIALES] === FUNCIÓN EJECUTADA ===');
     console.log('[BUSCAR_MATERIALES] Input:', { buscador, categoria });
-    console.log('[BUSCAR_MATERIALES] Elementos DOM:', {
-        buscador_elem: !!document.getElementById('buscador-material'),
-        categoria_elem: !!document.getElementById('filtro-categoria'),
-        resultados_elem: !!document.getElementById('resultados-materiales'),
-        lista_elem: !!document.getElementById('lista-resultados-materiales')
-    });
     
     // Si no hay búsqueda, no mostrar resultados
     if (!buscador) {
@@ -292,83 +353,61 @@ async function buscarMaterialesDinamico() {
     console.log('[BUSCAR_MATERIALES] ✅ Buscando:', buscador, 'Categoría:', categoria || '(todas)');
     
     try {
-        // Construir URL - categoría es OPCIONAL, defaultea a 0 si no hay
+        // ⭐ CREAR NUEVO ABORT CONTROLLER PARA ESTA BÚSQUEDA
+        busqueda_controller = new AbortController();
+        
+        // Construir URL
         let url = `/api/presupuestos/combo/materiales?termino=${encodeURIComponent(buscador)}&categoria=${categoria || '0'}`;
         
         console.log('[BUSCAR_MATERIALES] 📡 URL:', url);
         console.log('[BUSCAR_MATERIALES] 📡 Iniciando fetch...');
         
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-        
         let response;
         try {
             response = await fetch(url, {
                 method: 'GET',
-                signal: controller.signal,
+                signal: busqueda_controller.signal,
                 headers: {
                     'Accept': 'application/json'
                 }
             });
         } catch (fetchError) {
-            console.error('[BUSCAR_MATERIALES] ❌ Fetch error:', fetchError.message);
-            console.error('[BUSCAR_MATERIALES] ❌ Error type:', fetchError.constructor.name);
-            if (fetchError instanceof TypeError) {
-                console.error('[BUSCAR_MATERIALES] ❌ TypeError - Posible error de CORS o conexión rechazada');
+            // ⭐ SI FUE ABORTADO INTENCIONALMENTE, NO MOSTRAR ERROR
+            if (fetchError.name === 'AbortError') {
+                console.log('[BUSCAR_MATERIALES] ⚠️ Búsqueda cancelada (nueva búsqueda iniciada)');
+                return;
             }
+            
+            console.error('[BUSCAR_MATERIALES] ❌ Fetch error:', fetchError.message);
             throw fetchError;
         }
-        
-        clearTimeout(timeoutId);
         
         console.log('[BUSCAR_MATERIALES] 📊 Response recibido:', response.status, response.statusText);
         
         if (!response.ok) {
             console.error('[BUSCAR_MATERIALES] ❌ HTTP Error:', response.status);
-            console.error('[BUSCAR_MATERIALES] ❌ Status text:', response.statusText);
-            
-            let errorText = '';
-            try {
-                errorText = await response.text();
-                console.error('[BUSCAR_MATERIALES] ❌ Error body:', errorText);
-            } catch (e) {
-                console.error('[BUSCAR_MATERIALES] ❌ No se pudo leer el error body');
-            }
-            
             mostrarResultadosMateriales([]);
             return;
         }
         
-        let data;
-        try {
-            data = await response.json();
-        } catch (jsonError) {
-            console.error('[BUSCAR_MATERIALES] ❌ Error parsing JSON:', jsonError.message);
-            console.error('[BUSCAR_MATERIALES] ❌ Response:', response);
-            mostrarResultadosMateriales([]);
-            return;
-        }
-        
+        const data = await response.json();
         console.log('[BUSCAR_MATERIALES] 📋 Respuesta JSON:', data);
         
         if (data.success && Array.isArray(data.data)) {
             console.log('[BUSCAR_MATERIALES] ✅ Éxito:', data.data.length, 'materiales encontrados');
-            if (data.data.length > 0) {
-                console.log('[BUSCAR_MATERIALES] 📄 Primer material:', data.data[0]);
-            }
             mostrarResultadosMateriales(data.data);
         } else {
             console.error('[BUSCAR_MATERIALES] ❌ Error en respuesta:', data.error || 'Sin datos');
             mostrarResultadosMateriales([]);
         }
     } catch (error) {
+        // ⭐ SI FUE ABORTADO, NO MOSTRAR ERROR
         if (error.name === 'AbortError') {
-            console.error('[BUSCAR_MATERIALES] ❌ Timeout - La solicitud tardó más de 10 segundos');
-        } else {
-            console.error('[BUSCAR_MATERIALES] ❌ Error:', error.message);
-            console.error('[BUSCAR_MATERIALES] ❌ Error type:', error.constructor.name);
-            console.error('[BUSCAR_MATERIALES] ❌ Stack:', error.stack);
+            console.log('[BUSCAR_MATERIALES] ⚠️ Búsqueda cancelada');
+            return;
         }
+        
+        console.error('[BUSCAR_MATERIALES] ❌ Error:', error.message);
         mostrarResultadosMateriales([]);
     }
 }
@@ -1041,6 +1080,12 @@ function abrirModalPresupuesto() {
     limpiarForm();
     document.getElementById('modal-presupuesto').classList.remove('hidden');
     cargarCategorias();
+    
+    // ✅ CONFIGURAR EVENT LISTENERS DESPUÉS DE ABRIR EL MODAL
+    // Usar setTimeout para asegurar que el DOM esté listo
+    setTimeout(() => {
+        configurarEventListenersMateriales();
+    }, 100);
 }
 
 // ============================================================================
@@ -1298,10 +1343,13 @@ async function cargarPresupuestos() {
                             <button onclick="descargarPresupuestoPDF(${p.id_presupuesto})" class="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs transition" title="Descargar PDF">
                                 <i class="fas fa-file-pdf"></i>
                             </button>
-                            <button onclick="abrirModalEditar(${p.id_presupuesto})" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition">
+                            <button onclick="editarPresupuestoConVersion(${p.id_presupuesto})" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition" title="Editar">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button onclick="abrirModalEliminar(${p.id_presupuesto}, '${p.numero_presupuesto}')" class="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs transition">
+                            <button onclick="abrirHistorialVersiones(${p.id_presupuesto})" class="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs transition" title="Historial de Versiones">
+                                <i class="fas fa-history"></i>
+                            </button>
+                            <button onclick="abrirModalEliminar(${p.id_presupuesto}, '${p.numero_presupuesto}')" class="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs transition" title="Eliminar">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -1993,5 +2041,1043 @@ async function importarExcel(input) {
             btnLabel.style.pointerEvents = '';
         }
         input.value = '';
+    }
+}
+
+
+// ============================================================================
+// SISTEMA DE VERSIONES DE PRESUPUESTO
+// ============================================================================
+
+// Variable global para almacenar el ID del presupuesto que se está editando
+let presupuestoEnEdicion = null;
+
+/**
+ * Función para interceptar el clic en "Editar" y guardar snapshot ANTES
+ */
+async function editarPresupuestoConVersion(idPresupuesto) {
+    try {
+        console.log('[VERSIONES] 🔄 Guardando snapshot antes de editar...');
+        
+        // Mostrar loading
+        mostrarMensaje('Preparando edición...', 'info');
+        
+        // Llamar endpoint para guardar snapshot
+        const response = await fetch('/api/presupuestos/guardar-snapshot', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id_presupuesto: idPresupuesto
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            console.log(`[VERSIONES] ✅ Snapshot guardado: v${data.numero_version}`);
+            
+            // Guardar ID para uso posterior
+            presupuestoEnEdicion = idPresupuesto;
+            
+            // Ahora sí, llamar a la función original de editar
+            // (asumiendo que existe una función editarPresupuesto)
+            if (typeof editarPresupuesto === 'function') {
+                editarPresupuesto(idPresupuesto);
+            } else {
+                // Si no existe, abrir modal manualmente
+                cargarDatosPresupuesto(idPresupuesto);
+            }
+        } else {
+            console.error('[VERSIONES] ❌ Error:', data.error);
+            mostrarMensaje('Error al preparar edición: ' + data.error, 'error');
+        }
+        
+    } catch (error) {
+        console.error('[VERSIONES] ❌ Error:', error);
+        mostrarMensaje('Error al preparar edición', 'error');
+    }
+}
+
+/**
+ * Abrir modal de historial de versiones
+ */
+async function abrirHistorialVersiones(idPresupuesto) {
+    try {
+        console.log('[VERSIONES] 📋 Abriendo historial de versiones...');
+        
+        // Llamar endpoint para obtener historial
+        const response = await fetch(`/api/presupuestos/${idPresupuesto}/versiones`);
+        const data = await response.json();
+        
+        if (data.success) {
+            console.log(`[VERSIONES] ✅ ${data.versiones.length} versiones encontradas`);
+            mostrarModalHistorial(idPresupuesto, data.versiones);
+        } else {
+            console.error('[VERSIONES] ❌ Error:', data.error);
+            mostrarMensaje('Error al obtener historial: ' + data.error, 'error');
+        }
+        
+    } catch (error) {
+        console.error('[VERSIONES] ❌ Error:', error);
+        mostrarMensaje('Error al obtener historial', 'error');
+    }
+}
+
+/**
+ * Mostrar modal con historial de versiones
+ */
+function mostrarModalHistorial(idPresupuesto, versiones) {
+    // Verificar si ya existe modal y eliminarlo
+    const modalExistente = document.getElementById('modal-historial-versiones');
+    if (modalExistente) {
+        modalExistente.remove();
+    }
+    
+    // Crear HTML del modal
+    const modalHTML = `
+        <div id="modal-historial-versiones" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white px-6 py-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-history text-2xl"></i>
+                        <div>
+                            <h2 class="text-xl font-bold">Historial de Versiones</h2>
+                            <p class="text-blue-100 text-sm">Presupuesto #${idPresupuesto}</p>
+                        </div>
+                    </div>
+                    <button onclick="cerrarModalHistorial()" class="text-white hover:text-gray-200 p-2">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <!-- Contenido -->
+                <div class="flex-1 overflow-y-auto p-6">
+                    ${versiones.length === 0 ? `
+                        <div class="text-center py-12 text-gray-500">
+                            <i class="fas fa-inbox text-5xl mb-4 opacity-50"></i>
+                            <p class="text-lg">No hay versiones registradas</p>
+                            <p class="text-sm mt-2">El historial se creará al editar el presupuesto</p>
+                        </div>
+                    ` : `
+                        <div class="space-y-4">
+                            ${versiones.map(v => `
+                                <div class="border ${v.es_version_actual ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-300 dark:border-gray-600'} rounded-lg p-4 hover:shadow-md transition-shadow">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex items-start gap-3 flex-1">
+                                            <div class="flex-shrink-0">
+                                                <span class="inline-flex items-center justify-center w-10 h-10 rounded-full ${v.es_version_actual ? 'bg-green-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'} font-bold">
+                                                    v${v.numero_version}
+                                                </span>
+                                            </div>
+                                            <div class="flex-1">
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <h3 class="font-bold text-lg">Versión ${v.numero_version}</h3>
+                                                    ${v.es_version_actual ? '<span class="px-2 py-0.5 bg-green-600 text-white text-xs rounded-full font-medium">ACTUAL</span>' : ''}
+                                                </div>
+                                                <div class="grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                                    <div><i class="fas fa-calendar text-blue-600 mr-1"></i><strong>Fecha:</strong> ${new Date(v.fecha_version).toLocaleString('es-PE')}</div>
+                                                    <div><i class="fas fa-user text-blue-600 mr-1"></i><strong>Por:</strong> ${v.creado_por_nombre || 'Sistema'}</div>
+                                                    <div><i class="fas fa-dollar-sign text-blue-600 mr-1"></i><strong>Total:</strong> S/. ${parseFloat(v.presupuesto_total || 0).toLocaleString('es-PE', {minimumFractionDigits: 2})}</div>
+                                                    <div><i class="fas fa-clipboard-list text-blue-600 mr-1"></i><strong>Partidas:</strong> ${v.total_partidas}</div>
+                                                </div>
+                                                ${v.motivo_cambio ? `
+                                                    <div class="mt-2 text-sm italic text-gray-600 dark:text-gray-400">
+                                                        <i class="fas fa-comment-dots mr-1"></i>${v.motivo_cambio}
+                                                    </div>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-col gap-1 ml-3">
+                                            <button onclick="verVersionDetalle(${idPresupuesto}, ${v.numero_version})" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors whitespace-nowrap">
+                                                <i class="fas fa-eye mr-1"></i>Ver
+                                            </button>
+                                            ${!v.es_version_actual ? `
+                                                <button onclick="compararVersiones(${idPresupuesto}, ${v.numero_version})" class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-medium transition-colors whitespace-nowrap">
+                                                    <i class="fas fa-balance-scale mr-1"></i>Comparar
+                                                </button>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `}
+                </div>
+                
+                <!-- Footer -->
+                <div class="px-6 py-4 bg-gray-100 dark:bg-gray-700 border-t border-gray-300 dark:border-gray-600 flex justify-end">
+                    <button onclick="cerrarModalHistorial()" class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors">
+                        <i class="fas fa-times mr-2"></i>Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Agregar modal al DOM
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+/**
+ * Cerrar modal de historial
+ */
+function cerrarModalHistorial() {
+    const modal = document.getElementById('modal-historial-versiones');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+/**
+ * Ver detalle de una versión específica
+ */
+async function verVersionDetalle(idPresupuesto, numeroVersion) {
+    try {
+        console.log(`[VERSIONES] 👁️ Viendo detalle de v${numeroVersion}...`);
+        
+        const response = await fetch(`/api/presupuestos/${idPresupuesto}/versiones/${numeroVersion}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            console.log(`[VERSIONES] ✅ Versión obtenida con ${data.partidas.length} partidas`);
+            mostrarModalDetalleVersion(data.version, data.partidas);
+        } else {
+            console.error('[VERSIONES] ❌ Error:', data.error);
+            mostrarMensaje('Error al obtener versión: ' + data.error, 'error');
+        }
+        
+    } catch (error) {
+        console.error('[VERSIONES] ❌ Error:', error);
+        mostrarMensaje('Error al obtener versión', 'error');
+    }
+}
+
+/**
+ * Mostrar modal con detalle de una versión
+ */
+function mostrarModalDetalleVersion(version, partidas) {
+    // Separar materiales y servicios
+    const materiales = partidas.filter(p => p.tipo_partida === 'MATERIAL');
+    const servicios = partidas.filter(p => p.tipo_partida === 'SERVICIO');
+    
+    const modalHTML = `
+        <div id="modal-detalle-version" class="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-purple-600 to-purple-800 text-white px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-xl font-bold">Versión ${version.numero_version} - ${version.numero_presupuesto}</h2>
+                            <p class="text-purple-100 text-sm">${version.nombre_cliente} - ${version.proyecto}</p>
+                        </div>
+                        <button onclick="cerrarModalDetalleVersion()" class="text-white hover:text-gray-200">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Contenido con scroll -->
+                <div class="flex-1 overflow-y-auto p-6">
+                    <!-- Información general -->
+                    <div class="grid grid-cols-2 gap-4 mb-6 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                        <div><strong>Fecha Emisión:</strong> ${version.fecha_emision || 'N/A'}</div>
+                        <div><strong>Fecha Vigencia:</strong> ${version.fecha_vigencia || 'N/A'}</div>
+                        <div><strong>Creado por:</strong> ${version.creado_por_nombre || 'Sistema'}</div>
+                        <div><strong>Fecha Versión:</strong> ${new Date(version.fecha_version).toLocaleString('es-PE')}</div>
+                    </div>
+                    
+                    <!-- Materiales -->
+                    <h3 class="text-lg font-bold mb-3"><i class="fas fa-boxes text-green-600 mr-2"></i>Materiales (${materiales.length})</h3>
+                    <div class="overflow-x-auto mb-6">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-200 dark:bg-gray-700">
+                                <tr>
+                                    <th class="px-3 py-2 text-left">Descripción</th>
+                                    <th class="px-3 py-2 text-center">Unidad</th>
+                                    <th class="px-3 py-2 text-center">Cantidad</th>
+                                    <th class="px-3 py-2 text-right">P. Unitario</th>
+                                    <th class="px-3 py-2 text-right">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                ${materiales.map(m => `
+                                    <tr>
+                                        <td class="px-3 py-2">${m.descripcion}</td>
+                                        <td class="px-3 py-2 text-center">${m.unidad}</td>
+                                        <td class="px-3 py-2 text-center">${parseFloat(m.cantidad).toFixed(2)}</td>
+                                        <td class="px-3 py-2 text-right">S/. ${parseFloat(m.precio_unitario).toFixed(2)}</td>
+                                        <td class="px-3 py-2 text-right font-semibold">S/. ${parseFloat(m.subtotal).toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Servicios -->
+                    <h3 class="text-lg font-bold mb-3"><i class="fas fa-tools text-blue-600 mr-2"></i>Servicios (${servicios.length})</h3>
+                    <div class="overflow-x-auto mb-6">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-200 dark:bg-gray-700">
+                                <tr>
+                                    <th class="px-3 py-2 text-left">Descripción</th>
+                                    <th class="px-3 py-2 text-center">Unidad</th>
+                                    <th class="px-3 py-2 text-center">Cantidad</th>
+                                    <th class="px-3 py-2 text-right">P. Unitario</th>
+                                    <th class="px-3 py-2 text-right">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                ${servicios.map(s => `
+                                    <tr>
+                                        <td class="px-3 py-2">${s.descripcion}</td>
+                                        <td class="px-3 py-2 text-center">${s.unidad}</td>
+                                        <td class="px-3 py-2 text-center">${parseFloat(s.cantidad).toFixed(2)}</td>
+                                        <td class="px-3 py-2 text-right">S/. ${parseFloat(s.precio_unitario).toFixed(2)}</td>
+                                        <td class="px-3 py-2 text-right font-semibold">S/. ${parseFloat(s.subtotal).toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Resumen financiero -->
+                    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                        <h3 class="text-lg font-bold mb-3">Resumen Financiero</h3>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div class="flex justify-between"><span>Total Materiales:</span><strong>S/. ${parseFloat(version.total_materiales).toFixed(2)}</strong></div>
+                            <div class="flex justify-between"><span>Total Servicios:</span><strong>S/. ${parseFloat(version.total_servicios).toFixed(2)}</strong></div>
+                            <div class="flex justify-between"><span>Costos Directos:</span><strong>S/. ${parseFloat(version.costos_directos).toFixed(2)}</strong></div>
+                            <div class="flex justify-between"><span>Gastos Generales (${version.porcentaje_gg}%):</span><strong>S/. ${parseFloat(version.gastos_generales).toFixed(2)}</strong></div>
+                            <div class="flex justify-between"><span>Utilidad (${version.porcentaje_utilidad}%):</span><strong>S/. ${parseFloat(version.utilidad).toFixed(2)}</strong></div>
+                            <div class="flex justify-between"><span>Sub Total:</span><strong>S/. ${parseFloat(version.sub_total).toFixed(2)}</strong></div>
+                            <div class="flex justify-between"><span>IGV (18%):</span><strong>S/. ${parseFloat(version.igv).toFixed(2)}</strong></div>
+                            <div class="flex justify-between"><span>Supervisión (${version.porcentaje_supervision}%):</span><strong>S/. ${parseFloat(version.supervision).toFixed(2)}</strong></div>
+                            <div class="flex justify-between text-lg font-bold text-blue-600"><span>PRESUPUESTO TOTAL:</span><strong>S/. ${parseFloat(version.presupuesto_total).toFixed(2)}</strong></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Footer -->
+                <div class="px-6 py-4 bg-gray-100 dark:bg-gray-700 flex justify-end gap-2">
+                    <button onclick="cerrarModalDetalleVersion()" class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function cerrarModalDetalleVersion() {
+    const modal = document.getElementById('modal-detalle-version');
+    if (modal) modal.remove();
+}
+
+/**
+ * Comparar versiones
+ */
+async function compararVersiones(idPresupuesto, version1) {
+    // Por ahora, comparar con la versión actual
+    try {
+        // Obtener versión actual
+        const respActual = await fetch(`/api/presupuestos/${idPresupuesto}/version-actual`);
+        const dataActual = await respActual.json();
+        
+        if (!dataActual.success) {
+            mostrarMensaje('Error al obtener versión actual', 'error');
+            return;
+        }
+        
+        const version2 = dataActual.version_actual;
+        
+        if (version1 === version2) {
+            mostrarMensaje('No se puede comparar la versión consigo misma', 'warning');
+            return;
+        }
+        
+        // Comparar
+        const response = await fetch('/api/presupuestos/comparar-versiones', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                id_presupuesto: idPresupuesto,
+                version1: version1,
+                version2: version2
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarModalComparacion(data.comparacion);
+        } else {
+            mostrarMensaje('Error al comparar versiones: ' + data.error, 'error');
+        }
+        
+    } catch (error) {
+        console.error('[VERSIONES] ❌ Error:', error);
+        mostrarMensaje('Error al comparar versiones', 'error');
+    }
+}
+
+/**
+ * Mostrar modal de comparación
+ */
+function mostrarModalComparacion(comparacion) {
+    const cambioPositivo = comparacion.diferencia_total > 0;
+    const cambioColor = cambioPositivo ? 'text-red-600' : 'text-green-600';
+    const cambioIcono = cambioPositivo ? 'fa-arrow-up' : 'fa-arrow-down';
+    
+    const modalHTML = `
+        <div id="modal-comparacion" class="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full">
+                <div class="bg-gradient-to-r from-purple-600 to-purple-800 text-white px-6 py-4">
+                    <h2 class="text-xl font-bold"><i class="fas fa-balance-scale mr-2"></i>Comparación de Versiones</h2>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-2 gap-6">
+                        <!-- Versión 1 -->
+                        <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                            <h3 class="font-bold text-lg mb-3">Versión ${comparacion.version1}</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">${new Date(comparacion.fecha_v1).toLocaleString('es-PE')}</p>
+                            <p class="text-2xl font-bold text-blue-600">S/. ${parseFloat(comparacion.total_v1).toLocaleString('es-PE', {minimumFractionDigits: 2})}</p>
+                            ${comparacion.motivo_v1 ? `<p class="text-sm italic mt-2">${comparacion.motivo_v1}</p>` : ''}
+                        </div>
+                        
+                        <!-- Versión 2 -->
+                        <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                            <h3 class="font-bold text-lg mb-3">Versión ${comparacion.version2}</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">${new Date(comparacion.fecha_v2).toLocaleString('es-PE')}</p>
+                            <p class="text-2xl font-bold text-blue-600">S/. ${parseFloat(comparacion.total_v2).toLocaleString('es-PE', {minimumFractionDigits: 2})}</p>
+                            ${comparacion.motivo_v2 ? `<p class="text-sm italic mt-2">${comparacion.motivo_v2}</p>` : ''}
+                        </div>
+                    </div>
+                    
+                    <!-- Diferencia -->
+                    <div class="mt-6 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-center">
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Diferencia</p>
+                        <p class="text-3xl font-bold ${cambioColor}">
+                            <i class="fas ${cambioIcono} mr-2"></i>
+                            S/. ${Math.abs(comparacion.diferencia_total).toLocaleString('es-PE', {minimumFractionDigits: 2})}
+                        </p>
+                        <p class="text-lg mt-2 ${cambioColor}">
+                            ${cambioPositivo ? '+' : ''}${parseFloat(comparacion.porcentaje_cambio).toFixed(2)}%
+                        </p>
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-gray-100 dark:bg-gray-700 flex justify-end">
+                    <button onclick="cerrarModalComparacion()" class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function cerrarModalComparacion() {
+    const modal = document.getElementById('modal-comparacion');
+    if (modal) modal.remove();
+}
+
+/**
+ * Función helper para mostrar mensajes
+ */
+function mostrarMensaje(mensaje, tipo = 'info') {
+    // Colores según tipo
+    const colores = {
+        'success': 'bg-green-600',
+        'error': 'bg-red-600',
+        'warning': 'bg-yellow-600',
+        'info': 'bg-blue-600'
+    };
+    
+    const color = colores[tipo] || colores['info'];
+    
+    const mensajeDiv = document.createElement('div');
+    mensajeDiv.className = `fixed top-4 right-4 ${color} text-white px-6 py-3 rounded-lg shadow-lg z-[9999] animate-fade-in`;
+    mensajeDiv.innerHTML = `
+        <div class="flex items-center gap-2">
+            <i class="fas fa-${tipo === 'success' ? 'check-circle' : tipo === 'error' ? 'exclamation-circle' : tipo === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+            <span>${mensaje}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(mensajeDiv);
+    
+    setTimeout(() => {
+        mensajeDiv.remove();
+    }, 3000);
+}
+
+// ============================================================================
+// SISTEMA DE VERSIONES DE PRESUPUESTOS
+// ============================================================================
+
+/**
+ * Función principal: Editar presupuesto CON guardado automático de snapshot
+ * Esta función intercepta el botón "Editar" y guarda un snapshot ANTES de abrir el modal
+ */
+async function editarPresupuestoConVersion(id_presupuesto) {
+    try {
+        console.log('[VERSIONES] === EDITAR CON VERSIÓN ===');
+        console.log('[VERSIONES] ID Presupuesto:', id_presupuesto);
+        
+        // PASO 1: Guardar snapshot ANTES de editar
+        console.log('[VERSIONES] 📸 Guardando snapshot antes de editar...');
+        
+        const responseSnapshot = await fetch('/api/presupuestos/guardar-snapshot', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ id_presupuesto: id_presupuesto })
+        });
+        
+        const resultSnapshot = await responseSnapshot.json();
+        
+        if (!resultSnapshot.success) {
+            console.error('[VERSIONES] ❌ Error al guardar snapshot:', resultSnapshot.error);
+            mostrarMensaje(`Error al crear versión: ${resultSnapshot.error}`, 'error');
+            return;
+        }
+        
+        console.log('[VERSIONES] ✅ Snapshot guardado:', resultSnapshot);
+        console.log('[VERSIONES] Versión creada:', resultSnapshot.numero_version);
+        
+        // Mostrar mensaje de éxito
+        mostrarMensaje(`Versión ${resultSnapshot.numero_version} guardada. Ahora puedes editar.`, 'success');
+        
+        // PASO 2: Cargar datos del presupuesto para edición
+        console.log('[VERSIONES] 📋 Cargando datos del presupuesto para edición...');
+        await cargarDatosPresupuestoParaEditar(id_presupuesto);
+        
+        console.log('[VERSIONES] ✅ Presupuesto listo para editar');
+        
+    } catch (error) {
+        console.error('[VERSIONES] ❌ Error:', error);
+        mostrarMensaje('Error al preparar presupuesto para edición', 'error');
+    }
+}
+
+/**
+ * Abrir modal con historial de versiones
+ */
+async function abrirHistorialVersiones(id_presupuesto) {
+    try {
+        console.log('[HISTORIAL] === ABRIENDO HISTORIAL ===');
+        console.log('[HISTORIAL] ID Presupuesto:', id_presupuesto);
+        
+        // Obtener versión actual
+        const responseActual = await fetch(`/api/presupuestos/${id_presupuesto}/version-actual`);
+        const resultActual = await responseActual.json();
+        
+        if (!resultActual.success) {
+            mostrarMensaje('Error al obtener versión actual', 'error');
+            return;
+        }
+        
+        const versionActual = resultActual.version_actual;
+        console.log('[HISTORIAL] Versión actual:', versionActual);
+        
+        // Obtener historial de versiones
+        const responseHistorial = await fetch(`/api/presupuestos/${id_presupuesto}/versiones`);
+        const resultHistorial = await responseHistorial.json();
+        
+        if (!resultHistorial.success) {
+            mostrarMensaje('Error al cargar historial', 'error');
+            return;
+        }
+        
+        const versiones = resultHistorial.versiones || [];
+        console.log('[HISTORIAL] Total versiones:', versiones.length);
+        
+        mostrarModalHistorial(id_presupuesto, versionActual, versiones);
+        
+    } catch (error) {
+        console.error('[HISTORIAL] Error:', error);
+        mostrarMensaje('Error al cargar historial de versiones', 'error');
+    }
+}
+
+/**
+ * Mostrar modal con lista de versiones
+ */
+function mostrarModalHistorial(id_presupuesto, versionActual, versiones) {
+    const modalHTML = `
+        <div id="modal-historial-versiones" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-purple-800 to-purple-900 text-white px-6 py-4 flex items-center justify-between border-b border-purple-700">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-purple-700 p-2 rounded-lg">
+                            <i class="fas fa-history text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-semibold">Historial de Versiones</h2>
+                            <p class="text-purple-300 text-xs mt-0.5">Presupuesto #${id_presupuesto} - Versión actual: v${versionActual}</p>
+                        </div>
+                    </div>
+                    <button onclick="cerrarModalHistorial()" class="text-purple-300 hover:text-white p-2 hover:bg-purple-700/50 rounded-lg transition-colors">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                
+                <!-- Contenido -->
+                <div class="flex-1 overflow-y-auto p-6">
+                    <div class="space-y-3">
+                        ${versiones.length === 0 ? `
+                            <div class="text-center py-12 text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-inbox text-4xl mb-4"></i>
+                                <p>Sin versiones anteriores</p>
+                                <p class="text-sm mt-2">Este presupuesto aún no ha sido editado</p>
+                            </div>
+                        ` : versiones.map(v => `
+                            <div class="bg-gray-50 dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-600 transition-colors">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="text-lg font-bold text-purple-600 dark:text-purple-400">v${v.numero_version}</span>
+                                            ${v.es_version_actual ? '<span class="px-2 py-0.5 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs rounded-full font-medium">ACTUAL</span>' : ''}
+                                        </div>
+                                        <div class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                            <div><i class="fas fa-calendar-alt mr-2"></i>${new Date(v.fecha_version).toLocaleString('es-PE')}</div>
+                                            <div><i class="fas fa-dollar-sign mr-2"></i>Monto: S/. ${parseFloat(v.presupuesto_total).toLocaleString('es-PE', {minimumFractionDigits: 2})}</div>
+                                            <div><i class="fas fa-clipboard-list mr-2"></i>${v.total_partidas || 0} items</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-col gap-2">
+                                        <button onclick="verVersionDetalle(${id_presupuesto}, ${v.numero_version})" 
+                                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition-colors font-medium">
+                                            <i class="fas fa-eye mr-1"></i>Ver Detalle
+                                        </button>
+                                        ${!v.es_version_actual ? `
+                                            <button onclick="compararVersiones(${id_presupuesto}, ${v.numero_version}, ${versionActual})" 
+                                                    class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded text-xs transition-colors font-medium">
+                                                <i class="fas fa-exchange-alt mr-1"></i>Comparar
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <!-- Footer -->
+                <div class="flex gap-3 justify-end p-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">
+                    <button onclick="cerrarModalHistorial()" 
+                            class="px-5 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-900 dark:text-white rounded font-medium text-sm transition-colors">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+/**
+ * Cerrar modal de historial
+ */
+function cerrarModalHistorial() {
+    const modal = document.getElementById('modal-historial-versiones');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+/**
+ * Ver detalle de una versión específica
+ */
+async function verVersionDetalle(id_presupuesto, version_numero) {
+    try {
+        console.log('[VER_VERSION] ID:', id_presupuesto, 'Versión:', version_numero);
+        
+        const response = await fetch(`/api/presupuestos/${id_presupuesto}/versiones/${version_numero}`);
+        const result = await response.json();
+        
+        if (!result.success) {
+            mostrarMensaje('Error al cargar versión', 'error');
+            return;
+        }
+        
+        const version = result.version;
+        const detalles = result.detalles || [];
+        
+        console.log('[VER_VERSION] Datos:', version);
+        console.log('[VER_VERSION] Detalles:', detalles.length);
+        
+        mostrarModalDetalleVersion(id_presupuesto, version, detalles);
+        
+    } catch (error) {
+        console.error('[VER_VERSION] Error:', error);
+        mostrarMensaje('Error al cargar detalle de versión', 'error');
+    }
+}
+
+/**
+ * Mostrar modal con detalle completo de una versión
+ */
+function mostrarModalDetalleVersion(id_presupuesto, version, detalles) {
+    const materiales = detalles.filter(d => d.tipo_partida === 'MATERIAL');
+    const servicios = detalles.filter(d => d.tipo_partida === 'SERVICIO');
+    
+    const modalHTML = `
+        <div id="modal-detalle-version" class="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-blue-800 to-blue-900 text-white px-6 py-4 flex items-center justify-between border-b border-blue-700">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-blue-700 p-2 rounded-lg">
+                            <i class="fas fa-file-alt text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-semibold">Detalle de Versión ${version.version_numero}</h2>
+                            <p class="text-blue-300 text-xs mt-0.5">${new Date(version.fecha_snapshot).toLocaleString('es-PE')}</p>
+                        </div>
+                    </div>
+                    <button onclick="cerrarModalDetalleVersion()" class="text-blue-300 hover:text-white p-2 hover:bg-blue-700/50 rounded-lg transition-colors">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                
+                <!-- Contenido -->
+                <div class="flex-1 overflow-y-auto p-6 space-y-4">
+                    <!-- Resumen Financiero -->
+                    <div class="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+                        <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-3">
+                            <i class="fas fa-calculator mr-2"></i>Resumen Financiero
+                        </h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                                <p class="text-xs text-blue-700 dark:text-blue-300 mb-1">Gastos Generales</p>
+                                <p class="text-lg font-bold text-blue-900 dark:text-blue-100">S/. ${parseFloat(version.gastos_generales || 0).toLocaleString('es-PE', {minimumFractionDigits: 2})}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-blue-700 dark:text-blue-300 mb-1">Utilidad</p>
+                                <p class="text-lg font-bold text-blue-900 dark:text-blue-100">S/. ${parseFloat(version.utilidad || 0).toLocaleString('es-PE', {minimumFractionDigits: 2})}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-blue-700 dark:text-blue-300 mb-1">Supervisión</p>
+                                <p class="text-lg font-bold text-blue-900 dark:text-blue-100">S/. ${parseFloat(version.supervision_obra || 0).toLocaleString('es-PE', {minimumFractionDigits: 2})}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-blue-700 dark:text-blue-300 mb-1">IGV (18%)</p>
+                                <p class="text-lg font-bold text-blue-900 dark:text-blue-100">S/. ${parseFloat(version.igv || 0).toLocaleString('es-PE', {minimumFractionDigits: 2})}</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-blue-300 dark:border-blue-600">
+                            <div class="flex justify-between items-center">
+                                <span class="text-base font-semibold text-blue-900 dark:text-blue-100">MONTO TOTAL</span>
+                                <span class="text-2xl font-bold text-blue-900 dark:text-blue-100">S/. ${parseFloat(version.presupuesto_total).toLocaleString('es-PE', {minimumFractionDigits: 2})}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Materiales -->
+                    <div class="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                            <i class="fas fa-cubes mr-2 text-green-600"></i>Materiales (${materiales.length})
+                        </h3>
+                        ${materiales.length === 0 ? '<p class="text-sm text-gray-500 dark:text-gray-400">Sin materiales</p>' : `
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-gray-100 dark:bg-slate-700 border-b border-gray-200 dark:border-slate-600">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left text-xs font-semibold">Nombre</th>
+                                            <th class="px-3 py-2 text-center text-xs font-semibold">Cantidad</th>
+                                            <th class="px-3 py-2 text-right text-xs font-semibold">P. Unit.</th>
+                                            <th class="px-3 py-2 text-right text-xs font-semibold">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200 dark:divide-slate-700">
+                                        ${materiales.map(m => `
+                                            <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/50">
+                                                <td class="px-3 py-2 text-xs">${m.nombre_partida}</td>
+                                                <td class="px-3 py-2 text-xs text-center">${parseFloat(m.cantidad).toFixed(2)}</td>
+                                                <td class="px-3 py-2 text-xs text-right">S/. ${parseFloat(m.precio_unitario).toFixed(2)}</td>
+                                                <td class="px-3 py-2 text-xs text-right font-semibold">S/. ${parseFloat(m.subtotal).toFixed(2)}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `}
+                    </div>
+                    
+                    <!-- Servicios -->
+                    <div class="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                            <i class="fas fa-cogs mr-2 text-blue-600"></i>Servicios (${servicios.length})
+                        </h3>
+                        ${servicios.length === 0 ? '<p class="text-sm text-gray-500 dark:text-gray-400">Sin servicios</p>' : `
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-gray-100 dark:bg-slate-700 border-b border-gray-200 dark:border-slate-600">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left text-xs font-semibold">Descripción</th>
+                                            <th class="px-3 py-2 text-center text-xs font-semibold">Cantidad</th>
+                                            <th class="px-3 py-2 text-right text-xs font-semibold">P. Unit.</th>
+                                            <th class="px-3 py-2 text-right text-xs font-semibold">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200 dark:divide-slate-700">
+                                        ${servicios.map(s => `
+                                            <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/50">
+                                                <td class="px-3 py-2 text-xs">${s.nombre_partida}</td>
+                                                <td class="px-3 py-2 text-xs text-center">${parseFloat(s.cantidad).toFixed(2)}</td>
+                                                <td class="px-3 py-2 text-xs text-right">S/. ${parseFloat(s.precio_unitario).toFixed(2)}</td>
+                                                <td class="px-3 py-2 text-xs text-right font-semibold">S/. ${parseFloat(s.subtotal).toFixed(2)}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `}
+                    </div>
+                    
+                    ${version.observaciones ? `
+                        <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-700">
+                            <h3 class="text-sm font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
+                                <i class="fas fa-comment mr-2"></i>Observaciones
+                            </h3>
+                            <p class="text-sm text-yellow-800 dark:text-yellow-200">${version.observaciones}</p>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <!-- Footer -->
+                <div class="flex gap-3 justify-end p-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">
+                    <button onclick="cerrarModalDetalleVersion()" 
+                            class="px-5 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-900 dark:text-white rounded font-medium text-sm transition-colors">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+/**
+ * Cerrar modal de detalle de versión
+ */
+function cerrarModalDetalleVersion() {
+    const modal = document.getElementById('modal-detalle-version');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+/**
+ * Comparar dos versiones
+ */
+async function compararVersiones(id_presupuesto, version1, version2) {
+    try {
+        console.log('[COMPARAR] Comparando versiones:', version1, 'vs', version2);
+        
+        const response = await fetch('/api/presupuestos/comparar-versiones', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id_presupuesto: id_presupuesto,
+                version1: version1,
+                version2: version2
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            mostrarMensaje('Error al comparar versiones', 'error');
+            return;
+        }
+        
+        const comparacion = result.comparacion;
+        mostrarModalComparacion(comparacion, version1, version2);
+        
+    } catch (error) {
+        console.error('[COMPARAR] Error:', error);
+        mostrarMensaje('Error al comparar versiones', 'error');
+    }
+}
+
+/**
+ * Mostrar modal de comparación entre versiones
+ */
+function mostrarModalComparacion(comparacion, version1, version2) {
+    const calcularDiferencia = (val1, val2) => {
+        const diff = parseFloat(val2) - parseFloat(val1);
+        const pct = val1 > 0 ? ((diff / val1) * 100).toFixed(2) : 0;
+        return { diff, pct };
+    };
+    
+    const difMonto = calcularDiferencia(comparacion.version1.presupuesto_total, comparacion.version2.presupuesto_total);
+    const difGastos = calcularDiferencia(comparacion.version1.gastos_generales || 0, comparacion.version2.gastos_generales || 0);
+    const difUtilidad = calcularDiferencia(comparacion.version1.utilidad || 0, comparacion.version2.utilidad || 0);
+    const difSupervision = calcularDiferencia(comparacion.version1.supervision || 0, comparacion.version2.supervision || 0);
+    
+    const modalHTML = `
+        <div id="modal-comparacion-versiones" class="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-orange-800 to-orange-900 text-white px-6 py-4 flex items-center justify-between border-b border-orange-700">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-orange-700 p-2 rounded-lg">
+                            <i class="fas fa-exchange-alt text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-semibold">Comparación de Versiones</h2>
+                            <p class="text-orange-300 text-xs mt-0.5">Versión ${version1} vs Versión ${version2}</p>
+                        </div>
+                    </div>
+                    <button onclick="cerrarModalComparacion()" class="text-orange-300 hover:text-white p-2 hover:bg-orange-700/50 rounded-lg transition-colors">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                
+                <!-- Contenido -->
+                <div class="flex-1 overflow-y-auto p-6 space-y-4">
+                    <!-- Comparación de Montos -->
+                    <div class="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg p-4 border border-orange-200 dark:border-orange-700">
+                        <h3 class="text-lg font-semibold text-orange-900 dark:text-orange-100 mb-4">
+                            <i class="fas fa-dollar-sign mr-2"></i>Comparación Financiera
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Versión 1 -->
+                            <div class="bg-white dark:bg-slate-800 rounded-lg p-4 border-2 border-blue-300 dark:border-blue-600">
+                                <div class="text-center mb-3">
+                                    <span class="inline-block px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-full text-sm font-semibold">
+                                        Versión ${version1}
+                                    </span>
+                                </div>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600 dark:text-gray-400">Gastos Generales:</span>
+                                        <span class="font-semibold">S/. ${parseFloat(comparacion.version1.gastos_generales || 0).toFixed(2)}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600 dark:text-gray-400">Utilidad:</span>
+                                        <span class="font-semibold">S/. ${parseFloat(comparacion.version1.utilidad || 0).toFixed(2)}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600 dark:text-gray-400">Supervisión:</span>
+                                        <span class="font-semibold">S/. ${parseFloat(comparacion.version1.supervision_obra || 0).toFixed(2)}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600 dark:text-gray-400">IGV:</span>
+                                        <span class="font-semibold">S/. ${parseFloat(comparacion.version1.igv || 0).toFixed(2)}</span>
+                                    </div>
+                                    <div class="flex justify-between pt-2 border-t border-gray-200 dark:border-slate-700">
+                                        <span class="font-bold">MONTO TOTAL:</span>
+                                        <span class="font-bold text-lg text-blue-600 dark:text-blue-400">S/. ${parseFloat(comparacion.version1.presupuesto_total).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Versión 2 -->
+                            <div class="bg-white dark:bg-slate-800 rounded-lg p-4 border-2 border-green-300 dark:border-green-600">
+                                <div class="text-center mb-3">
+                                    <span class="inline-block px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded-full text-sm font-semibold">
+                                        Versión ${version2} (Actual)
+                                    </span>
+                                </div>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600 dark:text-gray-400">Gastos Generales:</span>
+                                        <span class="font-semibold">S/. ${parseFloat(comparacion.version2.gastos_generales || 0).toFixed(2)}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600 dark:text-gray-400">Utilidad:</span>
+                                        <span class="font-semibold">S/. ${parseFloat(comparacion.version2.utilidad || 0).toFixed(2)}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600 dark:text-gray-400">Supervisión:</span>
+                                        <span class="font-semibold">S/. ${parseFloat(comparacion.version2.supervision_obra || 0).toFixed(2)}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600 dark:text-gray-400">IGV:</span>
+                                        <span class="font-semibold">S/. ${parseFloat(comparacion.version2.igv || 0).toFixed(2)}</span>
+                                    </div>
+                                    <div class="flex justify-between pt-2 border-t border-gray-200 dark:border-slate-700">
+                                        <span class="font-bold">MONTO TOTAL:</span>
+                                        <span class="font-bold text-lg text-green-600 dark:text-green-400">S/. ${parseFloat(comparacion.version2.presupuesto_total).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Diferencias -->
+                        <div class="mt-4 bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700">
+                            <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-3">
+                                <i class="fas fa-chart-line mr-2 text-orange-600"></i>Diferencias
+                            </h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                <div class="text-center p-2 rounded ${difGastos.diff >= 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Gastos Generales</div>
+                                    <div class="font-bold ${difGastos.diff >= 0 ? 'text-green-600' : 'text-red-600'}">
+                                        ${difGastos.diff >= 0 ? '+' : ''}S/. ${difGastos.diff.toFixed(2)}
+                                    </div>
+                                    <div class="text-xs ${difGastos.diff >= 0 ? 'text-green-600' : 'text-red-600'}">${difGastos.diff >= 0 ? '+' : ''}${difGastos.pct}%</div>
+                                </div>
+                                <div class="text-center p-2 rounded ${difUtilidad.diff >= 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Utilidad</div>
+                                    <div class="font-bold ${difUtilidad.diff >= 0 ? 'text-green-600' : 'text-red-600'}">
+                                        ${difUtilidad.diff >= 0 ? '+' : ''}S/. ${difUtilidad.diff.toFixed(2)}
+                                    </div>
+                                    <div class="text-xs ${difUtilidad.diff >= 0 ? 'text-green-600' : 'text-red-600'}">${difUtilidad.diff >= 0 ? '+' : ''}${difUtilidad.pct}%</div>
+                                </div>
+                                <div class="text-center p-2 rounded ${difSupervision.diff >= 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Supervisión</div>
+                                    <div class="font-bold ${difSupervision.diff >= 0 ? 'text-green-600' : 'text-red-600'}">
+                                        ${difSupervision.diff >= 0 ? '+' : ''}S/. ${difSupervision.diff.toFixed(2)}
+                                    </div>
+                                    <div class="text-xs ${difSupervision.diff >= 0 ? 'text-green-600' : 'text-red-600'}">${difSupervision.diff >= 0 ? '+' : ''}${difSupervision.pct}%</div>
+                                </div>
+                                <div class="text-center p-2 rounded ${difMonto.diff >= 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">MONTO TOTAL</div>
+                                    <div class="font-bold text-lg ${difMonto.diff >= 0 ? 'text-green-600' : 'text-red-600'}">
+                                        ${difMonto.diff >= 0 ? '+' : ''}S/. ${difMonto.diff.toFixed(2)}
+                                    </div>
+                                    <div class="text-xs ${difMonto.diff >= 0 ? 'text-green-600' : 'text-red-600'}">${difMonto.diff >= 0 ? '+' : ''}${difMonto.pct}%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Footer -->
+                <div class="flex gap-3 justify-end p-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">
+                    <button onclick="cerrarModalComparacion()" 
+                            class="px-5 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-900 dark:text-white rounded font-medium text-sm transition-colors">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+/**
+ * Cerrar modal de comparación
+ */
+function cerrarModalComparacion() {
+    const modal = document.getElementById('modal-comparacion-versiones');
+    if (modal) {
+        modal.remove();
     }
 }
