@@ -69,15 +69,14 @@ def obtener_usuarios_accesos():
         print("[USUARIOS_ACCESOS] Iniciando obtencin de usuarios y accesos")
         
         # Llamar SP que retorna usuarios con informacin de accesos
-        cursor.execute('CALL sp_ObtenerUsuariosAccesos()', multi=True)
+        cursor.callproc('sp_ObtenerUsuariosAccesos')
         
-        usuarios = cursor.fetchall()
+        # Obtener resultados del SP
+        usuarios = []
+        for result in cursor.stored_results():
+            usuarios = result.fetchall()
         
         print(f"[USUARIOS_ACCESOS] {len(usuarios)} usuarios obtenidos")
-        
-        # Consumir resultados restantes
-        while cursor.nextset():
-            pass
         
         cursor.close()
         connection.close()
@@ -106,15 +105,14 @@ def obtener_accesos_usuario(num_documento):
         print(f"[USUARIO_ACCESOS] Obteniendo accesos para documento: {num_documento}")
         
         # Llamar SP que retorna accesos del usuario
-        cursor.execute('CALL sp_ObtenerAccesosUsuario(%s)', (num_documento,), multi=True)
+        cursor.callproc('sp_ObtenerAccesosUsuario', (num_documento,))
         
-        accesos = cursor.fetchall()
+        # Obtener resultados del SP
+        accesos = []
+        for result in cursor.stored_results():
+            accesos = result.fetchall()
         
         print(f"[USUARIO_ACCESOS] {len(accesos)} accesos encontrados")
-        
-        # Consumir resultados restantes
-        while cursor.nextset():
-            pass
         
         cursor.close()
         connection.close()

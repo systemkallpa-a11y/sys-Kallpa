@@ -84,12 +84,13 @@ def obtener_presupuestos():
         
         # Intentar llamar al SP
         try:
-            cursor.execute('CALL sp_ReportePresupuestos()', multi=True)
-            presupuestos = cursor.fetchall()
+            cursor.callproc('sp_ReportePresupuestos')
             
-            # Consumir resultados restantes si los hay
-            while cursor.nextset():
-                pass
+            # Obtener resultados del SP
+            presupuestos = []
+            for result in cursor.stored_results():
+                presupuestos = result.fetchall()
+                
         except Exception as sp_error:
             print(f"[PRESUPUESTOS] [WARN] Error con SP, usando query directa: {sp_error}")
             # Si el SP falla, usar query directa como fallback
@@ -370,28 +371,34 @@ def visualizar_presupuesto(id_presupuesto):
         
         # Llamar al SP directamente
         print(f"[VISUALIZAR_PRESUPUESTO] [DEBUG] Ejecutando SP directamente...")
-        cursor.execute(f'CALL sp_obtener_presupuesto_detalle_completo({id_presupuesto})', multi=True)
+        cursor.callproc('sp_obtener_presupuesto_detalle_completo', (id_presupuesto,))
         
         # El SP retorna 3 conjuntos de resultados: PRESUPUESTO, DETALLES, RESUMEN
         presupuesto_data = None
         detalles_data = None
         resumen_data = None
         
+        # Obtener resultados del SP
+        resultados = list(cursor.stored_results())
+        
         # PARTE 1: Obtener presupuesto
         try:
-            resultado1 = cursor.fetchall()
-            if resultado1:
-                presupuesto_data = resultado1[0]
-                print(f"[VISUALIZAR_PRESUPUESTO] [DEBUG] PARTE 1 (Presupuesto): {presupuesto_data}")
+            if len(resultados) > 0:
+                resultado1 = resultados[0].fetchall()
+                if resultado1:
+                    presupuesto_data = resultado1[0]
+                    print(f"[VISUALIZAR_PRESUPUESTO] [DEBUG] PARTE 1 (Presupuesto): {presupuesto_data}")
+                else:
+                    print(f"[VISUALIZAR_PRESUPUESTO] [DEBUG] PARTE 1 vaca")
             else:
-                print(f"[VISUALIZAR_PRESUPUESTO] [DEBUG] PARTE 1 vaca")
+                print(f"[VISUALIZAR_PRESUPUESTO] [DEBUG] No hay resultados PARTE 1")
         except Exception as e:
             print(f"[VISUALIZAR_PRESUPUESTO] [DEBUG] Error PARTE 1: {e}")
         
         # PARTE 2: Obtener detalles
         try:
-            if cursor.nextset():
-                detalles_data = cursor.fetchall()
+            if len(resultados) > 1:
+                detalles_data = resultados[1].fetchall()
                 print(f"[VISUALIZAR_PRESUPUESTO] [DEBUG] PARTE 2 (Detalles): {len(detalles_data or [])} registros")
             else:
                 print(f"[VISUALIZAR_PRESUPUESTO] [DEBUG] No hay PARTE 2")
@@ -400,8 +407,8 @@ def visualizar_presupuesto(id_presupuesto):
         
         # PARTE 3: Obtener resumen
         try:
-            if cursor.nextset():
-                resumen_result = cursor.fetchall()
+            if len(resultados) > 2:
+                resumen_result = resultados[2].fetchall()
                 if resumen_result:
                     resumen_data = resumen_result[0]
                     print(f"[VISUALIZAR_PRESUPUESTO] [DEBUG] PARTE 3 (Resumen): {resumen_data}")
