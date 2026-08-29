@@ -120,15 +120,21 @@ class DatabaseConfig:
     PASSWORD = os.getenv('DB_PASSWORD', '')
     DATABASE = os.getenv('DB_NAME', 'kallgwkn_kallpa_bd')
     
-    # Configuracin SSH (opcional)
-    USE_SSH_TUNNEL = os.getenv('USE_SSH_TUNNEL', 'False').lower() == 'true'
+    @classmethod
+    def get_use_ssh_tunnel(cls):
+        """Leer USE_SSH_TUNNEL en runtime (no al definir la clase)"""
+        return os.getenv('USE_SSH_TUNNEL', 'False').lower() == 'true'
     
     @classmethod
     def get_connection_params(cls):
         """Retorna diccionario con parmetros de conexin"""
         
+        # Leer USE_SSH_TUNNEL en runtime
+        use_ssh = cls.get_use_ssh_tunnel()
+        logging.info(f"[DB CONFIG] USE_SSH_TUNNEL={use_ssh}")
+        
         # Intentar obtener tnel SSH si est habilitado
-        if cls.USE_SSH_TUNNEL:
+        if use_ssh:
             tunnel = get_ssh_tunnel()
             
             if tunnel and tunnel.is_active:

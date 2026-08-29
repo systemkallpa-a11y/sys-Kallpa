@@ -203,59 +203,32 @@ def generar_memo():
             cursor.close()
             connection.close()
         
-        # Generar PDF
-        pdf_buffer = io.BytesIO()
-        doc = SimpleDocTemplate(
-            pdf_buffer,
-            pagesize=letter,
-            rightMargin=0.75*inch,
-            leftMargin=0.75*inch,
-            topMargin=0.75*inch,
-            bottomMargin=0.75*inch
-        )
+        # Obtener datos de la empresa (RUC y logo)
+        empresa_nombre = empleado.get('empresa', '')
+        empresa_ruc = ''
+        empresa_logo_bytes = None
+        empresa_id = None
         
-        story = []
-        styles = getSampleStyleSheet()
-        
-        # Estilos personalizados
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=14,
-            textColor=colors.HexColor('#c00000'),
-            fontName='Helvetica-Bold',
-            alignment=TA_CENTER,
-            spaceAfter=20,
-            spaceBefore=10
-        )
-        
-        bold_style = ParagraphStyle(
-            'Bold',
-            parent=styles['Normal'],
-            fontName='Helvetica-Bold',
-            fontSize=11
-        )
-        
-        body_style = ParagraphStyle(
-            'Body',
-            parent=styles['Normal'],
-            fontSize=11,
-            alignment=TA_JUSTIFY,
-            leading=16
-        )
-        
-        # Obtener textos desde la BD (no del diccionario)
-        textos = {
-            'titulo': tipo_memo_data['titulo'],
-            'motivo': tipo_memo_data['nombre'],
-            'descripcion': tipo_memo_data['descripcion'],
-            'consecuencias': tipo_memo_data['consecuencias']
-        }
+        try:
+            conn_empresa = get_db_connection()
+            if conn_empresa:
+                cur_empresa = conn_empresa.cursor(dictionary=True)
+                cur_empresa.execute('SELECT id_empresa, nombre, ruc, logo FROM TblEmpresa WHERE nombre = %s LIMIT 1', (empresa_nombre,))
+                emp_data = cur_empresa.fetchone()
+                if emp_data:
+                    empresa_id = emp_data['id_empresa']
+                    empresa_ruc = emp_data['ruc'] or ''
+                    empresa_logo_bytes = emp_data['logo']
+                cur_empresa.close()
+                conn_empresa.close()
+        except Exception as e:
+            print(f"[MEMO_PDF] [!] Error al obtener datos de empresa: {e}")
         
         # Convertir fecha_incidente a formato legible
         from datetime import datetime as dt
         fecha_obj = dt.strptime(fecha_incidente, '%Y-%m-%d')
         fecha_formateada = fecha_obj.strftime('%d de %B de %Y')
+        mes_espanol = fecha_obj.strftime('%B')
         meses_espanol = {
             'January': 'enero', 'February': 'febrero', 'March': 'marzo',
             'April': 'abril', 'May': 'mayo', 'June': 'junio',
@@ -265,94 +238,443 @@ def generar_memo():
         for ing, esp in meses_espanol.items():
             fecha_formateada = fecha_formateada.replace(ing, esp)
         
-        # ========== ENCABEZADO ==========
-        story.append(Paragraph("KALLPA", title_style))
-        story.append(Paragraph(textos['titulo'], title_style))
-        story.append(Spacer(1, 0.3*inch))
+        # Obtener nombre del firmante (Gerente de RRHH de la empresa)
+        nombre_firmante = 'GERENCIA DE RECURSOS HUMANOS'
+        try:
+            conn_firm = get_db_connection()
+            if conn_firm:
+                cur_firm = conn_firm.cursor(dictionary=True)
+                cur_firm.execute('''
+                    SELECT CONCAT(p.nombres, ' ', p.apellido_paterno, ' ', IFNULL(p.apellido_materno, '')) AS nombre_completo
+                    FROM TblUsuario u
+                    JOIN TblPersona p ON u.num_documento = p.num_documento
+                    JOIN TblCargo c ON u.id_cargo = c.id_cargo
+                    WHERE c.nombre LIKE '%Gerente%RRHH%' OR c.nombre LIKE '%Gerente%Recursos%'
+                    LIMIT 1
+                ''')
+                firm = cur_firm.fetchone()
+                if firm:
+                    nombre_firmante = firm['nombre_completo'].upper()
+                cur_firm.close()
+                conn_firm.close()
+        except Exception as e:
+            print(f"[MEMO_PDF] [!] Error al obtener firmante: {e}")
         
-        # Fecha del incidente
-        fecha_paragraph = Paragraph(f"<b>FECHA DEL INCIDENTE:</b> {fecha_formateada}", bold_style)
-        story.append(fecha_paragraph)
-        story.append(Spacer(1, 0.2*inch))
-        
-        # Datos del empleado en tabla
         nombre_completo_bd = empleado.get('nombre_completo', nombre_completo)
+        cargo_empleado = empleado.get('cargo', 'N/A')
         
-        datos_empleado = [
-            ['DE:', 'Gerencia de Recursos Humanos'],
-            ['PARA:', nombre_completo_bd],
-            ['CARGO:', empleado.get('cargo', 'N/A')],
-            ['REA:', empleado.get('area', 'N/A')],
-            ['ASUNTO:', textos['motivo'].upper()]
-        ]
+        # Generar PDF
+        pdf_buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            pdf_buffer,
+            pagesize=letter,
+            rightMargin=0.6*inch,
+            leftMargin=0.6*inch,
+            topMargin=0.5*inch,
+            bottomMargin=0.5*inch
+        )
         
-        table_empleado = Table(datos_empleado, colWidths=[1.5*inch, 5*inch])
-        table_empleado.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 11),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        ]))
+        story = []
+        styles = getSampleStyleSheet()
         
-        story.append(table_empleado)
-        story.append(Spacer(1, 0.3*inch))
+        # Estilos personalizados - formato exacto de las plantillas
+        header_style = ParagraphStyle(
+            'MemoHeader',
+            parent=styles['Normal'],
+            fontSize=13,
+            fontName='Helvetica-Bold',
+            alignment=TA_CENTER,
+            spaceAfter=6,
+            spaceBefore=0,
+            underline=True
+        )
         
-        # ========== CUERPO DEL MEMO ==========
-        story.append(Paragraph("<b>Estimado(a) colaborador(a):</b>", body_style))
-        story.append(Spacer(1, 0.1*inch))
+        field_label_style = ParagraphStyle(
+            'FieldLabel',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=11,
+            leading=14
+        )
         
-        story.append(Paragraph(textos['descripcion'], body_style))
+        field_value_style = ParagraphStyle(
+            'FieldValue',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=11,
+            leading=14
+        )
+        
+        body_style = ParagraphStyle(
+            'Body',
+            parent=styles['Normal'],
+            fontSize=11,
+            alignment=TA_JUSTIFY,
+            leading=14,
+            spaceBefore=2,
+            spaceAfter=2
+        )
+        
+        # ========== OBTENER NÚMERO SECUENCIAL DEL MEMO ==========
+        num_secuencial = 1
+        try:
+            conn_num = get_db_connection()
+            if conn_num:
+                cur_num = conn_num.cursor(dictionary=True)
+                # Obtener el último número de memo del año actual
+                from datetime import datetime as _dt
+                anio_actual = _dt.now().year
+                cur_num.execute('''
+                    SELECT COUNT(*) as total FROM TblMemo 
+                    WHERE YEAR(fecha_generacion) = %s
+                ''', (anio_actual,))
+                result = cur_num.fetchone()
+                if result:
+                    num_secuencial = result['total'] + 1
+                cur_num.close()
+                conn_num.close()
+        except Exception as e:
+            print(f"[MEMO_PDF] [!] Error al obtener número secuencial: {e}")
+        
+        num_memorando = f"{num_secuencial:03d}"
+        
+        # ========== ENCABEZADO ==========
+        empresa_code = empresa_nombre.upper().replace(' ', '').replace('.', '').replace(',', '')[:20]
+        header_text = f"MEMORANDUM N\u00b0 {num_memorando} - 2026-{empresa_code}"
+        header_style2 = ParagraphStyle(
+            'MemoHeader2',
+            parent=header_style,
+            underline=True
+        )
+        story.append(Paragraph(f"<u>{header_text}</u>", header_style2))
         story.append(Spacer(1, 0.15*inch))
         
-        # Consecuencias
-        story.append(Paragraph("<b>ADVERTENCIA:</b>", bold_style))
-        story.append(Spacer(1, 0.05*inch))
-        story.append(Paragraph(textos['consecuencias'], body_style))
-        story.append(Spacer(1, 0.2*inch))
+        # ========== CAMPOS DEL MEMO (sin tabla, formato libre) ==========
+        # PARA        : [Nombre]
+        story.append(Paragraph(f"<b>PARA</b>\t\t\t: {nombre_completo_bd}", field_label_style))
+        # CARGO       : [Cargo]
+        story.append(Paragraph(f"<b>CARGO</b>\t\t\t: {cargo_empleado}", field_label_style))
+        # DE          : [Empresa]
+        story.append(Paragraph(f"<b>DE</b>\t\t\t: {empresa_nombre}", field_label_style))
+        # ASUNTO      : [Tipo]
+        asunto_texto = tipo_memo_data['nombre']
+        story.append(Paragraph(f"<b>ASUNTO</b>\t\t\t: {asunto_texto}", field_label_style))
+        # FECHA       : [Fecha]
+        story.append(Paragraph(f"<b>FECHA</b>\t\t\t: {fecha_formateada}", field_label_style))
+        story.append(Spacer(1, 0.1*inch))
         
-        # Cierre
-        story.append(Paragraph("Se le exhorta a corregir esta situacin de inmediato y a cumplir con las disposiciones laborales establecidas.", body_style))
-        story.append(Spacer(1, 0.3*inch))
+        # ========== CUERPO DEL MEMO (texto de las plantillas) ==========
+        story.append(Paragraph("De nuestra consideraci\u00f3n:", body_style))
+        story.append(Spacer(1, 0.03*inch))
         
-        # Firma
+        # Texto espec\u00edfico seg\u00fan tipo de memo
+        if tipo_memo == 'TARDANZA':
+            # Obtener datos reales de horario y marcaci\u00f3n
+            hora_ingreso_real = None
+            hora_horario_prog = None
+            minutos_tardanza = None
+            
+            try:
+                conn_marc = get_db_connection()
+                if conn_marc:
+                    cur_marc = conn_marc.cursor(dictionary=True)
+                    
+                    # 1. Obtener hora de entrada real del empleado en esa fecha
+                    cur_marc.execute('''
+                        SELECT hora_marcacion FROM tbl_marcaciones 
+                        WHERE num_documento = %s AND tipo_marcacion = 'ENTRADA' 
+                        AND DATE(fecha_marcacion) = %s 
+                        LIMIT 1
+                    ''', (num_documento, fecha_incidente))
+                    marc = cur_marc.fetchone()
+                    if marc and marc.get('hora_marcacion'):
+                        hora_ingreso_real = marc['hora_marcacion']
+                    
+                    # 2. Obtener horario programado del empleado para ese d\u00eda de la semana
+                    from datetime import datetime as dt
+                    fecha_obj_temp = dt.strptime(fecha_incidente, '%Y-%m-%d')
+                    dias_semana = ['LUNES','MARTES','MI\u00c9RCOLES','JUEVES','VIERNES','S\u00c1BADO','DOMINGO']
+                    dia_semana = dias_semana[fecha_obj_temp.weekday()]
+                    
+                    cur_marc.execute('''
+                        SELECT hora_entrada FROM TblHorarioTrabajo 
+                        WHERE num_documento = %s AND dia_semana = %s AND es_activo = 1
+                        LIMIT 1
+                    ''', (num_documento, dia_semana))
+                    horario = cur_marc.fetchone()
+                    if horario and horario.get('hora_entrada'):
+                        hora_horario_prog = horario['hora_entrada']
+                    
+                    cur_marc.close()
+                    conn_marc.close()
+                    
+                    # 3. Calcular minutos de tardanza si tenemos ambos datos
+                    if hora_ingreso_real and hora_horario_prog:
+                        from datetime import timedelta
+                        tolerancia = timedelta(minutes=5)
+                        diff = (hora_ingreso_real - hora_horario_prog) - tolerancia
+                        if diff.total_seconds() > 0:
+                            minutos_tardanza = int(diff.total_seconds() / 60)
+                        else:
+                            minutos_tardanza = 0
+            except Exception as e:
+                print(f"[MEMO_PDF] [!] Error al obtener datos de marcaci\u00f3n: {e}")
+            
+            # Formatear horas para el texto
+            if hora_ingreso_real:
+                h_real = str(hora_ingreso_real)[:5]
+            else:
+                h_real = 'N/D'
+            
+            if hora_horario_prog:
+                # Convertir timedelta a hora legible
+                total_seg = int(hora_horario_prog.total_seconds())
+                h_prog = f"{total_seg // 3600:02d}:{(total_seg % 3600) // 60:02d}"
+                h_prog_legible = f"{total_seg // 3600}:" + f"{(total_seg % 3600) // 60:02d}".replace(':00','') + " a. m." if total_seg // 3600 < 12 else f"{total_seg // 3600 - 12}:" + f"{(total_seg % 3600) // 60:02d}".replace(':00','') + " p. m."
+                # Simplificar a formato legible
+                h_horas = total_seg // 3600
+                h_min = (total_seg % 3600) // 60
+                if h_horas < 12:
+                    h_prog_legible = f"{h_horas}:{h_min:02d} a. m."
+                elif h_horas == 12:
+                    h_prog_legible = f"12:{h_min:02d} p. m."
+                else:
+                    h_prog_legible = f"{h_horas - 12}:{h_min:02d} p. m."
+                
+                # Hora l\u00edmite de tolerancia (programada + 5 min)
+                h_limite_total = total_seg + 300  # 5 min en segundos
+                h_lim_h = h_limite_total // 3600
+                h_lim_m = (h_limite_total % 3600) // 60
+                if h_lim_h < 12:
+                    hora_tolerancia = f"{h_lim_h}:{h_lim_m:02d} a. m."
+                elif h_lim_h == 12:
+                    hora_tolerancia = f"12:{h_lim_m:02d} p. m."
+                else:
+                    hora_tolerancia = f"{h_lim_h - 12}:{h_lim_m:02d} p. m."
+            else:
+                h_prog_legible = 'N/D'
+                hora_tolerancia = 'N/D'
+            
+            body_text = (
+                f"Por medio del presente, se deja constancia que el d\u00eda <b>{fecha_formateada}</b>, "
+                f"usted registr\u00f3 su ingreso a las <b>{h_real}</b>."
+            )
+            story.append(Paragraph(body_text, body_style))
+            
+            body_text2 = (
+                f"Se recuerda que el horario establecido de ingreso a labores es a las <b>{h_prog_legible}</b>, "
+                f"contando el personal con una <b>tolerancia m\u00e1xima de cinco (05) minutos</b>, "
+                f"hasta las <b>{hora_tolerancia}</b>. En consecuencia, "
+                f"<b>todo ingreso registrado a partir de las {hora_tolerancia} ser\u00e1 considerado tardanza</b>."
+            )
+            story.append(Paragraph(body_text2, body_style))
+            
+            min_texto = str(minutos_tardanza) if minutos_tardanza is not None else 'N/D'
+            body_text3 = (
+                f"En el presente caso, usted registr\u00f3 una tardanza de <b>{min_texto} minutos</b>, "
+                f"incumpliendo con las disposiciones internas relacionadas con el horario, puntualidad y asistencia del personal."
+            )
+            story.append(Paragraph(body_text3, body_style))
+            
+            story.append(Paragraph(
+                "La puntualidad constituye una obligaci\u00f3n del trabajador y resulta necesaria para garantizar "
+                "el normal desarrollo, coordinaci\u00f3n y organizaci\u00f3n de las actividades de la empresa.",
+                body_style))
+            
+            story.append(Paragraph(
+                f"En ese sentido, la conducta se\u00f1alada constituye un <b>cumplimiento de las disposiciones establecidas "
+                f"en el Reglamento Interno de Trabajo y de las normas internas de {empresa_nombre}</b> "
+                f"relacionadas con el horario, puntualidad y asistencia del personal.",
+                body_style))
+            
+            story.append(Paragraph(
+                f"Por lo expuesto, mediante el presente se le <b>exhorta a cumplir estrictamente con el horario de "
+                f"ingreso establecido</b>, adoptando las medidas necesarias para evitar que esta situaci\u00f3n vuelva a "
+                f"repetirse.",
+                body_style))
+            
+            story.append(Paragraph(
+                f"Asimismo, se deja constancia de que la <b>reiteraci\u00f3n de tardanzas podr\u00e1 dar lugar a la "
+                f"aplicaci\u00f3n de las medidas disciplinarias correspondientes</b>, de conformidad con el Reglamento "
+                f"Interno de Trabajo y las disposiciones laborales aplicables.",
+                body_style))
+            
+            story.append(Paragraph(
+                "Sin otro particular, esperamos el cumplimiento de las disposiciones se\u00f1aladas.",
+                body_style))
+        
+        elif tipo_memo == 'INASISTENCIA':
+            body_text = (
+                f"Por medio del presente, se deja constancia que el d\u00eda <b>{fecha_formateada}</b>, "
+                f"usted no se present\u00f3 a cumplir con su jornada laboral, sin haber comunicado oportunamente "
+                f"su ausencia a la Gerencia y/o a su jefe inmediato."
+            )
+            story.append(Paragraph(body_text, body_style))
+            
+            story.append(Paragraph(
+                "Se recuerda que todo trabajador tiene la obligaci\u00f3n de cumplir con su jornada laboral y asistir "
+                "regularmente a su centro de trabajo. En caso de presentarse alguna circunstancia que imposibilite "
+                "su asistencia, deber\u00e1 comunicar oportunamente a la empresa y presentar la justificaci\u00f3n "
+                "o documentaci\u00f3n correspondiente.",
+                body_style))
+            
+            story.append(Paragraph(
+                "La falta de comunicaci\u00f3n respecto de una inasistencia afecta directamente la organizaci\u00f3n "
+                "de las actividades, la distribuci\u00f3n de funciones y el normal desarrollo de las operaciones de "
+                "la empresa.",
+                body_style))
+            
+            story.append(Paragraph(
+                f"En ese sentido, la conducta se\u00f1alada constituye un incumplimiento de las disposiciones establecidas "
+                f"en el Reglamento Interno de Trabajo y de las normas internas de <b>{empresa_nombre}</b> "
+                f"relacionadas con la asistencia, responsabilidad y comunicaci\u00f3n del personal.",
+                body_style))
+            
+            story.append(Paragraph(
+                f"Por lo expuesto, mediante el presente se le <b>exhorta a cumplir con su jornada laboral y a "
+                f"comunicar oportunamente cualquier situaci\u00f3n que le impida asistir a sus labores</b>, "
+                f"utilizando los canales establecidos por la empresa.",
+                body_style))
+            
+            story.append(Paragraph(
+                f"Asimismo, se deja constancia de que la reiteraci\u00f3n de esta conducta y/o el incumplimiento "
+                f"reiterado de las disposiciones establecidas en el Reglamento Interno de Trabajo podr\u00e1 dar lugar "
+                f"a la aplicaci\u00f3n de medidas disciplinarias de mayor gravedad, incluida la suspensi\u00f3n y, "
+                f"de configurarse una falta grave conforme a la normativa laboral vigente, el despido.",
+                body_style))
+            
+            story.append(Paragraph(
+                "Sin otro particular, esperamos el cumplimiento de las disposiciones se\u00f1aladas.",
+                body_style))
+        
+        elif tipo_memo == 'UNIFORME':
+            body_text = (
+                f"Por medio del presente, se deja constancia que el d\u00eda <b>{fecha_formateada}</b> "
+                f"usted se present\u00f3 a laborar sin cumplir con la uniformidad establecida por la empresa."
+            )
+            story.append(Paragraph(body_text, body_style))
+            
+            story.append(Paragraph(
+                "Se recuerda que el uso correcto del uniforme y la adecuada presentaci\u00f3n personal constituyen "
+                "disposiciones internas de cumplimiento obligatorio durante la jornada laboral.",
+                body_style))
+            
+            story.append(Paragraph(
+                "La uniformidad establecida por la empresa es la siguiente:",
+                body_style))
+            
+            # Lista de uniformes (con vi\u00f1etas)
+            bullet_style = ParagraphStyle(
+                'Bullet',
+                parent=body_style,
+                leftIndent=20,
+                bulletIndent=5,
+                spaceBefore=4,
+                spaceAfter=4
+            )
+            
+            story.append(Paragraph(
+                "\u2022  De lunes a jueves: casaca verde institucional, camisa blanca, zapato de vestir negro y fotocheck.",
+                bullet_style))
+            
+            story.append(Paragraph(
+                "\u2022  Viernes, s\u00e1bado y domingo: buzo institucional de la empresa con zapatillas de color "
+                "blanco o negro y fotocheck.",
+                bullet_style))
+            
+            story.append(Paragraph(
+                "\u2022  En caso de utilizar prendas adicionales, estas deber\u00e1n ser \u00fanicamente de color negro, "
+                "a fin de mantener la uniformidad e imagen institucional.",
+                bullet_style))
+            
+            story.append(Paragraph(
+                "El incumplimiento de estas disposiciones constituye una falta a las normas internas y al "
+                "Reglamento Interno de Trabajo.",
+                body_style))
+            
+            story.append(Paragraph(
+                f"Por lo expuesto, se le exhorta a cumplir correctamente con la uniformidad establecida. "
+                f"Asimismo, se deja constancia de que la reiteraci\u00f3n de esta conducta y/o el incumplimiento "
+                f"reiterado de las disposiciones internas podr\u00e1 dar lugar a la aplicaci\u00f3n de medidas "
+                f"disciplinarias de mayor gravedad, incluida la suspensi\u00f3n y, de configurarse una falta grave "
+                f"conforme a la normativa laboral vigente, el despido.",
+                body_style))
+            
+            story.append(Paragraph(
+                "Sin otro particular, esperamos el cumplimiento de las disposiciones se\u00f1aladas.",
+                body_style))
+        
+        story.append(Spacer(1, 0.08*inch))
+        
+        # ========== FIRMA ==========
         story.append(Paragraph("Atentamente,", body_style))
-        story.append(Spacer(1, 0.5*inch))
-        
-        firma_data = [
-            ['_' * 40],
-            ['Gerencia de Recursos Humanos'],
-            ['KALLPA']
-        ]
-        
-        table_firma = Table(firma_data, colWidths=[3.5*inch])
-        table_firma.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('FONTNAME', (0, 1), (0, 2), 'Helvetica-Bold'),
-        ]))
-        
-        story.append(table_firma)
-        story.append(Spacer(1, 0.3*inch))
-        
-        # Nota de recepcin
-        story.append(Paragraph("<i>He recibido copia del presente memorando y tomo conocimiento de su contenido.</i>", 
-                               ParagraphStyle('Italic', parent=styles['Normal'], fontSize=9, textColor=colors.grey)))
         story.append(Spacer(1, 0.2*inch))
         
-        recepcion_data = [
-            ['Firma del colaborador:', '_' * 30, 'Fecha:', '_' * 20]
-        ]
+        # Logo de empresa como sello (si existe) - mantener proporcionales
+        if empresa_logo_bytes:
+            try:
+                from reportlab.platypus import Image as RLImage
+                from io import BytesIO
+                
+                logo_buffer = BytesIO(empresa_logo_bytes)
+                logo_img = RLImage(logo_buffer)
+                # Mantener proporcion: usar solo ancho max, altura se calcula solas
+                logo_max_width = 1.6*inch
+                logo_max_height = 1.0*inch
+                # Calcular escala manteniendo aspect ratio
+                ratio = min(logo_max_width / logo_img.drawWidth, logo_max_height / logo_img.drawHeight)
+                logo_img.drawWidth = logo_img.drawWidth * ratio
+                logo_img.drawHeight = logo_img.drawHeight * ratio
+                logo_img.hAlign = 'CENTER'
+                story.append(logo_img)
+            except Exception as e:
+                print(f"[MEMO_PDF] [!] Error al insertar logo: {e}")
+                story.append(Spacer(1, 0.15*inch))
+        else:
+            story.append(Spacer(1, 0.15*inch))
         
-        table_recepcion = Table(recepcion_data, colWidths=[1.5*inch, 2.5*inch, 0.8*inch, 1.7*inch])
-        table_recepcion.setStyle(TableStyle([
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
+        # Imagen de firma y sello (busca en platillas de documento/Firmas/)
+        import os as _os
         
-        story.append(table_recepcion)
+        firmas_dir = _os.path.join(_os.path.dirname(_os.path.dirname(__file__)), 'platillas de documento', 'Firmas')
+        firma_path = None
+        
+        if _os.path.exists(firmas_dir):
+            # Buscar archivo exacto por nombre de empresa
+            for ext in ['.png', '.jpg', '.jpeg']:
+                candidato = _os.path.join(firmas_dir, empresa_nombre + ext)
+                if _os.path.exists(candidato):
+                    firma_path = candidato
+                    print(f"[MEMO_PDF] [OK] Firma encontrada: {empresa_nombre}{ext}")
+                    break
+            
+            # Si no encontró exacto, buscar por nombre parcial
+            if not firma_path:
+                for archivo in _os.listdir(firmas_dir):
+                    if archivo.lower().endswith(('.png', '.jpg', '.jpeg')):
+                        nombre_arch = archivo.rsplit('.', 1)[0].upper()
+                        if empresa_nombre.upper() in nombre_arch or nombre_arch in empresa_nombre.upper():
+                            firma_path = _os.path.join(firmas_dir, archivo)
+                            print(f"[MEMO_PDF] [OK] Firma encontrada (parcial): {archivo}")
+                            break
+        
+        if firma_path and _os.path.exists(firma_path):
+            try:
+                from reportlab.platypus import Image as RLImage
+                firma_img = RLImage(firma_path)
+                # Mantener proporcion: usar solo ancho max, altura se calcula solas
+                firma_max_width = 2.2*inch
+                firma_max_height = 1.4*inch
+                ratio = min(firma_max_width / firma_img.drawWidth, firma_max_height / firma_img.drawHeight)
+                firma_img.drawWidth = firma_img.drawWidth * ratio
+                firma_img.drawHeight = firma_img.drawHeight * ratio
+                firma_img.hAlign = 'CENTER'
+                story.append(Spacer(1, 0.05*inch))
+                story.append(firma_img)
+            except Exception as e:
+                print(f"[MEMO_PDF] [!] Error al insertar firma: {e}")
+        else:
+            print(f"[MEMO_PDF] [!] No se encontr\u00f3 imagen de firma para: {empresa_nombre}")
         
         # Construir PDF
         doc.build(story)

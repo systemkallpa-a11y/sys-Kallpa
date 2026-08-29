@@ -124,14 +124,11 @@ def registrar_marcacion():
                     %s,  -- p_foto_base64
                     @p_id_marcacion,
                     @p_mensaje
-                );
-                
-                SELECT 
-                    @p_id_marcacion as id_marcacion,
-                    @p_mensaje as mensaje
+                )
             """, (num_documento, tipo_marcacion, latitud, longitud, precision, foto_base64))
             
-            cursor.nextset()
+            # Leer OUT parameters
+            cursor.execute("SELECT @p_id_marcacion as id_marcacion, @p_mensaje as mensaje")
             result = cursor.fetchone()
             
             print(f"[MARCACION] [-] Resultado SP: {result}")
