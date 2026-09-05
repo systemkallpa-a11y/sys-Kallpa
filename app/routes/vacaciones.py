@@ -130,17 +130,35 @@ def crear_vacacion():
             while cursor.nextset():
                 pass
 
-            connection.commit()
-            cursor.close()
-            connection.close()
-
             if resultado and resultado['id_vacacion'] > 0:
+                id_vacacion_creada = resultado['id_vacacion']
+
+                cursor.execute("""
+                    CALL sp_AprobarVacacion(%s, %s, @p_mensaje_aprobacion)
+                """, (id_vacacion_creada, int(num_documento)))
+
+                cursor.execute("SELECT @p_mensaje_aprobacion as mensaje_aprobacion")
+                resultado_aprobacion = cursor.fetchone()
+
+                while cursor.nextset():
+                    pass
+
+                connection.commit()
+                cursor.close()
+                connection.close()
+
+                mensaje_aprobado = resultado_aprobacion['mensaje_aprobacion'] if resultado_aprobacion else 'Vacacion auto-aprobada'
+
                 return jsonify({
                     'success': True,
-                    'message': resultado['mensaje'],
-                    'id_vacacion': resultado['id_vacacion']
+                    'message': f"{resultado['mensaje']} - {mensaje_aprobado}",
+                    'id_vacacion': id_vacacion_creada
                 }), 201
             else:
+                connection.rollback()
+                cursor.close()
+                connection.close()
+
                 return jsonify({
                     'success': False,
                     'error': resultado['mensaje'] if resultado else 'Error al crear solicitud'

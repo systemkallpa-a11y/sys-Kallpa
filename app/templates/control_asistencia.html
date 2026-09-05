@@ -111,7 +111,8 @@
                             <th colspan="5" class="px-2 py-2 text-center text-white font-bold border-r border-green-600">DATOS DEL EMPLEADO</th>
                             <th colspan="3" class="px-2 py-2 text-center text-white font-bold border-r border-green-600">FECHA</th>
                             <th colspan="3" class="px-2 py-2 text-center text-white font-bold border-r border-green-600">TURNO 1 (MAÑANA)</th>
-                            <th colspan="3" class="px-2 py-2 text-center text-white font-bold">TURNO 2 (TARDE)</th>
+                            <th colspan="3" class="px-2 py-2 text-center text-white font-bold border-r border-green-600">TURNO 2 (TARDE)</th>
+                            <th colspan="1" class="px-2 py-2 text-center text-white font-bold">ACCIÓN</th>
                         </tr>
                         <tr class="bg-gradient-to-r from-green-600 to-green-700">
                             <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">EMPRESA</th>
@@ -129,12 +130,13 @@
                             <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">H. INGRESO</th>
                             <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">H. SALIDA</th>
                             <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">MINUTOS</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold">DETALLE</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">DETALLE</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold">ACCIÓN</th>
                         </tr>
                     </thead>
                     <tbody id="tabla-control-asistencia" class="divide-y divide-gray-200 dark:divide-slate-700">
                         <tr>
-                            <td colspan="16" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                            <td colspan="17" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                                 <i class="fas fa-spinner fa-spin mr-2"></i>Cargando datos...
                             </td>
                         </tr>
@@ -178,6 +180,93 @@
         </div>
     </div>
 
+</div>
+
+<!-- ============================================================================
+MODAL: EDITAR HORAS DE MARCACIÓN
+============================================================================= -->
+<div id="modal-editar-marcacion" class="fixed inset-0 z-50 hidden">
+    <!-- Fondo oscuro -->
+    <div class="fixed inset-0 bg-black bg-opacity-50" onclick="cerrarModalEditar()"></div>
+    
+    <!-- Contenido del modal -->
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md">
+            <!-- Header -->
+            <div class="px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-xl">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-white font-bold text-sm">
+                        <i class="fas fa-clock mr-2"></i>Editar Horas de Marcación
+                    </h3>
+                    <button onclick="cerrarModalEditar()" class="text-white hover:text-gray-200">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Body -->
+            <div class="px-4 py-4">
+                <!-- Empleado y fecha -->
+                <div class="mb-4 text-center">
+                    <p class="text-gray-900 dark:text-white font-semibold" id="modal-empleado-nombre">Nombre Empleado</p>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm" id="modal-fecha-marcaicon">Fecha: 01/01/2026</p>
+                </div>
+                
+                <!-- Turno 1 -->
+                <div class="mb-4 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                    <h4 class="text-gray-700 dark:text-gray-300 font-semibold text-xs mb-3 uppercase">
+                        <i class="fas fa-sun text-yellow-500 mr-1"></i>Turno 1 (Mañana)
+                    </h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1">Ingreso</label>
+                            <input type="time" id="modal-hora-ingreso-t1" 
+                                   class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1">Salida</label>
+                            <input type="time" id="modal-hora-salida-t1" 
+                                   class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Turno 2 -->
+                <div class="mb-4 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                    <h4 class="text-gray-700 dark:text-gray-300 font-semibold text-xs mb-3 uppercase">
+                        <i class="fas fa-moon text-blue-500 mr-1"></i>Turno 2 (Tarde)
+                    </h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1">Ingreso</label>
+                            <input type="time" id="modal-hora-ingreso-t2" 
+                                   class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1">Salida</label>
+                            <input type="time" id="modal-hora-salida-t2" 
+                                   class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mensaje de estado -->
+                <div id="modal-mensaje-estado" class="hidden mb-3 p-2 rounded text-xs text-center"></div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="px-4 py-3 bg-gray-50 dark:bg-slate-700 rounded-b-xl flex justify-end gap-2">
+                <button onclick="cerrarModalEditar()" 
+                        class="px-4 py-2 bg-gray-300 dark:bg-slate-600 hover:bg-gray-400 dark:hover:bg-slate-500 text-gray-700 dark:text-white rounded text-sm font-medium transition-colors">
+                    Cancelar
+                </button>
+                <button onclick="guardarCambios()" 
+                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
+                    <i class="fas fa-save mr-1"></i>Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% endblock %}
@@ -241,7 +330,7 @@ async function cargarControlAsistencia(fechaInicio, fechaFin, empleado) {
     const tbody = document.getElementById('tabla-control-asistencia');
     tbody.innerHTML = `
         <tr>
-            <td colspan="16" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+            <td colspan="17" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                 <i class="fas fa-spinner fa-spin mr-2"></i>Cargando datos...
             </td>
         </tr>
@@ -304,7 +393,7 @@ async function cargarControlAsistencia(fechaInicio, fechaFin, empleado) {
         console.error('[CONTROL] Error:', error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="16" class="px-4 py-8 text-center text-red-500">
+                <td colspan="17" class="px-4 py-8 text-center text-red-500">
                     <i class="fas fa-exclamation-triangle mr-2"></i>Error al cargar datos: ${error.message}
                 </td>
             </tr>
@@ -321,7 +410,7 @@ function renderizarTabla(data) {
     if (!data || data.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="18" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                <td colspan="17" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     <i class="fas fa-inbox mr-2"></i>No se encontraron registros
                 </td>
             </tr>
@@ -353,7 +442,14 @@ function renderizarTabla(data) {
                 <td class="px-2 py-2 text-center text-gray-900 dark:text-white font-semibold border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.H_INGRESO_T2 || '-')}</td>
                 <td class="px-2 py-2 text-center text-gray-900 dark:text-white font-semibold border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.H_SALIDA_T2 || '-')}</td>
                 <td class="px-2 py-2 text-center ${coloresT2.colorMinutos} border-r border-gray-200 dark:border-slate-700">${formatearMinutos(fila.MINUTOS_T2)}</td>
-                <td class="px-2 py-2 text-center ${coloresT2.colorDetalle}">${escapeHtml(fila.DETALLE_T2 || '-')}</td>
+                <td class="px-2 py-2 text-center ${coloresT2.colorDetalle} border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.DETALLE_T2 || '-')}</td>
+                <td class="px-2 py-2 text-center">
+                    <button onclick="abrirModalEditar('${escapeHtml(fila.DNI_CE || '')}', '${escapeHtml(fila.H_INGRESO_T1 || '')}', '${escapeHtml(fila.H_SALIDA_T1 || '')}', '${escapeHtml(fila.H_INGRESO_T2 || '')}', '${escapeHtml(fila.H_SALIDA_T2 || '')}', '${escapeHtml(fila.NOMBRES || '')}', '${escapeHtml(fila.DIA || '')}', '${escapeHtml(fila.MES || '')}', '${escapeHtml(fila.ANO || '')}')" 
+                            class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-medium transition-colors"
+                            title="Editar horas">
+                        <i class="fas fa-edit mr-1"></i>Editar
+                    </button>
+                </td>
             </tr>
         `;
     });
@@ -570,5 +666,234 @@ function exportarExcel() {
     
     // Descargar archivo
     window.location.href = `/api/reportes/control-asistencia/excel?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;
+}
+
+// ============================================================================
+// VARIABLES PARA MODAL DE EDICIÓN
+// ============================================================================
+let marcacionEditando = {
+    numDocumento: null,
+    idT1Entrada: null,
+    idT1Salida: null,
+    idT2Entrada: null,
+    idT2Salida: null,
+    fechaOriginal: null
+};
+
+// ============================================================================
+// ABRIR MODAL EDITAR MARCACIÓN
+// ============================================================================
+async function abrirModalEditar(numDocumento, horaIngresoT1, horaSalidaT1, horaIngresoT2, horaSalidaT2,
+                          nombreEmpleado, dia, mes, anio) {
+    
+    console.log('[MODAL] === ABRIR MODAL EDITAR ===');
+    console.log('[MODAL] Parámetros recibidos:', { numDocumento, horaIngresoT1, horaSalidaT1, horaIngresoT2, horaSalidaT2, nombreEmpleado, dia, mes, anio });
+    
+    // Guardar número de documento
+    marcacionEditando.numDocumento = numDocumento;
+    
+    // Formatear fecha para guardar
+    const diaFmt = String(dia).padStart(2, '0');
+    const mesFmt = String(mes).padStart(2, '0');
+    marcacionEditando.fechaOriginal = `${anio}-${mesFmt}-${diaFmt}`;
+    
+    console.log('[MODAL] Fecha formateada:', marcacionEditando.fechaOriginal);
+    
+    // Mostrar nombre del empleado
+    document.getElementById('modal-empleado-nombre').textContent = nombreEmpleado || 'Sin nombre';
+    document.getElementById('modal-fecha-marcaicon').textContent = `Fecha: ${diaFmt}/${mesFmt}/${anio}`;
+    
+    // Cargar horas existentes en los inputs (solo si no son '-' o vacías)
+    document.getElementById('modal-hora-ingreso-t1').value = (horaIngresoT1 && horaIngresoT1 !== '-') ? horaIngresoT1 : '';
+    document.getElementById('modal-hora-salida-t1').value = (horaSalidaT1 && horaSalidaT1 !== '-') ? horaSalidaT1 : '';
+    document.getElementById('modal-hora-ingreso-t2').value = (horaIngresoT2 && horaIngresoT2 !== '-') ? horaIngresoT2 : '';
+    document.getElementById('modal-hora-salida-t2').value = (horaSalidaT2 && horaSalidaT2 !== '-') ? horaSalidaT2 : '';
+    
+    console.log('[MODAL] Inputs cargados:', {
+        t1e: document.getElementById('modal-hora-ingreso-t1').value,
+        t1s: document.getElementById('modal-hora-salida-t1').value,
+        t2e: document.getElementById('modal-hora-ingreso-t2').value,
+        t2s: document.getElementById('modal-hora-salida-t2').value
+    });
+    
+    // Ocultar mensaje de estado
+    const msgEstado = document.getElementById('modal-mensaje-estado');
+    msgEstado.classList.add('hidden');
+    
+    // Buscar IDs de las marcaciones
+    const urlIds = `/api/marcacion/obtener-ids?num_documento=${numDocumento}&fecha=${marcacionEditando.fechaOriginal}`;
+    console.log('[MODAL] Fetching IDs:', urlIds);
+    
+    try {
+        const response = await fetch(urlIds);
+        console.log('[MODAL] Response status:', response.status);
+        
+        const result = await response.json();
+        console.log('[MODAL] Response body:', result);
+        
+        if (result.success) {
+            marcacionEditando.idT1Entrada = result.data.id_t1_entrada;
+            marcacionEditando.idT1Salida = result.data.id_t1_salida;
+            marcacionEditando.idT2Entrada = result.data.id_t2_entrada;
+            marcacionEditando.idT2Salida = result.data.id_t2_salida;
+            
+            console.log('[MODAL] IDs guardados:', marcacionEditando);
+        } else {
+            console.error('[MODAL] [X] Error del API:', result.error);
+            marcacionEditando.idT1Entrada = null;
+            marcacionEditando.idT1Salida = null;
+            marcacionEditando.idT2Entrada = null;
+            marcacionEditando.idT2Salida = null;
+        }
+    } catch (error) {
+        console.error('[MODAL] [X] Error de conexión:', error);
+        marcacionEditando.idT1Entrada = null;
+        marcacionEditando.idT1Salida = null;
+        marcacionEditando.idT2Entrada = null;
+        marcacionEditando.idT2Salida = null;
+    }
+    
+    // Mostrar modal
+    document.getElementById('modal-editar-marcacion').classList.remove('hidden');
+    console.log('[MODAL] Modal abierto');
+}
+
+// ============================================================================
+// CERRAR MODAL EDITAR
+// ============================================================================
+function cerrarModalEditar() {
+    document.getElementById('modal-editar-marcacion').classList.add('hidden');
+}
+
+// ============================================================================
+// GUARDAR CAMBIOS
+// ============================================================================
+async function guardarCambios() {
+    console.log('[GUARDAR] === GUARDAR CAMBIOS ===');
+    
+    const horaIngresoT1 = document.getElementById('modal-hora-ingreso-t1').value;
+    const horaSalidaT1 = document.getElementById('modal-hora-salida-t1').value;
+    const horaIngresoT2 = document.getElementById('modal-hora-ingreso-t2').value;
+    const horaSalidaT2 = document.getElementById('modal-hora-salida-t2').value;
+    
+    console.log('[GUARDAR] Horas capturadas:', { horaIngresoT1, horaSalidaT1, horaIngresoT2, horaSalidaT2 });
+    console.log('[GUARDAR] IDs disponibles:', marcacionEditando);
+    
+    const msgEstado = document.getElementById('modal-mensaje-estado');
+    let hayErrores = false;
+    let totalEditados = 0;
+    
+    // Validar que al menos haya una hora para editar
+    if (!horaIngresoT1 && !horaSalidaT1 && !horaIngresoT2 && !horaSalidaT2) {
+        console.log('[GUARDAR] [X] No hay horas para editar');
+        msgEstado.textContent = 'Ingrese al menos una hora para editar';
+        msgEstado.className = 'mb-3 p-2 rounded text-xs text-center bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+        msgEstado.classList.remove('hidden');
+        return;
+    }
+    
+    // Editar Turno 1 - Entrada
+    if (marcacionEditando.idT1Entrada && horaIngresoT1) {
+        console.log(`[GUARDAR] Editando T1 Entrada: ID=${marcacionEditando.idT1Entrada}, Hora=${horaIngresoT1}`);
+        const resultado = await editarMarcacionIndividual(marcacionEditando.idT1Entrada, horaIngresoT1, marcacionEditando.fechaOriginal);
+        console.log(`[GUARDAR] Resultado T1 Entrada: ${resultado}`);
+        if (resultado) totalEditados++;
+        else hayErrores = true;
+    } else {
+        console.log(`[GUARDAR] Saltando T1 Entrada: id=${marcacionEditando.idT1Entrada}, hora=${horaIngresoT1}`);
+    }
+    
+    // Editar Turno 1 - Salida
+    if (marcacionEditando.idT1Salida && horaSalidaT1) {
+        console.log(`[GUARDAR] Editando T1 Salida: ID=${marcacionEditando.idT1Salida}, Hora=${horaSalidaT1}`);
+        const resultado = await editarMarcacionIndividual(marcacionEditando.idT1Salida, horaSalidaT1, marcacionEditando.fechaOriginal);
+        console.log(`[GUARDAR] Resultado T1 Salida: ${resultado}`);
+        if (resultado) totalEditados++;
+        else hayErrores = true;
+    } else {
+        console.log(`[GUARDAR] Saltando T1 Salida: id=${marcacionEditando.idT1Salida}, hora=${horaSalidaT1}`);
+    }
+    
+    // Editar Turno 2 - Entrada
+    if (marcacionEditando.idT2Entrada && horaIngresoT2) {
+        console.log(`[GUARDAR] Editando T2 Entrada: ID=${marcacionEditando.idT2Entrada}, Hora=${horaIngresoT2}`);
+        const resultado = await editarMarcacionIndividual(marcacionEditando.idT2Entrada, horaIngresoT2, marcacionEditando.fechaOriginal);
+        console.log(`[GUARDAR] Resultado T2 Entrada: ${resultado}`);
+        if (resultado) totalEditados++;
+        else hayErrores = true;
+    } else {
+        console.log(`[GUARDAR] Saltando T2 Entrada: id=${marcacionEditando.idT2Entrada}, hora=${horaIngresoT2}`);
+    }
+    
+    // Editar Turno 2 - Salida
+    if (marcacionEditando.idT2Salida && horaSalidaT2) {
+        console.log(`[GUARDAR] Editando T2 Salida: ID=${marcacionEditando.idT2Salida}, Hora=${horaSalidaT2}`);
+        const resultado = await editarMarcacionIndividual(marcacionEditando.idT2Salida, horaSalidaT2, marcacionEditando.fechaOriginal);
+        console.log(`[GUARDAR] Resultado T2 Salida: ${resultado}`);
+        if (resultado) totalEditados++;
+        else hayErrores = true;
+    } else {
+        console.log(`[GUARDAR] Saltando T2 Salida: id=${marcacionEditando.idT2Salida}, hora=${horaSalidaT2}`);
+    }
+    
+    console.log(`[GUARDAR] Total editados: ${totalEditados}, Errores: ${hayErrores}`);
+    
+    // Mostrar resultado
+    if (totalEditados > 0 && !hayErrores) {
+        msgEstado.textContent = `✓ ${totalEditados} marcación(es) actualizada(s) exitosamente`;
+        msgEstado.className = 'mb-3 p-2 rounded text-xs text-center bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+        msgEstado.classList.remove('hidden');
+        
+        // Recargar tabla después de 1.5 segundos
+        setTimeout(() => {
+            cerrarModalEditar();
+            aplicarFiltrosControl();
+        }, 1500);
+    } else if (hayErrores) {
+        msgEstado.textContent = '⚠ Algunas ediciones fallaron. Intente nuevamente.';
+        msgEstado.className = 'mb-3 p-2 rounded text-xs text-center bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+        msgEstado.classList.remove('hidden');
+    }
+}
+
+// ============================================================================
+// EDITAR MARCACIÓN INDIVIDUAL
+// ============================================================================
+async function editarMarcacionIndividual(idMarcacion, nuevaHora, fechaOriginal) {
+    console.log(`[EDITAR] === EDITAR MARCACIÓN INDIVIDUAL ===`);
+    console.log(`[EDITAR] ID=${idMarcacion}, Hora=${nuevaHora}, Fecha=${fechaOriginal}`);
+    
+    const body = {
+        id_marcacion: idMarcacion,
+        nueva_hora: nuevaHora,
+        fecha_original: fechaOriginal
+    };
+    console.log(`[EDITAR] Body:`, body);
+    
+    try {
+        console.log(`[EDITAR] Fetch PUT /api/marcacion/editar`);
+        const response = await fetch('/api/marcacion/editar', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+        
+        console.log(`[EDITAR] Response status: ${response.status}`);
+        const result = await response.json();
+        console.log(`[EDITAR] Response body:`, result);
+        
+        if (result.success) {
+            console.log(`[EDITAR] [OK] Marcación ${idMarcacion} actualizada: ${result.message}`);
+            return true;
+        } else {
+            console.error(`[EDITAR] [X] Error en marcación ${idMarcacion}:`, result.error);
+            return false;
+        }
+    } catch (error) {
+        console.error(`[EDITAR] [X] Error de conexión en marcación ${idMarcacion}:`, error);
+        return false;
+    }
 }</script>
 {% endblock %}

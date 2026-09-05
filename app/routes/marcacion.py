@@ -1166,3 +1166,163 @@ def exportar_control_asistencia_excel():
     except Exception as e:
         print(f"[EXPORTAR_CONTROL] [X] Error general: {e}")
         return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+
+
+# ============================================================================
+# API: OBTENER IDs DE MARCACIONES POR DOCUMENTO Y FECHA
+# ============================================================================
+
+@marcacion_bp.route('/api/marcacion/obtener-ids', methods=['GET'])
+@login_required
+def obtener_ids_marcacion():
+    """Obtener IDs de las marcaciones de un empleado en una fecha específica"""
+    try:
+        num_documento_raw = request.args.get('num_documento')
+        fecha = request.args.get('fecha')
+        
+        print(f"[OBTENER_IDS] [+] Parámetros recibidos: num_documento_raw={num_documento_raw} (tipo={type(num_documento_raw).__name__}), fecha={fecha}")
+        
+        if not num_documento_raw or not fecha:
+            print("[OBTENER_IDS] [X] Faltan parámetros")
+            return jsonify({'success': False, 'error': 'Se requieren num_documento y fecha'}), 400
+        
+        # num_documento_raw es el DNI (documento_numero) como string
+        num_documento_str = str(num_documento_raw).strip()
+        
+        print(f"[OBTENER_IDS] Buscando marcaciones: DNI={num_documento_str}, Fecha={fecha}")
+        
+        connection = get_db_connection()
+        if not connection:
+            print("[OBTENER_IDS] [X] Error de conexión a BD")
+            return jsonify({'success': False, 'error': 'Error de conexión a BD'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            print(f"[OBTENER_IDS] Llamando SP sp_ObtenerIdsMarcacion('{num_documento_str}', '{fecha}')")
+            cursor.callproc('sp_ObtenerIdsMarcacion', [num_documento_str, fecha])
+            
+            # Obtener resultados
+            ids = None
+            for result in cursor.stored_results():
+                ids = result.fetchone()
+            
+            cursor.close()
+            connection.close()
+            
+            if ids:
+                print(f"[OBTENER_IDS] [OK] IDs encontrados: T1E={ids['id_t1_entrada']}, T1S={ids['id_t1_salida']}, T2E={ids['id_t2_entrada']}, T2S={ids['id_t2_salida']}")
+                return jsonify({
+                    'success': True,
+                    'data': {
+                        'id_t1_entrada': ids['id_t1_entrada'],
+                        'id_t1_salida': ids['id_t1_salida'],
+                        'id_t2_entrada': ids['id_t2_entrada'],
+                        'id_t2_salida': ids['id_t2_salida']
+                    }
+                })
+            else:
+                print("[OBTENER_IDS] [!] SP no retornó resultados")
+                return jsonify({'success': False, 'error': 'No se encontraron marcaciones'}), 404
+        
+        except Error as e:
+            print(f"[OBTENER_IDS] [X] Error SQL: {e}")
+            import traceback
+            traceback.print_exc()
+            if connection:
+                connection.close()
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    except Exception as e:
+        print(f"[OBTENER_IDS] [X] Error general: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+
+
+# ============================================================================
+# API: EDITAR MARCACION (HORAS)
+# ============================================================================
+
+@marcacion_bp.route('/api/marcacion/editar', methods=['PUT'])
+@login_required
+def editar_marcacion():
+    """Editar hora de entrada/salida de una marcación"""
+    try:
+        data = request.get_json()
+        
+        print(f"[EDITAR_MARCACION] [+] Datos recibidos: {data}")
+        
+        if not data:
+            print("[EDITAR_MARCACION] [X] No se recibieron datos")
+            return jsonify({'success': False, 'error': 'Datos no proporcionados'}), 400
+        
+        id_marcacion_raw = data.get('id_marcacion')
+        nueva_hora = data.get('nueva_hora')  # Formato: "HH:MM"
+        fecha_original = data.get('fecha_original')  # Formato: "YYYY-MM-DD"
+        
+        print(f"[EDITAR_MARCACION] Parámetros: id_marcacion={id_marcacion_raw} (tipo={type(id_marcacion_raw).__name__}), nueva_hora={nueva_hora}, fecha_original={fecha_original}")
+        
+        if not id_marcacion_raw or not nueva_hora or not fecha_original:
+            print(f"[EDITAR_MARCACION] [X] Faltan parámetros")
+            return jsonify({'success': False, 'error': 'Faltan parámetros: id_marcacion, nueva_hora, fecha_original'}), 400
+        
+        # Convertir id_marcacion a int
+        try:
+            id_marcacion = int(id_marcacion_raw)
+        except (ValueError, TypeError):
+            print(f"[EDITAR_MARCACION] [X] id_marcacion no es numérico: {id_marcacion_raw}")
+            return jsonify({'success': False, 'error': f'id_marcacion inválido: {id_marcacion_raw}'}), 400
+        
+        print(f"[EDITAR_MARCACION] Editando marcación ID={id_marcacion}: fecha={fecha_original}, hora={nueva_hora}")
+        
+        connection = get_db_connection()
+        if not connection:
+            print("[EDITAR_MARCACION] [X] Error de conexión a BD")
+            return jsonify({'success': False, 'error': 'Error de conexión a BD'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            # Llamar al SP sp_EditarMarcacion
+            print(f"[EDITAR_MARCACION] Llamando SP sp_EditarMarcacion({id_marcacion}, {nueva_hora}, {fecha_original})")
+            cursor.execute("CALL sp_EditarMarcacion(%s, %s, %s, @p_mensaje)", (id_marcacion, nueva_hora, fecha_original))
+            
+            # Consumir result sets pendientes del SP
+            while cursor.nextset():
+                pass
+            
+            # Obtener parámetro OUT del SP
+            cursor.execute("SELECT @p_mensaje AS mensaje")
+            out_result = cursor.fetchone()
+            mensaje = out_result['mensaje'] if out_result and out_result.get('mensaje') else 'Actualización realizada'
+            
+            connection.commit()
+            cursor.close()
+            connection.close()
+            
+            print(f"[EDITAR_MARCACION] [OK] {mensaje}")
+            
+            return jsonify({
+                'success': True,
+                'message': mensaje,
+                'data': {
+                    'id_marcacion': id_marcacion,
+                    'nueva_hora': nueva_hora,
+                    'fecha_original': fecha_original
+                }
+            })
+        
+        except Error as e:
+            print(f"[EDITAR_MARCACION] [X] Error SQL: {e}")
+            import traceback
+            traceback.print_exc()
+            if connection:
+                connection.close()
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    except Exception as e:
+        print(f"[EDITAR_MARCACION] [X] Error general: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Error del servidor'}), 500

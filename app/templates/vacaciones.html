@@ -4,15 +4,11 @@
 <div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
     <!-- Topbar -->
     <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
-        <div class="px-6 py-4 flex items-center justify-between">
+            <div class="px-6 py-4 flex items-center justify-between">
             <div>
                 <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Gestión de Vacaciones</h1>
                 <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Administra las solicitudes y periodos de vacaciones del personal</p>
             </div>
-            <button id="btn-solicitar-vacaciones" class="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg">
-                <i class="fas fa-calendar-plus"></i>
-                <span>Solicitar Vacaciones</span>
-            </button>
         </div>
     </div>
 
@@ -233,6 +229,128 @@
     </div>
 </div>
 
+<!-- Modal: Ver Detalle Vacacion -->
+<div id="modal-detalle-vacacion" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-6 py-4 flex items-center justify-between border-b border-indigo-800">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-500 p-2 rounded-lg">
+                    <i class="fas fa-file-alt text-lg"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-semibold">Detalle de Vacacion</h2>
+                    <p class="text-indigo-200 text-xs mt-0.5" id="detalle-id"></p>
+                </div>
+            </div>
+            <button onclick="cerrarModalDetalle()" class="text-indigo-200 hover:text-white p-2 hover:bg-indigo-700/50 rounded-lg transition-colors">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Contenido -->
+        <div class="flex-1 overflow-y-auto p-6">
+            <!-- Empleado -->
+            <div class="mb-5">
+                <div class="flex items-center gap-2 mb-3">
+                    <div class="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
+                        <i class="fas fa-user text-blue-600 dark:text-blue-400"></i>
+                    </div>
+                    <span class="text-sm font-semibold text-gray-900 dark:text-white">Empleado</span>
+                </div>
+                <div class="ml-10 space-y-1">
+                    <p class="text-sm text-gray-700 dark:text-gray-300" id="detalle-empleado">-</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400" id="detalle-area">-</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400" id="detalle-empresa">-</p>
+                </div>
+            </div>
+
+            <!-- Fechas -->
+            <div class="mb-5">
+                <div class="flex items-center gap-2 mb-3">
+                    <div class="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg">
+                        <i class="fas fa-calendar text-green-600 dark:text-green-400"></i>
+                    </div>
+                    <span class="text-sm font-semibold text-gray-900 dark:text-white">Periodo</span>
+                </div>
+                <div class="ml-10 grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Inicio</p>
+                        <p class="text-sm font-medium text-gray-900 dark:text-white" id="detalle-fecha-inicio">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Fin</p>
+                        <p class="text-sm font-medium text-gray-900 dark:text-white" id="detalle-fecha-fin">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dias y Tipo -->
+            <div class="mb-5">
+                <div class="flex items-center gap-2 mb-3">
+                    <div class="bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded-lg">
+                        <i class="fas fa-clock text-yellow-600 dark:text-yellow-400"></i>
+                    </div>
+                    <span class="text-sm font-semibold text-gray-900 dark:text-white">Informacion</span>
+                </div>
+                <div class="ml-10 grid grid-cols-3 gap-4">
+                    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 text-center">
+                        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="detalle-dias">0</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Dias</p>
+                    </div>
+                    <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 text-center">
+                        <p class="text-sm font-semibold text-purple-600 dark:text-purple-400" id="detalle-tipo">-</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Tipo</p>
+                    </div>
+                    <div class="rounded-lg p-3 text-center" id="detalle-estado-container">
+                        <p class="text-sm font-semibold" id="detalle-estado">-</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Estado</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Observaciones -->
+            <div id="detalle-observaciones-container" class="mb-5 hidden">
+                <div class="flex items-center gap-2 mb-3">
+                    <div class="bg-gray-100 dark:bg-gray-800 p-2 rounded-lg">
+                        <i class="fas fa-comment text-gray-600 dark:text-gray-400"></i>
+                    </div>
+                    <span class="text-sm font-semibold text-gray-900 dark:text-white">Observaciones</span>
+                </div>
+                <div class="ml-10">
+                    <p class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-slate-800 rounded-lg p-3 border border-gray-200 dark:border-slate-700" id="detalle-observaciones">-</p>
+                </div>
+            </div>
+
+            <!-- Control -->
+            <div class="border-t border-gray-200 dark:border-slate-700 pt-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="bg-orange-100 dark:bg-orange-900/30 p-2 rounded-lg">
+                        <i class="fas fa-info-circle text-orange-600 dark:text-orange-400"></i>
+                    </div>
+                    <span class="text-sm font-semibold text-gray-900 dark:text-white">Control</span>
+                </div>
+                <div class="ml-10 grid grid-cols-2 gap-4 text-xs text-gray-500 dark:text-gray-400">
+                    <div>
+                        <p>Solicitado: <span class="text-gray-700 dark:text-gray-300" id="detalle-fecha-solicitud">-</span></p>
+                    </div>
+                    <div>
+                        <p>Creado por: <span class="text-gray-700 dark:text-gray-300" id="detalle-creado-por">-</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex gap-3 justify-end p-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">
+            <button type="button" onclick="cerrarModalDetalle()" 
+                    class="px-5 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-900 dark:text-white rounded-lg font-medium text-sm transition-colors">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
 // ============================================================================
 // VARIABLES GLOBALES
@@ -247,13 +365,25 @@ document.addEventListener('DOMContentLoaded', function() {
     cargarSolicitudes();
     cargarEstadisticas();
 
-    document.getElementById('btn-solicitar-vacaciones').addEventListener('click', abrirModal);
     document.getElementById('form-vacaciones').addEventListener('submit', guardarSolicitud);
     document.getElementById('fecha_inicio').addEventListener('change', calcularDias);
     document.getElementById('fecha_fin').addEventListener('change', calcularDias);
 
     document.getElementById('filtro-empleado').addEventListener('keyup', function(e) {
         if (e.key === 'Enter') aplicarFiltros();
+    });
+
+    // Cerrar modales con Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            cerrarModal();
+            cerrarModalDetalle();
+        }
+    });
+
+    // Cerrar modal detalle al hacer click fuera
+    document.getElementById('modal-detalle-vacacion').addEventListener('click', function(e) {
+        if (e.target === this) cerrarModalDetalle();
     });
 });
 
@@ -331,23 +461,18 @@ async function cargarSolicitudes() {
                     <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${v.fecha_solicitud ? formatearFecha(v.fecha_solicitud) : '-'}</td>
                     <td class="px-4 py-3 text-xs text-center">
                         <div class="flex gap-1 justify-center">
+                            <button onclick="solicitarVacacionEmpleado(${v.num_documento})" class="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs transition" title="Solicitar Vacaciones">
+                                <i class="fas fa-calendar-plus"></i>
+                            </button>
                             <button onclick="verDetalle(${v.id_vacacion})" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition" title="Ver detalle">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            ${v.estado === 'PENDIENTE' ? `
-                                <button onclick="aprobar(${v.id_vacacion})" class="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs transition" title="Aprobar">
-                                    <i class="fas fa-check"></i>
-                                </button>
-                                <button onclick="rechazar(${v.id_vacacion})" class="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs transition" title="Rechazar">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                                <button onclick="editarSolicitud(${v.id_vacacion})" class="px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-xs transition" title="Editar">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button onclick="eliminarSolicitud(${v.id_vacacion})" class="px-2 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-xs transition" title="Eliminar">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            ` : ''}
+                            <button onclick="editarSolicitud(${v.id_vacacion})" class="px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-xs transition" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="eliminarSolicitud(${v.id_vacacion})" class="px-2 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-xs transition" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -379,10 +504,20 @@ async function cargarEstadisticas() {
 // ============================================================================
 // FUNCIONES DE MODAL
 // ============================================================================
-function abrirModal() {
+function abrirModal(num_documento) {
     document.getElementById('modal-vacaciones').classList.remove('hidden');
     document.getElementById('form-vacaciones').reset();
     document.getElementById('dias-calculados').textContent = '0';
+    document.getElementById('modal-titulo').textContent = 'Solicitar Vacaciones';
+    document.getElementById('form-vacaciones').dataset.editando = '';
+    document.getElementById('num_documento').disabled = false;
+    if (num_documento) {
+        document.getElementById('num_documento').value = num_documento;
+    }
+}
+
+function solicitarVacacionEmpleado(num_documento) {
+    abrirModal(num_documento);
 }
 
 function cerrarModal() {
@@ -433,7 +568,7 @@ async function guardarSolicitud(e) {
         const data = await res.json();
 
         if (data.success) {
-            alert(data.message || 'Solicitud creada correctamente');
+            alert(data.message || 'Vacacion creada y aprobada correctamente');
             cerrarModal();
             cargarSolicitudes();
         } else {
@@ -448,7 +583,7 @@ async function guardarSolicitud(e) {
 // ============================================================================
 // FUNCIONES DE ACCIONES
 // ============================================================================
-async function verDetalle(id) {
+function verDetalle(id) {
     const v = solicitudes.find(s => s.id_vacacion === id);
     if (!v) return;
 
@@ -460,65 +595,55 @@ async function verDetalle(id) {
         'FINALIZADO': 'Finalizado'
     };
 
-    let mensaje = `ID: ${v.id_vacacion}\n`;
-    mensaje += `Empleado: ${v.empleado}\n`;
-    mensaje += `Area: ${v.area || '-'}\n`;
-    mensaje += `Fecha Inicio: ${formatearFecha(v.fecha_inicio)}\n`;
-    mensaje += `Fecha Fin: ${formatearFecha(v.fecha_fin)}\n`;
-    mensaje += `Dias: ${v.dias}\n`;
-    mensaje += `Tipo: ${v.tipo}\n`;
-    mensaje += `Estado: ${estadoLabels[v.estado] || v.estado}\n`;
-    mensaje += `Solicitado: ${v.fecha_solicitud ? formatearFecha(v.fecha_solicitud) : '-'}\n`;
-    mensaje += `Creado por: ${v.creado_por_nombre || '-'}\n`;
-    if (v.aprobado_por_nombre) mensaje += `Aprobado por: ${v.aprobado_por_nombre}\n`;
-    if (v.fecha_aprobacion) mensaje += `Fecha aprobacion: ${formatearFecha(v.fecha_aprobacion)}\n`;
-    if (v.motivo_rechazo) mensaje += `Motivo rechazo: ${v.motivo_rechazo}\n`;
-    if (v.observaciones) mensaje += `Observaciones: ${v.observaciones}\n`;
+    const estadoColors = {
+        'PENDIENTE': 'text-yellow-600 dark:text-yellow-400',
+        'APROBADO': 'text-green-600 dark:text-green-400',
+        'RECHAZADO': 'text-red-600 dark:text-red-400',
+        'EN_CURSO': 'text-blue-600 dark:text-blue-400',
+        'FINALIZADO': 'text-gray-600 dark:text-gray-400'
+    };
 
-    alert(mensaje);
+    const estadoBg = {
+        'PENDIENTE': 'bg-yellow-50 dark:bg-yellow-900/20',
+        'APROBADO': 'bg-green-50 dark:bg-green-900/20',
+        'RECHAZADO': 'bg-red-50 dark:bg-red-900/20',
+        'EN_CURSO': 'bg-blue-50 dark:bg-blue-900/20',
+        'FINALIZADO': 'bg-gray-50 dark:bg-gray-800'
+    };
+
+    document.getElementById('detalle-id').textContent = `Solicitud #${v.id_vacacion}`;
+    document.getElementById('detalle-empleado').textContent = v.empleado || '-';
+    document.getElementById('detalle-area').textContent = `Area: ${v.area || '-'}`;
+    document.getElementById('detalle-empresa').textContent = `Empresa: ${v.empresa || '-'}`;
+    document.getElementById('detalle-fecha-inicio').textContent = formatearFecha(v.fecha_inicio);
+    document.getElementById('detalle-fecha-fin').textContent = formatearFecha(v.fecha_fin);
+    document.getElementById('detalle-dias').textContent = v.dias || 0;
+    document.getElementById('detalle-tipo').textContent = v.tipo || '-';
+    
+    const estadoEl = document.getElementById('detalle-estado');
+    estadoEl.textContent = estadoLabels[v.estado] || v.estado;
+    estadoEl.className = `text-sm font-semibold ${estadoColors[v.estado] || estadoColors['PENDIENTE']}`;
+    
+    const containerEl = document.getElementById('detalle-estado-container');
+    containerEl.className = `rounded-lg p-3 text-center ${estadoBg[v.estado] || estadoBg['PENDIENTE']}`;
+
+    document.getElementById('detalle-fecha-solicitud').textContent = v.fecha_solicitud ? formatearFecha(v.fecha_solicitud) : '-';
+    document.getElementById('detalle-creado-por').textContent = v.creado_por_nombre || '-';
+
+    const obsContainer = document.getElementById('detalle-observaciones-container');
+    const obsText = document.getElementById('detalle-observaciones');
+    if (v.observaciones) {
+        obsText.textContent = v.observaciones;
+        obsContainer.classList.remove('hidden');
+    } else {
+        obsContainer.classList.add('hidden');
+    }
+
+    document.getElementById('modal-detalle-vacacion').classList.remove('hidden');
 }
 
-async function aprobar(id) {
-    if (!confirm('¿Aprobar esta solicitud de vacaciones?')) return;
-
-    try {
-        const res = await fetch(`/api/vacaciones/aprobar/${id}`, { method: 'POST' });
-        const data = await res.json();
-
-        if (data.success) {
-            alert(data.message || 'Vacacion aprobada');
-            cargarSolicitudes();
-        } else {
-            alert(data.error || 'Error al aprobar');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error de conexion');
-    }
-}
-
-async function rechazar(id) {
-    const motivo = prompt('Motivo del rechazo:');
-    if (!motivo) return;
-
-    try {
-        const res = await fetch(`/api/vacaciones/rechazar/${id}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ motivo })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-            alert(data.message || 'Vacacion rechazada');
-            cargarSolicitudes();
-        } else {
-            alert(data.error || 'Error al rechazar');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error de conexion');
-    }
+function cerrarModalDetalle() {
+    document.getElementById('modal-detalle-vacacion').classList.add('hidden');
 }
 
 async function eliminarSolicitud(id) {
@@ -542,7 +667,7 @@ async function eliminarSolicitud(id) {
 
 function editarSolicitud(id) {
     const v = solicitudes.find(s => s.id_vacacion === id);
-    if (!v || v.estado !== 'PENDIENTE') return;
+    if (!v) return;
 
     document.getElementById('num_documento').value = v.num_documento;
     document.getElementById('num_documento').disabled = true;
