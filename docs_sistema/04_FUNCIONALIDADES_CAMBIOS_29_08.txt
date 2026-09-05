@@ -1,0 +1,190 @@
+================================================================================
+KALLPA - FUNCIONALIDADES AGREGADAS Y CAMBIOS REALIZADOS
+Fecha creación: 29/08/2026
+================================================================================
+
+================================================================================
+FUNCIONALIDAD #1: IMPORTAR PDF PARA AUTO-REllenAR PRESUPUESTO
+================================================================================
+
+ESTADO: IMPLEMENTADA
+
+(Ver documento 03_FUNCIONALIDADES_CAMBIOS.txt - línea 1)
+
+================================================================================
+FUNCIONALIDAD #2: MODULO DE VACACIONES
+================================================================================
+
+ESTADO: IMPLEMENTADO
+
+DESCRIPCIÓN:
+  Sistema completo de gestión de vacaciones para empleados. Permite
+  solicitar, aprobar, rechazar y eliminar solicitudes de vacaciones.
+  El saldo de vacaciones se calcula automáticamente (30 días/año).
+  Las vacaciones aprobadas se reflejan en el sistema de marcación
+  como estado "VACACIONES" en lugar de TARDE/FALTA.
+
+ESTRUCTURA DE BASE DE DATOS:
+
+  Tabla: TblVacaciones
+    - id_vacacion          INT AUTO_INCREMENT PRIMARY KEY
+    - num_documento        INT NOT NULL (FK → TblUsuario)
+    - fecha_inicio         DATE NOT NULL
+    - fecha_fin            DATE NOT NULL
+    - dias_solicitados     INT NOT NULL
+    - tipo_vacacion        VARCHAR(20) (PROGRAMADAS/ADELANTADAS/TRUNCAS)
+    - estado               VARCHAR(20) (PENDIENTE/APROBADO/RECHAZADO/EN_CURSO/FINALIZADO)
+    - observaciones        TEXT
+    - motivo_rechazo       TEXT
+    - creado_por           INT (FK → TblUsuario)
+    - aprobado_por         INT (FK → TblUsuario)
+    - fecha_creacion       DATETIME
+    - fecha_modificacion   DATETIME
+    - fecha_aprobacion     DATETIME
+    - INDEX idx_vacaciones_documento, idx_vacaciones_estado_fechas
+
+  Tabla: TblVacacionSaldo
+    - id_saldo             INT AUTO_INCREMENT PRIMARY KEY
+    - num_documento        INT NOT NULL (FK → TblUsuario)
+    - anio                 YEAR NOT NULL
+    - dias_totales         INT DEFAULT 30
+    - dias_usados          INT DEFAULT 0
+    - dias_pendientes      INT GENERATED ALWAYS AS (dias_totales - dias_usados) STORED
+    - UNIQUE KEY uk_saldo_documento_anio
+
+STORED PROCEDURES CREADOS:
+
+  1. sp_ObtenerVacaciones(estado, anio, busqueda)
+     - Lista vacaciones con filtros
+     - JOIN con TblUsuario, TblPersona, TblCargo, TblArea
+     - Retorna: empleado, área, fechas, días, tipo, estado, observaciones
+
+  2. sp_CrearVacacion(num_documento, fecha_inicio, fecha_fin, tipo_vacaciones, observaciones, creado_por, OUT id_vacacion, OUT mensaje)
+     - Valida: empleado activo, rango fechas válido, saldo disponible
+     - Verifica solapamiento con vacaciones existentes
+     - Crea registro en TblVacaciones con estado PENDIENTE
+     - Retorna ID creado y mensaje de resultado
+
+  3. sp_ActualizarVacacion(id_vacacion, fecha_inicio, fecha_fin, tipo_vacaciones, observaciones, OUT mensaje)
+     - Solo permite editar si estado = PENDIENTE
+     - Recalcula días y valida saldo
+
+  4. sp_AprobarVacacion(id_vacacion, aprobado_por, OUT mensaje)
+     - Cambia estado a APROBADO
+     - Descuenta días del saldo
+     - Registra fecha_aprobacion y aprobado_por
+
+  5. sp_RechazarVacacion(id_vacacion, aprobado_por, motivo, OUT mensaje)
+     - Cambia estado a RECHAZADO
+     - Registra motivo_rechazo
+
+  6. sp_EliminarVacacion(id_vacacion, OUT mensaje)
+     - Si estado = APROBADO: devuelve días al saldo
+     - Elimina registro de TblVacaciones
+
+  7. sp_ObtenerDiasDisponibles(num_documento, anio)
+     - Retorna saldo: días totales, usados, pendientes
+     - Crea registro en TblVacacionSaldo si no existe
+
+  8. sp_ObtenerEstadisticasVacaciones(num_documento, anio)
+     - Retorna: días disponibles, usados, solicitudes pendientes, total
+
+ARCHIVOS CREADOS:
+
+  1. app/routes/vacaciones.py (nuevo)
+     - Endpoints: obtener, crear, actualizar, aprobar, rechazar, eliminar
+     - Endpoints: dias-disponibles, estadisticas, empleados
+     - Patrón: Usa main_bp, get_db_connection(), DatabaseConfig
+     - Total: ~350 líneas
+
+  2. sql/01CrearTablasVacaciones.sql (nuevo)
+     - Script CREATE TABLE para TblVacaciones y TblVacacionSaldo
+     - Importante: num_documento es INT (no VARCHAR)
+
+  3. sql/02CrearSPsVacaciones.sql (nuevo)
+     - 8 Stored Procedures del módulo
+
+ARCHIVOS MODIFICADOS:
+
+  1. app/routes/__init__.py
+     - Agregado: import vacaciones en la línea de imports
+
+  2. app/templates/vacaciones.html
+     - Reemplazado: JavaScript completo para conectar con APIs reales
+     - Eliminados: datos hardcodeados de ejemplo
+     - Agregado: cargarEmpleados() → GET /api/vacaciones/empleados
+     - Agregado: cargarSolicitudes() → GET /api/vacaciones/obtener
+     - Agregado: cargarEstadisticas() → GET /api/vacaciones/estadisticas
+     - Agregado: guardarSolicitud() → POST /api/vacaciones/crear
+     - Agregado: aprobar(), rechazar(), eliminarSolicitud(), editarSolicitud()
+     - Agregado: verDetalle() con información completa de la solicitud
+     - Agregado: filtrado por estado, año, búsqueda
+
+  3. .env (ya actualizado en sesión anterior)
+     - USE_SSH_TUNNEL=True
+     - SSH_USER=kallpasystem
+     - SSH_PASSWORD=#21592159xDxD
+
+MODIFICACIÓN EN MARCACIÓN (sp_ObtenerHistorialConEstados):
+
+  Archivo: sp_ObtenerHistorialConEstados (en BD)
+  Cambio: Agregado estado VACACIONES
+  
+  Lógica nueva (al inicio del CASE de estado_asistencia):
+    WHEN m.tipo_marcacion = 'ENTRADA'
+         AND EXISTS (
+             SELECT 1 FROM TblVacaciones v
+             WHERE v.num_documento = m.num_documento
+               AND v.estado = 'APROBADO'
+               AND DATE(m.fecha_marcacion) BETWEEN v.fecha_inicio AND v.fecha_fin
+         ) THEN 'VACACIONES'
+
+  Impacto: NINGUNO sobre lógica existente
+  - Solo agrega una condición antes del cálculo normal
+  - Si no hay vacación aprobada, el SP se comporta igual que antes
+  - El frontend (reporte_asistencia.html) necesita mapear el estado "VACACIONES" a un color/estilo
+
+ENDPOINTS API:
+
+  Método   | Ruta                              | Función
+  ---------|-----------------------------------|----------------------------------
+  GET      | /vacaciones                       | Vista HTML (protegida con login)
+  GET      | /api/vacaciones/obtener           | Lista vacaciones con filtros
+  POST     | /api/vacaciones/crear             | Crear solicitud
+  PUT      | /api/vacaciones/actualizar/<id>   | Editar solicitud pendiente
+  POST     | /api/vacaciones/aprobar/<id>      | Aprobar solicitud
+  POST     | /api/vacaciones/rechazar/<id>     | Rechazar solicitud
+  DELETE   | /api/vacaciones/eliminar/<id>     | Eliminar solicitud
+  GET      | /api/vacaciones/dias-disponibles  | Consultar saldo
+  GET      | /api/vacaciones/estadisticas      | Estadísticas dashboard
+  GET      | /api/vacaciones/empleados         | Lista empleados activos
+
+NOTAS TÉCNICAS IMPORTANTES:
+
+  1. TblUsuario.num_documento es INT (no VARCHAR)
+     - Todos los SPs y scripts usan INT para num_documento
+     - Error común: usar VARCHAR genera error FK 3780
+
+  2. sp_CrearVacacion maneja:
+     - Validación de empleado activo
+     - Cálculo automático de días (DATEDIFF + 1)
+     - Creación automática de saldo si no existe
+     - Verificación de solapamiento con vacaciones existentes
+     - Validación de saldo suficiente
+
+  3. sp_EliminarVacacion:
+     - Si la vacación estaba APROBADA, devuelve los días al saldo
+     - IMPORTANTE: usar GREATEST(0, dias_usados - dias) para evitar negativos
+
+  4. El frontend usa formatearFecha() con 'T00:00:00' para evitar
+     problemas de zona horaria al mostrar fechas
+
+PENDIENTE:
+  - Mapear estado "VACACIONES" en reporte_asistencia.html (colores/icono)
+  - Agregar menú/submenu de Vacaciones en TblMenu/TblSubMenu
+  - Configurar permisos en TblUsuarioAccesos
+  - Probar flujo completo: crear → aprobar → verificar en marcación
+
+================================================================================
+FIN
+================================================================================

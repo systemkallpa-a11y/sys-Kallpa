@@ -39,9 +39,11 @@ def create_app():
     # app.config['FLASK_ENV'] = 'production'
     app.config['PRESERVE_CONTEXT_ON_EXCEPTION'] = False
     app.config['JSON_SORT_KEYS'] = False
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
+    app.config['TEMPLATES_CACHE_DIR'] = None
     
     # VERSION DE ASSETS - Incrementar este nmero cuando se actualicen archivos estticos
-    app.config['ASSETS_VERSION'] = '20260813_2'
+    app.config['ASSETS_VERSION'] = '20260830_3'
 
     # Configurar logging
     if not app.debug:
@@ -85,13 +87,17 @@ def create_app():
     def inject_assets_version():
         return {'assets_version': app.config.get('ASSETS_VERSION', '1')}
     
-    # Asegurar que todas las respuestas HTML tengan charset UTF-8
+    # Asegurar que todas las respuestas HTML tengan charset UTF-8 y no se cacheen
     @app.after_request
     def set_utf8_charset(response):
         if 'Content-Type' in response.headers:
             content_type = response.headers['Content-Type']
             if 'text/html' in content_type and 'charset' not in content_type:
                 response.headers['Content-Type'] = content_type + '; charset=utf-8'
+            if 'text/html' in content_type:
+                response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                response.headers['Pragma'] = 'no-cache'
+                response.headers['Expires'] = '0'
         return response
     
     # Error handlers: SIEMPRE retornar JSON para rutas /api/*

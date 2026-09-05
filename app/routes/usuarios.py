@@ -126,7 +126,9 @@ def usuarios():
 @main_bp.route('/api/usuarios/obtener', methods=['GET'])
 @login_required
 def obtener_usuarios():
-    """Obtener lista de todos los usuarios usando SP"""
+    """Obtener lista de usuarios usando SP, con filtro opcional por nombre"""
+    q = request.args.get('q', '').strip()
+    
     connection = get_db_connection()
     if not connection:
         return jsonify({'success': False, 'error': 'Error de conexin'}), 500
@@ -139,6 +141,16 @@ def obtener_usuarios():
         usuarios = []
         for result in cursor.stored_results():
             usuarios = result.fetchall()
+        
+        # Filtrar por nombre si se proporciona q
+        if q:
+            q_lower = q.lower()
+            usuarios = [
+                u for u in usuarios
+                if q_lower in (u.get('nombres') or '').lower()
+                or q_lower in (u.get('apellido_paterno') or '').lower()
+                or q_lower in (u.get('apellido_materno') or '').lower()
+            ]
         
         cursor.close()
         connection.close()

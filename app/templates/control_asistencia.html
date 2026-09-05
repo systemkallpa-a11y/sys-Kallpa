@@ -84,27 +84,35 @@
                 <span class="text-gray-700 dark:text-gray-300">Permiso</span>
             </span>
             <span class="flex items-center gap-1">
+                <span class="w-3 h-3 rounded-full bg-purple-500"></span>
+                <span class="text-gray-700 dark:text-gray-300">Vacaciones</span>
+            </span>
+            <span class="flex items-center gap-1">
                 <span class="w-3 h-3 rounded-full bg-gray-400"></span>
                 <span class="text-gray-700 dark:text-gray-300">Descanso</span>
             </span>
         </div>
     </div>
 
-    <!-- Contenido Principal - Tabla -->
-    <div class="flex-1 overflow-auto p-6">
+    <!-- Contenido Principal -->
+    <div class="flex-1 overflow-auto p-6 space-y-6">
+        <!-- Tabla de Asistencia -->
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-slate-700">
+            <div class="px-4 py-3 bg-gradient-to-r from-green-700 to-green-800">
+                <h2 class="text-white font-bold text-sm flex items-center gap-2">
+                    <i class="fas fa-clipboard-check"></i> Control de Asistencia
+                </h2>
+            </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-xs">
                     <!-- Encabezado agrupado -->
                     <thead>
-                        <!-- Fila 1: Grupos principales -->
                         <tr class="bg-gradient-to-r from-green-700 to-green-800">
                             <th colspan="5" class="px-2 py-2 text-center text-white font-bold border-r border-green-600">DATOS DEL EMPLEADO</th>
                             <th colspan="3" class="px-2 py-2 text-center text-white font-bold border-r border-green-600">FECHA</th>
                             <th colspan="3" class="px-2 py-2 text-center text-white font-bold border-r border-green-600">TURNO 1 (MAÑANA)</th>
                             <th colspan="3" class="px-2 py-2 text-center text-white font-bold">TURNO 2 (TARDE)</th>
                         </tr>
-                        <!-- Fila 2: Sub-encabezados -->
                         <tr class="bg-gradient-to-r from-green-600 to-green-700">
                             <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">EMPRESA</th>
                             <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">NOMBRES</th>
@@ -124,8 +132,6 @@
                             <th class="px-2 py-2 text-center text-white font-semibold">DETALLE</th>
                         </tr>
                     </thead>
-
-                    <!-- Body dinámico -->
                     <tbody id="tabla-control-asistencia" class="divide-y divide-gray-200 dark:divide-slate-700">
                         <tr>
                             <td colspan="16" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
@@ -135,7 +141,40 @@
                     </tbody>
                 </table>
             </div>
+        </div>
 
+        <!-- Tabla de Vacaciones Aprobadas -->
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-slate-700">
+            <div class="px-4 py-3 bg-gradient-to-r from-purple-700 to-purple-800">
+                <h2 class="text-white font-bold text-sm flex items-center gap-2">
+                    <i class="fas fa-umbrella-beach"></i> Vacaciones Aprobadas en este Período
+                </h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs">
+                    <thead>
+                        <tr class="bg-gradient-to-r from-purple-700 to-purple-800">
+                            <th class="px-3 py-2 text-center text-white font-semibold border-r border-purple-600">#</th>
+                            <th class="px-3 py-2 text-center text-white font-semibold border-r border-purple-600">EMPRESA</th>
+                            <th class="px-3 py-2 text-center text-white font-semibold border-r border-purple-600">EMPLEADO</th>
+                            <th class="px-3 py-2 text-center text-white font-semibold border-r border-purple-600">DNI / CE</th>
+                            <th class="px-3 py-2 text-center text-white font-semibold border-r border-purple-600">ÁREA</th>
+                            <th class="px-3 py-2 text-center text-white font-semibold border-r border-purple-600">DESDE</th>
+                            <th class="px-3 py-2 text-center text-white font-semibold border-r border-purple-600">HASTA</th>
+                            <th class="px-3 py-2 text-center text-white font-semibold border-r border-purple-600">DÍAS</th>
+                            <th class="px-3 py-2 text-center text-white font-semibold border-r border-purple-600">TIPO</th>
+                            <th class="px-3 py-2 text-center text-white font-semibold">ESTADO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-vacaciones" class="divide-y divide-gray-200 dark:divide-slate-700">
+                        <tr>
+                            <td colspan="10" class="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Cargando vacaciones...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -150,6 +189,7 @@
 // ============================================================================
 let datosReporte = [];
 let datosFiltrados = [];
+let vacacionesAprobadas = [];
 
 // ============================================================================
 // INICIALIZACIÓN
@@ -210,7 +250,13 @@ async function cargarControlAsistencia(fechaInicio, fechaFin, empleado) {
     try {
         let url = `/api/reportes/control-asistencia?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;
         
-        const response = await fetch(url);
+        const cacheBuster = Date.now();
+        
+        const [response, vacResponse] = await Promise.all([
+            fetch(url),
+            fetch(`/api/vacaciones/obtener?t=${cacheBuster}&estado=APROBADO`)
+        ]);
+        
         const result = await response.json();
         
         if (!result.success) {
@@ -218,6 +264,15 @@ async function cargarControlAsistencia(fechaInicio, fechaFin, empleado) {
         }
         
         datosReporte = result.data || [];
+        
+        // Cargar vacaciones aprobadas
+        try {
+            const vacResult = await vacResponse.json();
+            vacacionesAprobadas = (vacResult.success && vacResult.data) ? vacResult.data : [];
+            console.log(`[VACACIONES] ${vacacionesAprobadas.length} vacaciones aprobadas cargadas`);
+        } catch (e) {
+            vacacionesAprobadas = [];
+        }
         
         // Filtrar por empleado si se escribió algo
         if (empleado) {
@@ -243,6 +298,7 @@ async function cargarControlAsistencia(fechaInicio, fechaFin, empleado) {
         }
         
         renderizarTabla(datosFiltrados);
+        renderizarVacaciones(fechaInicio, fechaFin, empleado);
         
     } catch (error) {
         console.error('[CONTROL] Error:', error);
@@ -276,7 +332,6 @@ function renderizarTabla(data) {
     let html = '';
     
     data.forEach((fila, index) => {
-        // Colores según detalle
         const coloresT1 = obtenerColoresDetalle(fila.DETALLE_T1);
         const coloresT2 = obtenerColoresDetalle(fila.DETALLE_T2);
         const colorFila = determinarColorFila(fila.DETALLE_T1, fila.DETALLE_T2);
@@ -299,6 +354,93 @@ function renderizarTabla(data) {
                 <td class="px-2 py-2 text-center text-gray-900 dark:text-white font-semibold border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.H_SALIDA_T2 || '-')}</td>
                 <td class="px-2 py-2 text-center ${coloresT2.colorMinutos} border-r border-gray-200 dark:border-slate-700">${formatearMinutos(fila.MINUTOS_T2)}</td>
                 <td class="px-2 py-2 text-center ${coloresT2.colorDetalle}">${escapeHtml(fila.DETALLE_T2 || '-')}</td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+// ============================================================================
+// RENDERIZAR TABLA DE VACACIONES
+// ============================================================================
+function renderizarVacaciones(fechaInicio, fechaFin, empleado) {
+    const tbody = document.getElementById('tabla-vacaciones');
+    
+    if (!vacacionesAprobadas || vacacionesAprobadas.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" class="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
+                    <i class="fas fa-umbrella-beach mr-2"></i>No hay vacaciones aprobadas en este período
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    // Filtrar vacaciones que se superponen con el rango seleccionado
+    let vacacionesFiltradas = vacacionesAprobadas.filter(v => {
+        if (!v.fecha_inicio || !v.fecha_fin) return false;
+        return v.fecha_inicio <= fechaFin && v.fecha_fin >= fechaInicio;
+    });
+    
+    // Filtrar por empleado si se escribió algo
+    if (empleado) {
+        const empLower = empleado.toLowerCase();
+        vacacionesFiltradas = vacacionesFiltradas.filter(v => 
+            (v.empleado && v.empleado.toLowerCase().includes(empLower)) ||
+            (v.num_documento && v.num_documento.toString().includes(empLower))
+        );
+    }
+    
+    if (vacacionesFiltradas.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" class="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
+                    <i class="fas fa-umbrella-beach mr-2"></i>No hay vacaciones aprobadas en este período
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    
+    function formatearFechaCorta(fechaStr) {
+        if (!fechaStr) return '-';
+        const partes = fechaStr.split('-');
+        if (partes.length === 3) {
+            const dia = parseInt(partes[2]);
+            const mes = parseInt(partes[1]) - 1;
+            return `${dia} ${meses[mes]}`;
+        }
+        return fechaStr;
+    }
+    
+    let html = '';
+    vacacionesFiltradas.forEach((v, index) => {
+        const tipoLabel = v.tipo === 'PROGRAMADAS' ? 'Programadas' : v.tipo === 'ADELANTADAS' ? 'Adelantadas' : v.tipo || '-';
+        
+        html += `
+            <tr class="hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors">
+                <td class="px-3 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700">${index + 1}</td>
+                <td class="px-3 py-2 text-left text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-slate-700 whitespace-nowrap">${escapeHtml(v.empresa || '-')}</td>
+                <td class="px-3 py-2 text-left text-gray-900 dark:text-white font-semibold border-r border-gray-200 dark:border-slate-700 whitespace-nowrap">${escapeHtml(v.empleado || '-')}</td>
+                <td class="px-3 py-2 text-center text-gray-900 dark:text-white font-mono border-r border-gray-200 dark:border-slate-700">${escapeHtml(v.num_documento || '-')}</td>
+                <td class="px-3 py-2 text-left text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-slate-700 whitespace-nowrap">${escapeHtml(v.area || '-')}</td>
+                <td class="px-3 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700">${formatearFechaCorta(v.fecha_inicio)}</td>
+                <td class="px-3 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700">${formatearFechaCorta(v.fecha_fin)}</td>
+                <td class="px-3 py-2 text-center text-gray-900 dark:text-white font-bold border-r border-gray-200 dark:border-slate-700">${v.dias || '-'}</td>
+                <td class="px-3 py-2 text-center border-r border-gray-200 dark:border-slate-700">
+                    <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${v.tipo === 'PROGRAMADAS' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'}">
+                        ${tipoLabel}
+                    </span>
+                </td>
+                <td class="px-3 py-2 text-center">
+                    <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                        ${v.estado || 'APROBADO'}
+                    </span>
+                </td>
             </tr>
         `;
     });
@@ -335,6 +477,12 @@ function obtenerColoresDetalle(detalle) {
         return {
             colorMinutos: 'text-orange-600 dark:text-orange-400 font-bold',
             colorDetalle: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 font-semibold'
+        };
+    }
+    if (detalleUpper === 'VACACIONES') {
+        return {
+            colorMinutos: 'text-purple-600 dark:text-purple-400 font-bold',
+            colorDetalle: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 font-semibold'
         };
     }
     if (detalleUpper === 'SIN MARCACIÓN') {
@@ -381,6 +529,7 @@ function determinarColorFila(detalleT1, detalleT2) {
     const t1 = (detalleT1 || '').toUpperCase();
     const t2 = (detalleT2 || '').toUpperCase();
     
+    if (t1 === 'VACACIONES' || t2 === 'VACACIONES') return 'bg-purple-50/50 dark:bg-purple-900/10';
     if (t1 === 'TARDANZA') return 'bg-yellow-50/50 dark:bg-yellow-900/10';
     if (t2 === 'SALIDA TEMPRANA') return 'bg-orange-50/50 dark:bg-orange-900/10';
     if (t1 === 'ASISTENCIA' && t2 === 'CUMPLIÓ HORARIO') return 'bg-green-50/50 dark:bg-green-900/10';

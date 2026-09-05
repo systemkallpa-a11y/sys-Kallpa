@@ -9,10 +9,16 @@
                 <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Gestión de Usuarios</h1>
                 <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Administra los usuarios del sistema</p>
             </div>
-            <button id="btn-crear-usuario" class="flex items-center gap-2 px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg">
-                <i class="fas fa-plus"></i>
-                <span>Crear Usuario</span>
-            </button>
+            <div class="flex items-center gap-3">
+                <div class="relative">
+                    <input type="text" id="buscar-usuario" placeholder="Buscar por nombre..." class="w-72 px-4 py-2 pl-10 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                </div>
+                <button id="btn-crear-usuario" class="flex items-center gap-2 px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg">
+                    <i class="fas fa-plus"></i>
+                    <span>Crear Usuario</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -452,6 +458,11 @@ document.addEventListener('DOMContentLoaded', function() {
     cargarAreas();
     cargarEmpresas();
     cargarDepartamentos();
+    
+    // Filtrar usuarios al escribir en el buscador
+    document.getElementById('buscar-usuario').addEventListener('input', function() {
+        cargarUsuarios();
+    });
 });
 
 // Manejar cambios de departamento
@@ -573,7 +584,12 @@ document.getElementById('btn-crear-usuario').addEventListener('click', function(
 
 // Cargar usuarios
 function cargarUsuarios() {
-    fetch('/api/usuarios/obtener')
+    const termino = document.getElementById('buscar-usuario').value.trim();
+    const url = termino 
+        ? `/api/usuarios/obtener?q=${encodeURIComponent(termino)}`
+        : '/api/usuarios/obtener';
+    
+    fetch(url)
         .then(r => r.json())
         .then(data => {
             if (data.success && data.data.length > 0) {

@@ -83,6 +83,11 @@
             color: white;
         }
 
+        .badge-vacaciones {
+            background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+            color: white;
+        }
+
         /* Optimización táctil móvil */
         button, .btn {
             -webkit-tap-highlight-color: transparent;
@@ -287,6 +292,9 @@
     </div>
 
     <script>
+    // ==================== VARIABLE USUARIO ====================
+    const userDocumento = '{{ session.get("user_documento", "") }}';
+    
     // ==================== ACTUALIZAR FECHA ====================
     function actualizarFecha() {
         const ahora = new Date();
@@ -699,13 +707,13 @@
     // ==================== CARGAR HISTORIAL ====================
     // ==================== CARGAR HISTORIAL CON ESTADOS ====================
     function cargarHistorialMarcaciones() {
-        fetch('{{ url_for("marcacion.obtener_historial_marcacion") }}', {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
+        Promise.all([
+            fetch('{{ url_for("marcacion.obtener_historial_marcacion") }}', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(r => r.json()),
+            fetch('/api/vacaciones/obtener?estado=APROBADO').then(r => r.json()).catch(() => ({ success: false, data: [] }))
+        ])
+        .then(([data, vacData]) => {
             const historialDiv = document.getElementById('historialMarcaciones');
             
             if (data.success && data.data && data.data.length > 0) {
@@ -715,16 +723,14 @@
                 const marcacionesPorFecha = {};
                 
                 data.data.forEach(marcacion => {
-                    // 🔧 Extraer fecha en formato YYYY-MM-DD (garantizado por backend)
                     let fecha = null;
                     
                     if (marcacion.fecha) {
-                        fecha = String(marcacion.fecha).split('T')[0]; // Extraer solo YYYY-MM-DD
+                        fecha = String(marcacion.fecha).split('T')[0];
                     } else if (marcacion.fecha_marcacion) {
                         fecha = String(marcacion.fecha_marcacion).split('T')[0];
                     }
                     
-                    // 🔧 Extraer hora en formato HH:MM
                     let hora = '00:00';
                     if (marcacion.hora_marcacion) {
                         hora = String(marcacion.hora_marcacion).substring(0, 5);
@@ -739,12 +745,7 @@
                     const minutos = marcacion.minutos_diferencia || 0;
                     const tipo = marcacion.tipo_marcacion;
                     
-                    console.log(`📅 Procesando: fecha=${fecha}, hora=${hora}, estado=${estado}, tipo=${tipo}`);
-                    
-                    if (!fecha || fecha === 'null') {
-                        console.warn('⚠️ Fecha no válida, omitiendo marcación:', marcacion);
-                        return;
-                    }
+                    if (!fecha || fecha === 'null') return;
                     
                     if (!marcacionesPorFecha[fecha]) {
                         marcacionesPorFecha[fecha] = {
@@ -759,7 +760,6 @@
                         };
                     }
                     
-                    // Determinar turno (usar variable 'tipo' ya declarada arriba)
                     const horaNum = parseInt(hora.split(':')[0]);
                     const turno = marcacion.turno || (horaNum < 12 ? 1 : 2);
                     
@@ -782,12 +782,62 @@
                     }
                 });
                 
-                // Generar HTML compacto para móviles (estilo oscuro)
+                // Agregar días de vacaciones sin marcación
+                if (vacData.success && vacData.data && vacData.data.length > 0) {
+                    const vacaciones = vacData.data.filter(v => 
+                        v.num_documento && v.num_documento.toString() === userDocumento.toString()
+                    );
+                    
+                    vacaciones.forEach(v => {
+                        if (!v.fecha_inicio || !v.fecha_fin) return;
+                        
+                        const inicio = new Date(v.fecha_inicio + 'T00:00:00');
+                        const fin = new Date(v.fecha_fin + 'T00:00:00');
+                        const hoy = new Date();
+                        hoy.setHours(23, 59, 59, 999);
+                        
+                        // Recorrer cada día de la vacación
+                        const fechaActual = new Date(inicio);
+                        while (fechaActual <= fin && fechaActual <= hoy) {
+                            const fechaStr = fechaActual.toISOString().split('T')[0];
+                            
+                            // Solo agregar si no hay marcaciones ese día
+                            if (!marcacionesPorFecha[fechaStr]) {
+                                marcacionesPorFecha[fechaStr] = {
+                                    turno1_entrada: null,
+                                    turno1_entrada_estado: 'VACACIONES',
+                                    turno1_entrada_minutos: 0,
+                                    turno1_salida: null,
+                                    turno2_entrada: null,
+                                    turno2_entrada_estado: 'VACACIONES',
+                                    turno2_entrada_minutos: 0,
+                                    turno2_salida: null
+                                };
+                            }
+                            
+                            fechaActual.setDate(fechaActual.getDate() + 1);
+                        }
+                    });
+                }
+                
+                // Generar HTML compacto
                 let html = '';
                 
-                // Función helper para renderizar entrada con estado
                 function renderizarEntrada(hora, estado, minutos) {
                     if (!hora) {
+                        // Si el estado es VACACIONES y no hay hora, mostrar badge de vacaciones
+                        if (estado === 'VACACIONES') {
+                            return `
+                                <div class="space-y-1">
+                                    <div class="text-purple-400 font-bold text-sm">
+                                        <i class="fas fa-umbrella-beach text-xs"></i> --:--
+                                    </div>
+                                    <div class="badge-vacaciones px-2 py-0.5 rounded-lg text-[10px] font-semibold inline-block">
+                                        🌴 Vacaciones
+                                    </div>
+                                </div>
+                            `;
+                        }
                         return `<div class="text-slate-500 text-xs">--:--</div>`;
                     }
                     
@@ -803,6 +853,9 @@
                     } else if (estado === 'TARDE') {
                         badge = 'badge-tarde';
                         textoEstado = `Tarde +${minutos}min`;
+                    } else if (estado === 'VACACIONES') {
+                        badge = 'badge-vacaciones';
+                        textoEstado = '🌴 Vacaciones';
                     } else {
                         badge = 'bg-slate-700 text-slate-300';
                         textoEstado = estado || 'Sin horario';
@@ -834,13 +887,10 @@
                 // Ordenar fechas de más reciente a más antigua
                 const fechasOrdenadas = Object.keys(marcacionesPorFecha).sort().reverse();
                 
-                console.log('📅 Fechas a renderizar:', fechasOrdenadas);
-                
-                // Renderizar como cards compactas (no tabla)
+                // Renderizar como cards compactas
                 fechasOrdenadas.forEach(fecha => {
                     const datos = marcacionesPorFecha[fecha];
                     
-                    // Parsear fecha YYYY-MM-DD
                     let fechaFormato = fecha;
                     try {
                         const partes = fecha.split('-');
@@ -860,22 +910,27 @@
                         console.error('❌ Error parseando fecha:', fecha, error);
                     }
                     
-                    // Verificar si hay marcaciones ese día
                     const hayMarcaciones = datos.turno1_entrada || datos.turno1_salida || datos.turno2_entrada || datos.turno2_salida;
+                    const esVacacion = datos.turno1_entrada_estado === 'VACACIONES' || datos.turno2_entrada_estado === 'VACACIONES';
                     
-                    if (!hayMarcaciones) return; // Omitir días sin marcaciones
+                    // Mostrar si hay marcaciones o si es vacación
+                    if (!hayMarcaciones && !esVacacion) return;
+                    
+                    // Determinar color del borde según el estado
+                    let borderColor = 'border-slate-700';
+                    if (esVacacion && !hayMarcaciones) {
+                        borderColor = 'border-purple-500/50';
+                    }
                     
                     html += `
-                        <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-4 mb-3">
-                            <!-- Fecha -->
+                        <div class="bg-slate-800/50 border ${borderColor} rounded-xl p-4 mb-3">
                             <div class="flex items-center gap-2 mb-3 pb-2 border-b border-slate-700">
-                                <i class="fas fa-calendar text-green-400"></i>
+                                <i class="fas fa-calendar ${esVacacion ? 'text-purple-400' : 'text-green-400'}"></i>
                                 <span class="text-white font-bold text-sm">${fechaFormato}</span>
+                                ${esVacacion ? '<span class="badge-vacaciones px-2 py-0.5 rounded-lg text-[10px] font-semibold ml-auto">🌴 VACACIONES</span>' : ''}
                             </div>
                             
-                            <!-- Turnos -->
                             <div class="grid grid-cols-2 gap-4">
-                                <!-- Turno 1 -->
                                 <div>
                                     <div class="text-slate-400 text-[10px] font-semibold mb-2 flex items-center gap-1">
                                         <i class="fas fa-sun text-xs"></i> MAÑANA
@@ -892,7 +947,6 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Turno 2 -->
                                 <div>
                                     <div class="text-slate-400 text-[10px] font-semibold mb-2 flex items-center gap-1">
                                         <i class="fas fa-moon text-xs"></i> TARDE
@@ -913,12 +967,11 @@
                     `;
                 });
                 
-                // Si no hay marcaciones
                 if (html === '') {
                     html = `
                         <div class="text-center text-slate-400 py-8">
                             <i class="fas fa-inbox text-3xl mb-2 opacity-50"></i>
-                            <p class="text-sm">No hay marcaciones en los últimos 7 días</p>
+                            <p class="text-sm">No hay marcaciones ni vacaciones en los últimos 7 días</p>
                         </div>
                     `;
                 }

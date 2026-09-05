@@ -1,5 +1,5 @@
 # CONTEXTO DEL SISTEMA KALLPA
-**Última actualización:** 14/08/2026
+**Última actualización:** 29/08/2026
 
 ---
 
@@ -86,7 +86,7 @@ sys-Kallpa/
 │       ├── roles.html           # Roles
 │       ├── empresa.html         # Empresas
 │       ├── ot.html              # Órdenes de trabajo
-│       ├── vacaciones.html      # Vacaciones
+│       ├── vacaciones.html      # Vacaciones (CON API REAL)
 │       └── gerencia/            # Vistas de gerencia
 ├── database_scripts/            # Scripts SQL y documentación
 ├── docs_sistema/                # Documentación del sistema
@@ -123,10 +123,12 @@ sys-Kallpa/
 | TblOrdeneCompra | Órdenes de compra |
 | TblMarcacion | Marcaciones entrada/salida |
 | TblHorarioTrabajo | Horarios de trabajo |
+| TblVacaciones | Solicitudes de vacaciones |
+| TblVacacionSaldo | Saldo anual de vacaciones |
 | TblEmpresa | Empresas |
 | TblObra/Obrero | Proyectos/obras |
 
-**Stored Procedures:** ~49 SPs (sp_ReportePresupuestos, sp_ObtenerRequerimientosConAprobadores, sp_ObtenerRequerimientosAprobados, etc.)
+**Stored Procedures:** ~57 SPs (sp_ReportePresupuestos, sp_ObtenerRequerimientosConAprobadores, sp_ObtenerVacaciones, sp_CrearVacacion, sp_AprobarVacacion, etc.)
 
 ---
 
@@ -227,6 +229,15 @@ sys-Kallpa/
 
 ### 6.8 Roles
 - **Archivos:** roles.py, roles.html
+
+### 6.9 Módulo de Vacaciones
+- **Ruta:** `/vacaciones`
+- **Endpoint principal:** `/api/vacaciones/obtener` (usa SP sp_ObtenerVacaciones)
+- **Funcionalidad:** CRUD completo: solicitar, aprobar, rechazar, editar, eliminar
+- **Saldo:** 30 días/año, calculado automáticamente
+- **Integración:** Vacaciones aprobadas aparecen como "VACACIONES" en reporte de asistencia
+- **Archivos:** vacaciones.py (~350 líneas), vacaciones.html
+- **BD:** TblVacaciones, TblVacacionSaldo, 8 SPs
 
 ---
 
@@ -354,8 +365,14 @@ SSH_PASSWORD=<password>
 4. **Timezone:** Sistema usa UTC-5 (hora Perú)
 5. **Encoding:** Todo usa UTF-8
 6. **pdfplumber** está instalado pero NO está en requirements.txt
-7. **Blueprints registrados:** main_bp, auth_bp, pdf_bp, requerimientos_pdf_bp, logo_bp, materiales_bp, marcacion_bp
+7. **Blueprints registrados:** main_bp, auth_bp, pdf_bp, requerimientos_pdf_bp, logo_bp, materiales_bp, marcacion_bp, vacaciones (usa main_bp)
 
 ---
 
 *Documento generado automáticamente para mantener contexto entre sesiones de desarrollo.*
+
+Documentos de referencia:
+- `docs_sistema/01_PROBLEMAS_Y_SOLUCIONES.txt` - Errores conocidos
+- `docs_sistema/02_PASOS_EJECUCION_LOCAL.txt` - Pasos para ejecutar localmente
+- `docs_sistema/03_FUNCIONALIDADES_CAMBIOS.txt` - Importar PDF en presupuestos
+- `docs_sistema/04_FUNCIONALIDADES_CAMBIOS_29_08.txt` - Módulo de Vacaciones (29/08/2026)
