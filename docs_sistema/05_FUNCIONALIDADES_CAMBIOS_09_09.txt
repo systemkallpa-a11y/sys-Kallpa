@@ -1,0 +1,46 @@
+================================================================================
+KALLPA - FUNCIONALIDADES AGREGADAS Y CAMBIOS REALIZADOS
+Fecha creación: 09/09/2026
+================================================================================
+
+================================================================================
+FUNCIONALIDAD #1: COLUMNAS Y FILTRO DE EMPRESA EN GESTIÓN DE USUARIOS
+================================================================================
+
+ESTADO: IMPLEMENTADO
+
+DESCRIPCIÓN:
+  Se agrega el nombre de la empresa a la tabla de usuarios y un filtro
+  por empresa en la gestión de usuarios. Antes solo se mostraba el ID
+  numérico de la empresa, ahora se muestra el nombre legible.
+
+CAMBIOS REALIZADOS:
+
+  1. STORED PROCEDURE sp_ObtenerUsuarios (MySQL)
+     - Agregado: LEFT JOIN TblEmpresa e ON u.id_empresa = e.id_empresa
+     - Agregado: e.nombre AS empresa
+     - Antes: retornaba u.id_empresa (solo ID numérico)
+     - Ahora: retorna empresa (nombre legible de la empresa)
+
+  2. FRONTEND - Tabla de usuarios (usuarios.html)
+     - Agregado: columna "Empresa" en el header de la tabla
+     - Agregado: celda ${u.empresa || 'N/A'} en el template JavaScript
+     - Actualizado: colspan de 9 a 10 en empty state
+
+  3. BACKEND - API de usuarios (usuarios.py)
+     - Agregado: parámetro 'empresa' en endpoint GET /api/usuarios/obtener
+     - Lógica: filtra por empresa usando case-insensitive (lower())
+     - Se aplica después del filtro de nombre (ambos filtros combinados = AND)
+
+  4. FRONTEND - Filtro de empresa (usuarios.html)
+     - Agregado: input #filtrar-empresa con ícono fa-building
+     - Agregado: event listener input → cargarUsuarios()
+     - Modificado: cargarUsuarios() envía parámetro 'empresa' al backend
+
+ARCHIVOS MODIFICADOS:
+  1. app/routes/usuarios.py
+  2. app/templates/usuarios.html
+
+================================================================================
+FIN
+================================================================================

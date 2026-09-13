@@ -94,10 +94,12 @@ def registrar_marcacion():
         longitud = data.get('longitud')
         precision = data.get('precision')
         foto_base64 = data.get('foto_base64')
+        justificacion = data.get('justificacion')  # NUEVO
         
         print(f"[MARCACION] [...] Intentando registrar: documento={num_documento}, tipo={tipo_marcacion}")
         print(f"[MARCACION]  GPS: lat={latitud}, lon={longitud}, precisin={precision}")
         print(f"[MARCACION]  Foto: {'S' if foto_base64 else 'No'}")
+        print(f"[MARCACION]  Justificacion: {'S' if justificacion else 'No'}")
         
         if not num_documento or not tipo_marcacion:
             print(f"[MARCACION] [X] Datos incompletos")
@@ -111,9 +113,9 @@ def registrar_marcacion():
         try:
             cursor = connection.cursor(dictionary=True)
             
-            print(f"[MARCACION]  Llamando a SP con GPS y foto")
+            print(f"[MARCACION]  Llamando a SP con GPS, foto y justificacion")
             
-            # Llamar SP para registrar marcacin con GPS y foto
+            # Llamar SP para registrar marcacin con GPS, foto y justificacion
             cursor.execute("""
                 CALL sp_RegistrarMarcacionCompleta(
                     %s,  -- p_num_documento
@@ -122,10 +124,11 @@ def registrar_marcacion():
                     %s,  -- p_longitud
                     %s,  -- p_precision
                     %s,  -- p_foto_base64
+                    %s,  -- p_justificacion
                     @p_id_marcacion,
                     @p_mensaje
                 )
-            """, (num_documento, tipo_marcacion, latitud, longitud, precision, foto_base64))
+            """, (num_documento, tipo_marcacion, latitud, longitud, precision, foto_base64, justificacion))
             
             # Leer OUT parameters
             cursor.execute("SELECT @p_id_marcacion as id_marcacion, @p_mensaje as mensaje")

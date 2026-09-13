@@ -126,8 +126,9 @@ def usuarios():
 @main_bp.route('/api/usuarios/obtener', methods=['GET'])
 @login_required
 def obtener_usuarios():
-    """Obtener lista de usuarios usando SP, con filtro opcional por nombre"""
+    """Obtener lista de usuarios usando SP, con filtro opcional por nombre y empresa"""
     q = request.args.get('q', '').strip()
+    empresa = request.args.get('empresa', '').strip()
     
     connection = get_db_connection()
     if not connection:
@@ -150,6 +151,14 @@ def obtener_usuarios():
                 if q_lower in (u.get('nombres') or '').lower()
                 or q_lower in (u.get('apellido_paterno') or '').lower()
                 or q_lower in (u.get('apellido_materno') or '').lower()
+            ]
+        
+        # Filtrar por empresa si se proporciona
+        if empresa:
+            empresa_lower = empresa.lower()
+            usuarios = [
+                u for u in usuarios
+                if empresa_lower in (u.get('empresa') or '').lower()
             ]
         
         cursor.close()

@@ -14,6 +14,10 @@
                     <input type="text" id="buscar-usuario" placeholder="Buscar por nombre..." class="w-72 px-4 py-2 pl-10 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent">
                     <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                 </div>
+                <div class="relative">
+                    <input type="text" id="filtrar-empresa" placeholder="Filtrar por empresa..." class="w-72 px-4 py-2 pl-10 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent">
+                    <i class="fas fa-building absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                </div>
                 <button id="btn-crear-usuario" class="flex items-center gap-2 px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg">
                     <i class="fas fa-plus"></i>
                     <span>Crear Usuario</span>
@@ -37,13 +41,14 @@
                             <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Usuario</th>
                             <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Cargo</th>
                             <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Área</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Empresa</th>
                             <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Estado</th>
                             <th class="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="usuarios-lista" class="divide-y divide-gray-200 dark:divide-slate-700">
                         <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                            <td colspan="9" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                            <td colspan="10" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                                 <i class="fas fa-spinner fa-spin mr-2"></i>Cargando usuarios...
                             </td>
                         </tr>
@@ -463,6 +468,11 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('buscar-usuario').addEventListener('input', function() {
         cargarUsuarios();
     });
+    
+    // Filtrar usuarios al escribir en el filtro de empresa
+    document.getElementById('filtrar-empresa').addEventListener('input', function() {
+        cargarUsuarios();
+    });
 });
 
 // Manejar cambios de departamento
@@ -585,9 +595,14 @@ document.getElementById('btn-crear-usuario').addEventListener('click', function(
 // Cargar usuarios
 function cargarUsuarios() {
     const termino = document.getElementById('buscar-usuario').value.trim();
-    const url = termino 
-        ? `/api/usuarios/obtener?q=${encodeURIComponent(termino)}`
-        : '/api/usuarios/obtener';
+    const empresa = document.getElementById('filtrar-empresa').value.trim();
+    
+    const params = new URLSearchParams();
+    if (termino) params.set('q', termino);
+    if (empresa) params.set('empresa', empresa);
+    
+    const queryString = params.toString();
+    const url = queryString ? `/api/usuarios/obtener?${queryString}` : '/api/usuarios/obtener';
     
     fetch(url)
         .then(r => r.json())
@@ -604,6 +619,7 @@ function cargarUsuarios() {
                             <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 font-mono">${u.usuario}</td>
                             <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${u.cargo || 'N/A'}</td>
                             <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${u.area || 'N/A'}</td>
+                            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">${u.empresa || 'N/A'}</td>
                             <td class="px-6 py-4 text-sm">
                                 <span class="px-3 py-1 rounded-full text-xs font-semibold ${
                                     u.estado === 'Activo' 
@@ -633,7 +649,7 @@ function cargarUsuarios() {
             } else {
                 document.getElementById('usuarios-lista').innerHTML = `
                     <tr>
-                        <td colspan="9" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <td colspan="10" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                             No hay usuarios registrados
                         </td>
                     </tr>
