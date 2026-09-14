@@ -288,6 +288,35 @@
                 class="w-full py-4 bg-white hover:bg-red-50 text-red-900 rounded-2xl font-black text-lg uppercase tracking-wider transition-all active:scale-95 shadow-2xl border-2 border-red-300">
                 <i class="fas fa-times-circle mr-2"></i> ENTENDIDO
             </button>
+            
+            <!-- Botón Justificar -->
+            <button onclick="abrirJustificacion()" 
+                id="btnAbrirJustificacion"
+                class="w-full py-4 bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white rounded-2xl font-black text-lg uppercase tracking-wider transition-all active:scale-95 shadow-2xl border-2 border-yellow-400 mt-3">
+                <i class="fas fa-pen mr-2"></i> JUSTIFICAR
+            </button>
+            
+            <!-- Sección de Justificación (oculta por defecto) -->
+            <div id="justificacionSection" class="hidden mt-4">
+                <div class="bg-black/30 rounded-xl p-4 border border-yellow-500/30">
+                    <label class="block text-yellow-300 text-sm font-bold mb-2">
+                        <i class="fas fa-exclamation-triangle mr-1"></i> Motivo de justificación
+                    </label>
+                    <textarea id="justificacionTexto" rows="3" 
+                        class="w-full px-4 py-3 rounded-xl bg-slate-900/80 border border-yellow-500/50 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent resize-none"
+                        placeholder="Describe el motivo por el cual no te encuentras en la ubicación autorizada..."></textarea>
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="enviarConJustificacion()" 
+                            class="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-all active:scale-95">
+                            <i class="fas fa-check mr-1"></i> Enviar
+                        </button>
+                        <button onclick="cerrarJustificacion()" 
+                            class="flex-1 py-3 bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-bold transition-all active:scale-95">
+                            <i class="fas fa-times mr-1"></i> Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -360,8 +389,22 @@
                     });
                 },
                 (error) => {
-                    console.warn('Error obteniendo ubicación:', error);
-                    resolve(null); // Continuar sin ubicación
+                    console.error('Error obteniendo ubicación:', error);
+                    let mensaje = '';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            mensaje = 'Debes activar tu ubicación en el navegador. Click en el ícono 🔒 junto a la URL → Ubicación → Permitir';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            mensaje = 'Tu dispositivo no puede determinar la ubicación. Activa el GPS.';
+                            break;
+                        case error.TIMEOUT:
+                            mensaje = 'Tiempo de espera agotado. Intenta nuevamente.';
+                            break;
+                        default:
+                            mensaje = 'No se pudo obtener la ubicación. Activa tu GPS.';
+                    }
+                    reject(new Error(mensaje));
                 },
                 {
                     enableHighAccuracy: true,
@@ -377,6 +420,8 @@
     let videoStream = null;
     let detectionInterval = null;
     let tipoMarcacionActual = null;
+    let fotoCapturada = null;
+    let ubicacionCapturada = null;
 
     // Cargar modelos de Face-API.js
     async function cargarModelosFaceAPI() {
@@ -554,13 +599,42 @@
             mensajeDiv.className = 'glass-card rounded-2xl p-4 text-center text-white border border-green-500/30';
             mensajeDiv.innerHTML = `
                 <i class="fas fa-spinner fa-spin text-2xl mb-2 block text-green-400"></i>
-                <p class="font-bold">Registrando marcación...</p>
-                <p class="text-xs mt-1 text-slate-300">GPS y verificación facial</p>
+                <p class="font-bold">Obteniendo ubicación GPS...</p>
+                <p class="text-xs mt-1 text-slate-300">Asegúrate de tener activada tu ubicación</p>
             `;
             mensajeDiv.classList.remove('hidden');
 
-            // Capturar ubicación GPS
-            const ubicacion = await obtenerUbicacion();
+            // Capturar ubicación GPS - REQUERIDO
+            let ubicacion;
+            try {
+                ubicacion = await obtenerUbicacion();
+            } catch (gpsError) {
+                // GPS falló - Mostrar mensaje de error
+                mensajeDiv.className = 'glass-card rounded-2xl p-4 text-center text-white border border-red-500/30';
+                mensajeDiv.innerHTML = `
+                    <i class="fas fa-map-marker-alt-slash text-3xl mb-2 block text-red-400"></i>
+                    <p class="font-bold text-red-300">Ubicación requerida</p>
+                    <p class="text-sm mt-2 text-slate-300">${gpsError.message}</p>
+                    <p class="text-xs mt-3 text-yellow-300">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Después de activar tu ubicación, haz clic en "Reintentar"
+                    </p>
+                `;
+                mensajeDiv.classList.remove('hidden');
+                
+                // Agregar botón de reintentar
+                const btnReintentar = document.createElement('button');
+                btnReintentar.className = 'mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-colors';
+                btnReintentar.innerHTML = '<i class="fas fa-sync-alt mr-1"></i> Reintentar';
+                btnReintentar.onclick = async () => {
+                    btnReintentar.disabled = true;
+                    btnReintentar.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Obteniendo ubicación...';
+                    await enviarMarcacion(tipo, fotoBase64);
+                };
+                mensajeDiv.appendChild(btnReintentar);
+                
+                return;
+            }
 
             console.log('📍 Ubicación:', ubicacion);
             console.log('📷 Foto capturada:', fotoBase64 ? 'Sí' : 'No');
@@ -616,7 +690,8 @@
                                   errorLower.includes('acerquese');
                 
                 if (esErrorGPS) {
-                    // ⚠️ ERROR GPS - Mostrar modal prominente
+                    // ⚠️ ERROR GPS - Guardar foto y mostrar modal
+                    fotoCapturada = fotoBase64;
                     mostrarModalErrorGPS(ubicacion, errorMensaje);
                 } else {
                     // Otro tipo de error - mostrar mensaje normal
@@ -670,6 +745,9 @@
     function mostrarModalErrorGPS(ubicacion, mensaje) {
         const modal = document.getElementById('modalErrorGPS');
         
+        // Guardar ubicación para usar en justificación
+        ubicacionCapturada = ubicacion;
+        
         // Actualizar información GPS si está disponible
         if (ubicacion) {
             const gpsActualSpan = document.getElementById('gpsActual');
@@ -698,10 +776,106 @@
         const modal = document.getElementById('modalErrorGPS');
         modal.classList.add('hidden');
         
+        // Cerrar sección de justificación si está abierta
+        cerrarJustificacion();
+        
         // Restaurar scroll del body
         document.body.style.overflow = '';
         
         console.log('✅ Modal GPS Error cerrado');
+    }
+
+    // ==================== JUSTIFICACIÓN DE MARCACIÓN ====================
+    function abrirJustificacion() {
+        document.getElementById('justificacionSection').classList.remove('hidden');
+        document.getElementById('btnAbrirJustificacion').classList.add('hidden');
+        document.getElementById('justificacionTexto').focus();
+    }
+
+    function cerrarJustificacion() {
+        document.getElementById('justificacionSection').classList.add('hidden');
+        document.getElementById('btnAbrirJustificacion').classList.remove('hidden');
+        document.getElementById('justificacionTexto').value = '';
+    }
+
+    async function enviarConJustificacion() {
+        const justificacion = document.getElementById('justificacionTexto').value.trim();
+        
+        if (!justificacion) {
+            alert('Debe ingresar un motivo de justificación');
+            return;
+        }
+
+        try {
+            // Mostrar mensaje de carga
+            const mensajeDiv = document.getElementById('mensajeMarcacion');
+            mensajeDiv.className = 'glass-card rounded-2xl p-4 text-center text-white border border-yellow-500/30';
+            mensajeDiv.innerHTML = `
+                <i class="fas fa-spinner fa-spin text-2xl mb-2 block text-yellow-400"></i>
+                <p class="font-bold">Registrando justificación...</p>
+            `;
+            mensajeDiv.classList.remove('hidden');
+
+            // Cerrar modal de GPS
+            cerrarModalErrorGPS();
+
+            // Enviar marcación con justificación, foto y GPS
+            const response = await fetch('{{ url_for("marcacion.registrar_marcacion") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    tipo_marcacion: tipoMarcacionActual,
+                    latitud: ubicacionCapturada?.latitud || null,
+                    longitud: ubicacionCapturada?.longitud || null,
+                    precision: ubicacionCapturada?.precision || null,
+                    foto_base64: fotoCapturada || null,
+                    justificacion: justificacion
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                mensajeDiv.className = 'glass-card rounded-2xl p-4 text-center border border-green-500';
+                mensajeDiv.innerHTML = `
+                    <i class="fas fa-check-circle text-3xl mb-2 block text-green-400"></i>
+                    <p class="font-bold text-white text-lg">${tipoMarcacionActual === 'ENTRADA' ? 'Entrada' : 'Salida'} registrada</p>
+                    <p class="text-sm mt-1 text-slate-300">${new Date().toLocaleTimeString('es-ES')}</p>
+                    <p class="text-xs mt-1 text-yellow-300">📝 Justificación enviada</p>
+                `;
+                mensajeDiv.classList.remove('hidden');
+
+                // Actualizar estado y historial
+                setTimeout(() => {
+                    cargarEstadoMarcacion();
+                    cargarHistorialMarcaciones();
+                    mensajeDiv.classList.add('hidden');
+                }, 2000);
+            } else {
+                mensajeDiv.className = 'glass-card rounded-2xl p-4 text-center border border-red-500';
+                mensajeDiv.innerHTML = `
+                    <i class="fas fa-exclamation-circle text-3xl mb-2 block text-red-400"></i>
+                    <p class="font-bold text-white">Error</p>
+                    <p class="text-sm mt-1 text-red-300">${data.error || 'No se pudo registrar'}</p>
+                `;
+                mensajeDiv.classList.remove('hidden');
+                setTimeout(() => mensajeDiv.classList.add('hidden'), 5000);
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            const mensajeDiv = document.getElementById('mensajeMarcacion');
+            mensajeDiv.className = 'glass-card rounded-2xl p-4 text-center border border-red-500';
+            mensajeDiv.innerHTML = `
+                <i class="fas fa-exclamation-circle text-3xl mb-2 block text-red-400"></i>
+                <p class="font-bold text-white">Error de conexión</p>
+                <p class="text-sm mt-1 text-red-300">No se pudo registrar la justificación</p>
+            `;
+            mensajeDiv.classList.remove('hidden');
+        }
     }
 
     // ==================== CARGAR HISTORIAL ====================
@@ -856,6 +1030,9 @@
                     } else if (estado === 'VACACIONES') {
                         badge = 'badge-vacaciones';
                         textoEstado = '🌴 Vacaciones';
+                    } else if (estado === 'JUSTIFICADO') {
+                        badge = 'bg-yellow-600 text-white';
+                        textoEstado = '📝 Justificado';
                     } else {
                         badge = 'bg-slate-700 text-slate-300';
                         textoEstado = estado || 'Sin horario';

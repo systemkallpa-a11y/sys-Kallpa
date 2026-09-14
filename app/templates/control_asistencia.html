@@ -4,6 +4,26 @@
 
 {% block content %}
 
+<style>
+    /* Sticky columns - SIEMPRE oscuro */
+    .sticky-col-1 { position: sticky; left: 0; z-index: 20; background: #0f172a; }
+    .sticky-col-2 { position: sticky; left: 60px; z-index: 20; background: #0f172a; }
+    .sticky-col-3 { position: sticky; left: 180px; z-index: 20; background: #0f172a; }
+    .sticky-col-5 { position: sticky; left: 260px; z-index: 20; background: #0f172a; }
+    
+    /* Colores OFICINA - SIEMPRE oscuro */
+    .bg-oficina { background: #1E3A5F; }
+    .text-oficina { color: #93C5FD; }
+    
+    /* Colores CAMPO - SIEMPRE oscuro */
+    .bg-campo { background: #064E3B; }
+    .text-campo { color: #6EE7B7; }
+    
+    /* Fondo oscuro para todas las celdas de la tabla */
+    #tabla-control-asistencia td { background: #0f172a; }
+    #tabla-control-asistencia tr { background: #0f172a; }
+</style>
+
 <div class="flex flex-col h-screen bg-gray-50 dark:bg-slate-950">
 
     <!-- Header -->
@@ -97,51 +117,71 @@
     <!-- Contenido Principal -->
     <div class="flex-1 overflow-auto p-6 space-y-6">
         <!-- Tabla de Asistencia -->
-        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-slate-700">
+        <div class="dark bg-slate-900 rounded-xl shadow-lg overflow-hidden border border-slate-700">
             <div class="px-4 py-3 bg-gradient-to-r from-green-700 to-green-800">
                 <h2 class="text-white font-bold text-sm flex items-center gap-2">
                     <i class="fas fa-clipboard-check"></i> Control de Asistencia
                 </h2>
             </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-xs">
+                <table class="w-full text-xs bg-slate-900">
                     <!-- Encabezado agrupado -->
                     <thead>
                         <tr class="bg-gradient-to-r from-green-700 to-green-800">
                             <th colspan="5" class="px-2 py-2 text-center text-white font-bold border-r border-green-600">DATOS DEL EMPLEADO</th>
                             <th colspan="3" class="px-2 py-2 text-center text-white font-bold border-r border-green-600">FECHA</th>
-                            <th colspan="3" class="px-2 py-2 text-center text-white font-bold border-r border-green-600">TURNO 1 (MAÑANA)</th>
-                            <th colspan="3" class="px-2 py-2 text-center text-white font-bold border-r border-green-600">TURNO 2 (TARDE)</th>
+                            <th colspan="8" class="px-2 py-2 text-center text-white font-bold border-r border-green-600" style="background:#1E40AF">OFICINA</th>
+                            <th colspan="8" class="px-2 py-2 text-center text-white font-bold border-r border-green-600" style="background:#065F46">CAMPO</th>
                             <th colspan="1" class="px-2 py-2 text-center text-white font-bold">ACCIÓN</th>
                         </tr>
                         <tr class="bg-gradient-to-r from-green-600 to-green-700">
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">EMPRESA</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">NOMBRES</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">DNI / CE</th>
+                            <th colspan="5" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500"></th>
+                            <th colspan="3" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500"></th>
+                            <th colspan="4" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#2563EB">Turno Mañana</th>
+                            <th colspan="4" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#1D4ED8">Turno Tarde</th>
+                            <th colspan="4" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#059669">Turno Mañana</th>
+                            <th colspan="4" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#047857">Turno Tarde</th>
+                            <th class="px-2 py-1"></th>
+                        </tr>
+                        <tr class="bg-gradient-to-r from-green-600 to-green-700">
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500 sticky left-0 bg-green-700 z-20">EMPRESA</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500 sticky left-[60px] bg-green-700 z-20">NOMBRES</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500 sticky left-[180px] bg-green-700 z-20">DNI / CE</th>
                             <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">CARGO</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">SEDE</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500 sticky left-[260px] bg-green-700 z-20">SEDE</th>
                             <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">DÍA</th>
                             <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">MES</th>
                             <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">AÑO</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">H. INGRESO</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">H. SALIDA</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">MINUTOS</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">DETALLE</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">H. INGRESO</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">H. SALIDA</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">MINUTOS</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">DETALLE</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#3B82F6">H.Ent</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#3B82F6">H.Sal</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#3B82F6">Min</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#3B82F6">Det</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#2563EB">H.Ent</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#2563EB">H.Sal</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#2563EB">Min</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#2563EB">Det</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#10B981">H.Ent</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#10B981">H.Sal</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#10B981">Min</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#10B981">Det</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#059669">H.Ent</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#059669">H.Sal</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#059669">Min</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#059669">Det</th>
                             <th class="px-2 py-2 text-center text-white font-semibold">ACCIÓN</th>
                         </tr>
                     </thead>
-                    <tbody id="tabla-control-asistencia" class="divide-y divide-gray-200 dark:divide-slate-700">
+                    <tbody id="tabla-control-asistencia" class="divide-y divide-slate-700">
                         <tr>
-                            <td colspan="17" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                            <td colspan="25" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                                 <i class="fas fa-spinner fa-spin mr-2"></i>Cargando datos...
                             </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+            <!-- Paginación -->
+            <div id="paginacion-controles" class="px-4 py-3 bg-gray-50 dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700">
             </div>
         </div>
 
@@ -212,40 +252,92 @@ MODAL: EDITAR HORAS DE MARCACIÓN
                     <p class="text-gray-500 dark:text-gray-400 text-sm" id="modal-fecha-marcaicon">Fecha: 01/01/2026</p>
                 </div>
                 
-                <!-- Turno 1 -->
-                <div class="mb-4 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
-                    <h4 class="text-gray-700 dark:text-gray-300 font-semibold text-xs mb-3 uppercase">
-                        <i class="fas fa-sun text-yellow-500 mr-1"></i>Turno 1 (Mañana)
+                <!-- Sección OFICINA -->
+                <div id="modal-seccion-oficina" class="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg">
+                    <h4 class="text-green-700 dark:text-green-400 font-semibold text-xs mb-3 uppercase">
+                        <i class="fas fa-building mr-1"></i>Oficina
                     </h4>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1">Ingreso</label>
-                            <input type="time" id="modal-hora-ingreso-t1" 
-                                   class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500">
+                    
+                    <!-- Turno Mañana -->
+                    <div class="mb-3 p-2 bg-white dark:bg-slate-700 rounded">
+                        <p class="text-gray-600 dark:text-gray-400 text-[10px] mb-2 font-semibold uppercase">
+                            <i class="fas fa-sun text-yellow-500 mr-1"></i>Turno Mañana
+                        </p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Entrada</label>
+                                <input type="time" id="modal-hora-ofi-t1-ent" 
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Salida</label>
+                                <input type="time" id="modal-hora-ofi-t1-sal" 
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500">
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1">Salida</label>
-                            <input type="time" id="modal-hora-salida-t1" 
-                                   class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <!-- Turno Tarde -->
+                    <div class="p-2 bg-white dark:bg-slate-700 rounded">
+                        <p class="text-gray-600 dark:text-gray-400 text-[10px] mb-2 font-semibold uppercase">
+                            <i class="fas fa-moon text-blue-500 mr-1"></i>Turno Tarde
+                        </p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Entrada</label>
+                                <input type="time" id="modal-hora-ofi-t2-ent" 
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Salida</label>
+                                <input type="time" id="modal-hora-ofi-t2-sal" 
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500">
+                            </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Turno 2 -->
-                <div class="mb-4 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
-                    <h4 class="text-gray-700 dark:text-gray-300 font-semibold text-xs mb-3 uppercase">
-                        <i class="fas fa-moon text-blue-500 mr-1"></i>Turno 2 (Tarde)
+                <!-- Sección CAMPO -->
+                <div id="modal-seccion-campo" class="mb-4 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-lg">
+                    <h4 class="text-emerald-700 dark:text-emerald-400 font-semibold text-xs mb-3 uppercase">
+                        <i class="fas fa-map-marker-alt mr-1"></i>Campo
                     </h4>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1">Ingreso</label>
-                            <input type="time" id="modal-hora-ingreso-t2" 
-                                   class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500">
+                    
+                    <!-- Turno Mañana -->
+                    <div class="mb-3 p-2 bg-white dark:bg-slate-700 rounded">
+                        <p class="text-gray-600 dark:text-gray-400 text-[10px] mb-2 font-semibold uppercase">
+                            <i class="fas fa-sun text-yellow-500 mr-1"></i>Turno Mañana
+                        </p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Entrada</label>
+                                <input type="time" id="modal-hora-cmp-t1-ent" 
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Salida</label>
+                                <input type="time" id="modal-hora-cmp-t1-sal" 
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500">
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1">Salida</label>
-                            <input type="time" id="modal-hora-salida-t2" 
-                                   class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <!-- Turno Tarde -->
+                    <div class="p-2 bg-white dark:bg-slate-700 rounded">
+                        <p class="text-gray-600 dark:text-gray-400 text-[10px] mb-2 font-semibold uppercase">
+                            <i class="fas fa-moon text-blue-500 mr-1"></i>Turno Tarde
+                        </p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Entrada</label>
+                                <input type="time" id="modal-hora-cmp-t2-ent" 
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Salida</label>
+                                <input type="time" id="modal-hora-cmp-t2-sal" 
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -279,6 +371,8 @@ MODAL: EDITAR HORAS DE MARCACIÓN
 let datosReporte = [];
 let datosFiltrados = [];
 let vacacionesAprobadas = [];
+let paginaActual = 1;
+const registrosPorPagina = 20;
 
 // ============================================================================
 // INICIALIZACIÓN
@@ -328,9 +422,13 @@ async function aplicarFiltrosControl() {
 // ============================================================================
 async function cargarControlAsistencia(fechaInicio, fechaFin, empleado) {
     const tbody = document.getElementById('tabla-control-asistencia');
+    
+    // Resetear paginación al cargar nuevos datos
+    paginaActual = 1;
+    
     tbody.innerHTML = `
         <tr>
-            <td colspan="17" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+            <td colspan="25" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                 <i class="fas fa-spinner fa-spin mr-2"></i>Cargando datos...
             </td>
         </tr>
@@ -393,7 +491,7 @@ async function cargarControlAsistencia(fechaInicio, fechaFin, empleado) {
         console.error('[CONTROL] Error:', error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="17" class="px-4 py-8 text-center text-red-500">
+                <td colspan="25" class="px-4 py-8 text-center text-red-500">
                     <i class="fas fa-exclamation-triangle mr-2"></i>Error al cargar datos: ${error.message}
                 </td>
             </tr>
@@ -410,51 +508,209 @@ function renderizarTabla(data) {
     if (!data || data.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="17" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                <td colspan="25" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     <i class="fas fa-inbox mr-2"></i>No se encontraron registros
                 </td>
             </tr>
         `;
+        document.getElementById('paginacion-controles').innerHTML = '';
         return;
     }
     
+    // Calcular paginación
+    const totalRegistros = data.length;
+    const totalPaginas = Math.ceil(totalRegistros / registrosPorPagina);
+    
+    if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+    if (paginaActual < 1) paginaActual = 1;
+    
+    const inicio = (paginaActual - 1) * registrosPorPagina;
+    const fin = inicio + registrosPorPagina;
+    const datosPagina = data.slice(inicio, fin);
+    
     let html = '';
     
-    data.forEach((fila, index) => {
-        const coloresT1 = obtenerColoresDetalle(fila.DETALLE_T1);
-        const coloresT2 = obtenerColoresDetalle(fila.DETALLE_T2);
-        const colorFila = determinarColorFila(fila.DETALLE_T1, fila.DETALLE_T2);
+    datosPagina.forEach((fila, index) => {
+        const colorFila = determinarColorFila(fila.DETALLE_OFI_T1, fila.DETALLE_OFI_T2);
+        
+        // Función para renderizar celda de hora con estilo
+        function celdaHora(valor, tipo) {
+            const bgColor = tipo === 'campo' ? 'bg-campo' : 'bg-oficina';
+            const textColor = tipo === 'campo' ? 'text-campo' : 'text-oficina';
+            if (!valor || valor === '-' || valor === 'NULL') return `<td class="px-2 py-2 text-center text-gray-400 dark:text-gray-500 border-r border-gray-200 dark:border-slate-700 ${bgColor}">--:--</td>`;
+            return `<td class="px-2 py-2 text-center ${textColor} dark:${textColor} font-semibold border-r border-gray-200 dark:border-slate-700 ${bgColor}">${escapeHtml(valor)}</td>`;
+        }
+        
+        // Función para renderizar detalle con color
+        function celdaDetalle(valor, justificacion, nombre, dia, mes, anio, turno) {
+            if (!valor || valor === '-') {
+                return '<td class="px-2 py-2 text-center text-gray-400 dark:text-gray-500 border-r border-gray-200 dark:border-slate-700">-</td>';
+            }
+            const colores = obtenerColoresDetalle(valor);
+            if (valor === 'CAMPO' && justificacion) {
+                return `<td class="px-2 py-2 text-center ${colores.colorDetalle} border-r border-gray-200 dark:border-slate-700">
+                    <span class="inline-flex items-center gap-1">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-200 text-emerald-800 dark:bg-emerald-800 dark:text-emerald-200">CAMPO</span>
+                        <button onclick="verJustificacion('${escapeHtml(nombre || '')}', '${escapeHtml(dia || '')}', '${escapeHtml(mes || '')}', '${escapeHtml(anio || '')}', '${turno}', '${escapeHtml((justificacion || '').replace(/'/g, "\\'").replace(/\n/g, " "))}')" class="px-1.5 py-0.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-[10px] font-medium transition-colors" title="Ver justificación"><i class="fas fa-eye"></i></button>
+                    </span>
+                </td>`;
+            }
+            return `<td class="px-2 py-2 text-center ${colores.colorDetalle} border-r border-gray-200 dark:border-slate-700">${escapeHtml(valor)}</td>`;
+        }
+        
+        // Función para renderizar minutos con color
+        function celdaMinutos(valor) {
+            if (!valor || valor === '-' || valor === 'NULL') {
+                return '<td class="px-2 py-2 text-center text-gray-400 dark:text-gray-500 border-r border-gray-200 dark:border-slate-700">--</td>';
+            }
+            let colorClass = 'text-gray-600 dark:text-gray-400';
+            if (valor.startsWith('+') && valor !== '+0:00') {
+                colorClass = 'text-green-600 dark:text-green-400 font-bold';
+            } else if (valor.startsWith('-') && valor !== '-0:00') {
+                colorClass = 'text-red-600 dark:text-red-400 font-bold';
+            }
+            return `<td class="px-2 py-2 text-center ${colorClass} border-r border-gray-200 dark:border-slate-700">${escapeHtml(valor)}</td>`;
+        }
         
         html += `
             <tr class="hover:bg-opacity-80 transition-colors ${colorFila}">
-                <td class="px-2 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.EMPRESA || '-')}</td>
-                <td class="px-2 py-2 text-left text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700 whitespace-nowrap">${escapeHtml(fila.NOMBRES || '-')}</td>
-                <td class="px-2 py-2 text-center text-gray-900 dark:text-white font-mono border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.DNI_CE || '-')}</td>
+                <td class="px-2 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700 sticky-col-1">${escapeHtml(fila.EMPRESA || '-')}</td>
+                <td class="px-2 py-2 text-left text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700 whitespace-nowrap sticky-col-2">${escapeHtml(fila.NOMBRES || '-')}</td>
+                <td class="px-2 py-2 text-center text-gray-900 dark:text-white font-mono border-r border-gray-200 dark:border-slate-700 sticky-col-3">${escapeHtml(fila.DNI_CE || '-')}</td>
                 <td class="px-2 py-2 text-left text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-slate-700 whitespace-nowrap">${escapeHtml(fila.CARGO || '-')}</td>
-                <td class="px-2 py-2 text-left text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-slate-700 whitespace-nowrap">${escapeHtml(fila.SEDE_TRABAJO || '-')}</td>
+                <td class="px-2 py-2 text-left text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-slate-700 whitespace-nowrap sticky-col-5">${escapeHtml(fila.SEDE_TRABAJO || '-')}</td>
                 <td class="px-2 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.DIA || '-')}</td>
                 <td class="px-2 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.MES || '-')}</td>
                 <td class="px-2 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.ANO || '-')}</td>
-                <td class="px-2 py-2 text-center text-gray-900 dark:text-white font-semibold border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.H_INGRESO_T1 || '-')}</td>
-                <td class="px-2 py-2 text-center text-gray-900 dark:text-white font-semibold border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.H_SALIDA_T1 || '-')}</td>
-                <td class="px-2 py-2 text-center ${coloresT1.colorMinutos} border-r border-gray-200 dark:border-slate-700">${formatearMinutos(fila.MINUTOS_T1)}</td>
-                <td class="px-2 py-2 text-center ${coloresT1.colorDetalle} border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.DETALLE_T1 || '-')}</td>
-                <td class="px-2 py-2 text-center text-gray-900 dark:text-white font-semibold border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.H_INGRESO_T2 || '-')}</td>
-                <td class="px-2 py-2 text-center text-gray-900 dark:text-white font-semibold border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.H_SALIDA_T2 || '-')}</td>
-                <td class="px-2 py-2 text-center ${coloresT2.colorMinutos} border-r border-gray-200 dark:border-slate-700">${formatearMinutos(fila.MINUTOS_T2)}</td>
-                <td class="px-2 py-2 text-center ${coloresT2.colorDetalle} border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.DETALLE_T2 || '-')}</td>
+                ${celdaHora(fila.H_ENTRADA_OFI_T1, 'oficina')}
+                ${celdaHora(fila.H_SALIDA_OFI_T1, 'oficina')}
+                ${celdaMinutos(fila.MINUTOS_T1)}
+                ${celdaDetalle(fila.DETALLE_OFI_T1, fila.JUSTIFICACION_ENT_T1, fila.NOMBRES, fila.DIA, fila.MES, fila.ANO, 'T1')}
+                ${celdaHora(fila.H_ENTRADA_OFI_T2, 'oficina')}
+                ${celdaHora(fila.H_SALIDA_OFI_T2, 'oficina')}
+                ${celdaMinutos(fila.MINUTOS_T2)}
+                ${celdaDetalle(fila.DETALLE_OFI_T2, fila.JUSTIFICACION_ENT_T2, fila.NOMBRES, fila.DIA, fila.MES, fila.ANO, 'T2')}
+                ${celdaHora(fila.H_ENTRADA_CMP_T1, 'campo')}
+                ${celdaHora(fila.H_SALIDA_CMP_T1, 'campo')}
+                ${celdaMinutos(fila.MINUTOS_T1)}
+                ${celdaDetalle(fila.DETALLE_CMP_T1, fila.JUSTIFICACION_ENT_T1, fila.NOMBRES, fila.DIA, fila.MES, fila.ANO, 'T1')}
+                ${celdaHora(fila.H_ENTRADA_CMP_T2, 'campo')}
+                ${celdaHora(fila.H_SALIDA_CMP_T2, 'campo')}
+                ${celdaMinutos(fila.MINUTOS_T2)}
+                ${celdaDetalle(fila.DETALLE_CMP_T2, fila.JUSTIFICACION_ENT_T2, fila.NOMBRES, fila.DIA, fila.MES, fila.ANO, 'T2')}
                 <td class="px-2 py-2 text-center">
-                    <button onclick="abrirModalEditar('${escapeHtml(fila.DNI_CE || '')}', '${escapeHtml(fila.H_INGRESO_T1 || '')}', '${escapeHtml(fila.H_SALIDA_T1 || '')}', '${escapeHtml(fila.H_INGRESO_T2 || '')}', '${escapeHtml(fila.H_SALIDA_T2 || '')}', '${escapeHtml(fila.NOMBRES || '')}', '${escapeHtml(fila.DIA || '')}', '${escapeHtml(fila.MES || '')}', '${escapeHtml(fila.ANO || '')}')" 
-                            class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-medium transition-colors"
-                            title="Editar horas">
-                        <i class="fas fa-edit mr-1"></i>Editar
-                    </button>
+                    <div class="flex items-center justify-center gap-1">
+                        <button onclick="abrirModalEditar('${escapeHtml(fila.DNI_CE || '')}', '${escapeHtml(fila.H_ENTRADA_OFI_T1 || '')}', '${escapeHtml(fila.H_SALIDA_OFI_T1 || '')}', '${escapeHtml(fila.H_ENTRADA_OFI_T2 || '')}', '${escapeHtml(fila.H_SALIDA_OFI_T2 || '')}', '${escapeHtml(fila.H_ENTRADA_CMP_T1 || '')}', '${escapeHtml(fila.H_SALIDA_CMP_T1 || '')}', '${escapeHtml(fila.H_ENTRADA_CMP_T2 || '')}', '${escapeHtml(fila.H_SALIDA_CMP_T2 || '')}', '${escapeHtml(fila.NOMBRES || '')}', '${escapeHtml(fila.DIA || '')}', '${escapeHtml(fila.MES || '')}', '${escapeHtml(fila.ANO || '')}')" 
+                                class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-medium transition-colors"
+                                title="Editar horas">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        ${(fila.JUSTIFICACION_ENT_T1 || fila.JUSTIFICACION_SAL_T1 || fila.JUSTIFICACION_ENT_T2 || fila.JUSTIFICACION_SAL_T2) 
+                            ? `<button onclick="verJustificacionesDia('${escapeHtml(fila.NOMBRES || '')}', '${escapeHtml(fila.DIA || '')}', '${escapeHtml(fila.MES || '')}', '${escapeHtml(fila.ANO || '')}', '${escapeHtml((fila.JUSTIFICACION_ENT_T1 || '').replace(/'/g, "\\'").replace(/\n/g, " "))}', '${escapeHtml((fila.JUSTIFICACION_SAL_T1 || '').replace(/'/g, "\\'").replace(/\n/g, " "))}', '${escapeHtml((fila.JUSTIFICACION_ENT_T2 || '').replace(/'/g, "\\'").replace(/\n/g, " "))}', '${escapeHtml((fila.JUSTIFICACION_SAL_T2 || '').replace(/'/g, "\\'").replace(/\n/g, " "))}')" 
+                                class="px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-[10px] font-medium transition-colors"
+                                title="Ver justificaciones">
+                                <i class="fas fa-file-alt"></i>
+                            </button>`
+                            : ''
+                        }
+                    </div>
                 </td>
             </tr>
         `;
     });
     
     tbody.innerHTML = html;
+    
+    // Renderizar controles de paginación
+    renderizarPaginacion(totalRegistros, totalPaginas);
+}
+
+// ============================================================================
+// RENDERIZAR CONTROLES DE PAGINACIÓN
+// ============================================================================
+function renderizarPaginacion(totalRegistros, totalPaginas) {
+    const contenedor = document.getElementById('paginacion-controles');
+    
+    if (totalPaginas <= 1) {
+        contenedor.innerHTML = `
+            <div class="text-xs text-gray-500 dark:text-gray-400">
+                Mostrando ${totalRegistros} registro${totalRegistros !== 1 ? 's' : ''}
+            </div>
+        `;
+        return;
+    }
+    
+    const inicio = (paginaActual - 1) * registrosPorPagina + 1;
+    const fin = Math.min(paginaActual * registrosPorPagina, totalRegistros);
+    
+    let botonesPagina = '';
+    
+    // Botón Primera página
+    botonesPagina += `
+        <button onclick="irAPagina(1)" ${paginaActual === 1 ? 'disabled' : ''} 
+            class="px-2 py-1 rounded text-xs font-medium ${paginaActual === 1 ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600'}">
+            <i class="fas fa-angle-double-left"></i>
+        </button>
+    `;
+    
+    // Botón Anterior
+    botonesPagina += `
+        <button onclick="irAPagina(${paginaActual - 1})" ${paginaActual === 1 ? 'disabled' : ''} 
+            class="px-2 py-1 rounded text-xs font-medium ${paginaActual === 1 ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600'}">
+            <i class="fas fa-angle-left"></i>
+        </button>
+    `;
+    
+    // Números de página (mostrar máximo 5)
+    let startPage = Math.max(1, paginaActual - 2);
+    let endPage = Math.min(totalPaginas, startPage + 4);
+    if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        botonesPagina += `
+            <button onclick="irAPagina(${i})" 
+                class="px-3 py-1 rounded text-xs font-medium ${i === paginaActual ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600'}">
+                ${i}
+            </button>
+        `;
+    }
+    
+    // Botón Siguiente
+    botonesPagina += `
+        <button onclick="irAPagina(${paginaActual + 1})" ${paginaActual === totalPaginas ? 'disabled' : ''} 
+            class="px-2 py-1 rounded text-xs font-medium ${paginaActual === totalPaginas ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600'}">
+            <i class="fas fa-angle-right"></i>
+        </button>
+    `;
+    
+    // Botón Última página
+    botonesPagina += `
+        <button onclick="irAPagina(${totalPaginas})" ${paginaActual === totalPaginas ? 'disabled' : ''} 
+            class="px-2 py-1 rounded text-xs font-medium ${paginaActual === totalPaginas ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600'}">
+            <i class="fas fa-angle-double-right"></i>
+        </button>
+    `;
+    
+    contenedor.innerHTML = `
+        <div class="flex items-center justify-between">
+            <div class="text-xs text-gray-500 dark:text-gray-400">
+                Mostrando <span class="font-semibold text-gray-700 dark:text-gray-300">${inicio}-${fin}</span> de <span class="font-semibold text-gray-700 dark:text-gray-300">${totalRegistros}</span> registros
+            </div>
+            <div class="flex items-center gap-1">
+                ${botonesPagina}
+            </div>
+        </div>
+    `;
+}
+
+// ============================================================================
+// NAVEGACIÓN DE PAGINACIÓN
+// ============================================================================
+function irAPagina(pagina) {
+    paginaActual = pagina;
+    renderizarTabla(datosFiltrados);
+    // Scroll al inicio de la tabla
+    document.getElementById('tabla-control-asistencia').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ============================================================================
@@ -587,10 +843,22 @@ function obtenerColoresDetalle(detalle) {
             colorDetalle: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500'
         };
     }
+    if (detalleUpper === 'JUSTIFICADO') {
+        return {
+            colorMinutos: 'text-yellow-600 dark:text-yellow-400 font-bold',
+            colorDetalle: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 font-semibold'
+        };
+    }
     if (detalleUpper === 'SIN HORARIO') {
         return {
             colorMinutos: 'text-purple-600 dark:text-purple-400',
             colorDetalle: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+        };
+    }
+    if (detalleUpper === 'CAMPO') {
+        return {
+            colorMinutos: 'text-emerald-600 dark:text-emerald-400 font-bold',
+            colorDetalle: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 font-semibold'
         };
     }
     
@@ -625,12 +893,12 @@ function determinarColorFila(detalleT1, detalleT2) {
     const t1 = (detalleT1 || '').toUpperCase();
     const t2 = (detalleT2 || '').toUpperCase();
     
-    if (t1 === 'VACACIONES' || t2 === 'VACACIONES') return 'bg-purple-50/50 dark:bg-purple-900/10';
-    if (t1 === 'TARDANZA') return 'bg-yellow-50/50 dark:bg-yellow-900/10';
-    if (t2 === 'SALIDA TEMPRANA') return 'bg-orange-50/50 dark:bg-orange-900/10';
-    if (t1 === 'ASISTENCIA' && t2 === 'CUMPLIÓ HORARIO') return 'bg-green-50/50 dark:bg-green-900/10';
-    if (t1 === 'SIN MARCACIÓN') return 'bg-gray-100/50 dark:bg-gray-800/30';
-    return '';
+    if (t1 === 'VACACIONES' || t2 === 'VACACIONES') return 'bg-purple-900/30';
+    if (t1 === 'TARDANZA') return 'bg-yellow-900/30';
+    if (t2 === 'SALIDA TEMPRANA') return 'bg-orange-900/30';
+    if (t1 === 'ASISTENCIA' && t2 === 'CUMPLIÓ HORARIO') return 'bg-green-900/30';
+    if (t1 === 'SIN MARCACIÓN') return 'bg-gray-700/50';
+    return 'bg-slate-800';
 }
 
 // ============================================================================
@@ -683,11 +951,12 @@ let marcacionEditando = {
 // ============================================================================
 // ABRIR MODAL EDITAR MARCACIÓN
 // ============================================================================
-async function abrirModalEditar(numDocumento, horaIngresoT1, horaSalidaT1, horaIngresoT2, horaSalidaT2,
+async function abrirModalEditar(numDocumento, hEntOfi1, hSalOfi1, hEntOfi2, hSalOfi2,
+                          hEntCmp1, hSalCmp1, hEntCmp2, hSalCmp2,
                           nombreEmpleado, dia, mes, anio) {
     
     console.log('[MODAL] === ABRIR MODAL EDITAR ===');
-    console.log('[MODAL] Parámetros recibidos:', { numDocumento, horaIngresoT1, horaSalidaT1, horaIngresoT2, horaSalidaT2, nombreEmpleado, dia, mes, anio });
+    console.log('[MODAL] Parámetros recibidos:', { numDocumento, hEntOfi1, hSalOfi1, hEntOfi2, hSalOfi2, hEntCmp1, hSalCmp1, hEntCmp2, hSalCmp2, nombreEmpleado, dia, mes, anio });
     
     // Guardar número de documento
     marcacionEditando.numDocumento = numDocumento;
@@ -703,24 +972,31 @@ async function abrirModalEditar(numDocumento, horaIngresoT1, horaSalidaT1, horaI
     document.getElementById('modal-empleado-nombre').textContent = nombreEmpleado || 'Sin nombre';
     document.getElementById('modal-fecha-marcaicon').textContent = `Fecha: ${diaFmt}/${mesFmt}/${anio}`;
     
-    // Cargar horas existentes en los inputs (solo si no son '-' o vacías)
-    document.getElementById('modal-hora-ingreso-t1').value = (horaIngresoT1 && horaIngresoT1 !== '-') ? horaIngresoT1 : '';
-    document.getElementById('modal-hora-salida-t1').value = (horaSalidaT1 && horaSalidaT1 !== '-') ? horaSalidaT1 : '';
-    document.getElementById('modal-hora-ingreso-t2').value = (horaIngresoT2 && horaIngresoT2 !== '-') ? horaIngresoT2 : '';
-    document.getElementById('modal-hora-salida-t2').value = (horaSalidaT2 && horaSalidaT2 !== '-') ? horaSalidaT2 : '';
+    // Función helper para determinar si una hora es válida
+    function esHoraValida(hora) {
+        return hora && hora !== '-' && hora !== 'null' && hora.trim() !== '';
+    }
     
-    console.log('[MODAL] Inputs cargados:', {
-        t1e: document.getElementById('modal-hora-ingreso-t1').value,
-        t1s: document.getElementById('modal-hora-salida-t1').value,
-        t2e: document.getElementById('modal-hora-ingreso-t2').value,
-        t2s: document.getElementById('modal-hora-salida-t2').value
+    // Cargar horas existentes (se mostrarán temporalmente, se ajustarán después con tipo_ubicacion)
+    document.getElementById('modal-hora-ofi-t1-ent').value = esHoraValida(hEntOfi1) ? hEntOfi1 : '';
+    document.getElementById('modal-hora-ofi-t1-sal').value = esHoraValida(hSalOfi1) ? hSalOfi1 : '';
+    document.getElementById('modal-hora-ofi-t2-ent').value = esHoraValida(hEntOfi2) ? hEntOfi2 : '';
+    document.getElementById('modal-hora-ofi-t2-sal').value = esHoraValida(hSalOfi2) ? hSalOfi2 : '';
+    document.getElementById('modal-hora-cmp-t1-ent').value = esHoraValida(hEntCmp1) ? hEntCmp1 : '';
+    document.getElementById('modal-hora-cmp-t1-sal').value = esHoraValida(hSalCmp1) ? hSalCmp1 : '';
+    document.getElementById('modal-hora-cmp-t2-ent').value = esHoraValida(hEntCmp2) ? hEntCmp2 : '';
+    document.getElementById('modal-hora-cmp-t2-sal').value = esHoraValida(hSalCmp2) ? hSalCmp2 : '';
+    
+    // Deshabilitar todos temporalmente
+    document.querySelectorAll('#modal-editar-marcacion input[type="time"]').forEach(input => {
+        input.disabled = true;
     });
     
     // Ocultar mensaje de estado
     const msgEstado = document.getElementById('modal-mensaje-estado');
     msgEstado.classList.add('hidden');
     
-    // Buscar IDs de las marcaciones
+    // Buscar IDs y tipo_ubicacion de las marcaciones
     const urlIds = `/api/marcacion/obtener-ids?num_documento=${numDocumento}&fecha=${marcacionEditando.fechaOriginal}`;
     console.log('[MODAL] Fetching IDs:', urlIds);
     
@@ -732,11 +1008,57 @@ async function abrirModalEditar(numDocumento, horaIngresoT1, horaSalidaT1, horaI
         console.log('[MODAL] Response body:', result);
         
         if (result.success) {
+            // Guardar IDs
             marcacionEditando.idT1Entrada = result.data.id_t1_entrada;
             marcacionEditando.idT1Salida = result.data.id_t1_salida;
             marcacionEditando.idT2Entrada = result.data.id_t2_entrada;
             marcacionEditando.idT2Salida = result.data.id_t2_salida;
             
+            // Guardar tipo_ubicacion
+            const tipoT1Ent = result.data.tipo_ubi_t1_ent;
+            const tipoT1Sal = result.data.tipo_ubi_t1_sal;
+            const tipoT2Ent = result.data.tipo_ubi_t2_ent;
+            const tipoT2Sal = result.data.tipo_ubi_t2_sal;
+            
+            console.log('[MODAL] Tipos ubicación:', { tipoT1Ent, tipoT1Sal, tipoT2Ent, tipoT2Sal });
+            
+            // Habilitar inputs según tipo_ubicacion
+            // T1 Entrada
+            if (tipoT1Ent === 'OFICINA') {
+                document.getElementById('modal-hora-ofi-t1-ent').disabled = false;
+            } else if (tipoT1Ent === 'CAMPO') {
+                document.getElementById('modal-hora-cmp-t1-ent').disabled = false;
+            }
+            
+            // T1 Salida
+            if (tipoT1Sal === 'OFICINA') {
+                document.getElementById('modal-hora-ofi-t1-sal').disabled = false;
+            } else if (tipoT1Sal === 'CAMPO') {
+                document.getElementById('modal-hora-cmp-t1-sal').disabled = false;
+            }
+            
+            // T2 Entrada
+            if (tipoT2Ent === 'OFICINA') {
+                document.getElementById('modal-hora-ofi-t2-ent').disabled = false;
+            } else if (tipoT2Ent === 'CAMPO') {
+                document.getElementById('modal-hora-cmp-t2-ent').disabled = false;
+            }
+            
+            // T2 Salida
+            if (tipoT2Sal === 'OFICINA') {
+                document.getElementById('modal-hora-ofi-t2-sal').disabled = false;
+            } else if (tipoT2Sal === 'CAMPO') {
+                document.getElementById('modal-hora-cmp-t2-sal').disabled = false;
+            }
+            
+            // Mostrar secciones si tienen al menos un input habilitado
+            const oficinaVisible = tipoT1Ent === 'OFICINA' || tipoT1Sal === 'OFICINA' || tipoT2Ent === 'OFICINA' || tipoT2Sal === 'OFICINA';
+            const campoVisible = tipoT1Ent === 'CAMPO' || tipoT1Sal === 'CAMPO' || tipoT2Ent === 'CAMPO' || tipoT2Sal === 'CAMPO';
+            
+            document.getElementById('modal-seccion-oficina').style.display = oficinaVisible ? 'block' : 'none';
+            document.getElementById('modal-seccion-campo').style.display = campoVisible ? 'block' : 'none';
+            
+            console.log('[MODAL] Secciones:', { oficinaVisible, campoVisible });
             console.log('[MODAL] IDs guardados:', marcacionEditando);
         } else {
             console.error('[MODAL] [X] Error del API:', result.error);
@@ -771,12 +1093,19 @@ function cerrarModalEditar() {
 async function guardarCambios() {
     console.log('[GUARDAR] === GUARDAR CAMBIOS ===');
     
-    const horaIngresoT1 = document.getElementById('modal-hora-ingreso-t1').value;
-    const horaSalidaT1 = document.getElementById('modal-hora-salida-t1').value;
-    const horaIngresoT2 = document.getElementById('modal-hora-ingreso-t2').value;
-    const horaSalidaT2 = document.getElementById('modal-hora-salida-t2').value;
+    // OFICINA
+    const ofiT1Ent = document.getElementById('modal-hora-ofi-t1-ent').value;
+    const ofiT1Sal = document.getElementById('modal-hora-ofi-t1-sal').value;
+    const ofiT2Ent = document.getElementById('modal-hora-ofi-t2-ent').value;
+    const ofiT2Sal = document.getElementById('modal-hora-ofi-t2-sal').value;
     
-    console.log('[GUARDAR] Horas capturadas:', { horaIngresoT1, horaSalidaT1, horaIngresoT2, horaSalidaT2 });
+    // CAMPO
+    const cmpT1Ent = document.getElementById('modal-hora-cmp-t1-ent').value;
+    const cmpT1Sal = document.getElementById('modal-hora-cmp-t1-sal').value;
+    const cmpT2Ent = document.getElementById('modal-hora-cmp-t2-ent').value;
+    const cmpT2Sal = document.getElementById('modal-hora-cmp-t2-sal').value;
+    
+    console.log('[GUARDAR] Horas capturadas:', { ofiT1Ent, ofiT1Sal, ofiT2Ent, ofiT2Sal, cmpT1Ent, cmpT1Sal, cmpT2Ent, cmpT2Sal });
     console.log('[GUARDAR] IDs disponibles:', marcacionEditando);
     
     const msgEstado = document.getElementById('modal-mensaje-estado');
@@ -784,7 +1113,8 @@ async function guardarCambios() {
     let totalEditados = 0;
     
     // Validar que al menos haya una hora para editar
-    if (!horaIngresoT1 && !horaSalidaT1 && !horaIngresoT2 && !horaSalidaT2) {
+    const hayHoras = [ofiT1Ent, ofiT1Sal, ofiT2Ent, ofiT2Sal, cmpT1Ent, cmpT1Sal, cmpT2Ent, cmpT2Sal].some(h => h);
+    if (!hayHoras) {
         console.log('[GUARDAR] [X] No hay horas para editar');
         msgEstado.textContent = 'Ingrese al menos una hora para editar';
         msgEstado.className = 'mb-3 p-2 rounded text-xs text-center bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
@@ -792,48 +1122,56 @@ async function guardarCambios() {
         return;
     }
     
-    // Editar Turno 1 - Entrada
-    if (marcacionEditando.idT1Entrada && horaIngresoT1) {
-        console.log(`[GUARDAR] Editando T1 Entrada: ID=${marcacionEditando.idT1Entrada}, Hora=${horaIngresoT1}`);
-        const resultado = await editarMarcacionIndividual(marcacionEditando.idT1Entrada, horaIngresoT1, marcacionEditando.fechaOriginal);
-        console.log(`[GUARDAR] Resultado T1 Entrada: ${resultado}`);
+    // T1 Entrada: usa OFICINA si tiene valor, si no CAMPO
+    if (marcacionEditando.idT1Entrada && ofiT1Ent) {
+        console.log(`[GUARDAR] Editando T1 Entrada (OFI): ID=${marcacionEditando.idT1Entrada}, Hora=${ofiT1Ent}`);
+        const resultado = await editarMarcacionIndividual(marcacionEditando.idT1Entrada, ofiT1Ent, marcacionEditando.fechaOriginal);
         if (resultado) totalEditados++;
         else hayErrores = true;
-    } else {
-        console.log(`[GUARDAR] Saltando T1 Entrada: id=${marcacionEditando.idT1Entrada}, hora=${horaIngresoT1}`);
+    } else if (marcacionEditando.idT1Entrada && cmpT1Ent) {
+        console.log(`[GUARDAR] Editando T1 Entrada (CMP): ID=${marcacionEditando.idT1Entrada}, Hora=${cmpT1Ent}`);
+        const resultado = await editarMarcacionIndividual(marcacionEditando.idT1Entrada, cmpT1Ent, marcacionEditando.fechaOriginal);
+        if (resultado) totalEditados++;
+        else hayErrores = true;
     }
     
-    // Editar Turno 1 - Salida
-    if (marcacionEditando.idT1Salida && horaSalidaT1) {
-        console.log(`[GUARDAR] Editando T1 Salida: ID=${marcacionEditando.idT1Salida}, Hora=${horaSalidaT1}`);
-        const resultado = await editarMarcacionIndividual(marcacionEditando.idT1Salida, horaSalidaT1, marcacionEditando.fechaOriginal);
-        console.log(`[GUARDAR] Resultado T1 Salida: ${resultado}`);
+    // T1 Salida: usa OFICINA si tiene valor, si no CAMPO
+    if (marcacionEditando.idT1Salida && ofiT1Sal) {
+        console.log(`[GUARDAR] Editando T1 Salida (OFI): ID=${marcacionEditando.idT1Salida}, Hora=${ofiT1Sal}`);
+        const resultado = await editarMarcacionIndividual(marcacionEditando.idT1Salida, ofiT1Sal, marcacionEditando.fechaOriginal);
         if (resultado) totalEditados++;
         else hayErrores = true;
-    } else {
-        console.log(`[GUARDAR] Saltando T1 Salida: id=${marcacionEditando.idT1Salida}, hora=${horaSalidaT1}`);
+    } else if (marcacionEditando.idT1Salida && cmpT1Sal) {
+        console.log(`[GUARDAR] Editando T1 Salida (CMP): ID=${marcacionEditando.idT1Salida}, Hora=${cmpT1Sal}`);
+        const resultado = await editarMarcacionIndividual(marcacionEditando.idT1Salida, cmpT1Sal, marcacionEditando.fechaOriginal);
+        if (resultado) totalEditados++;
+        else hayErrores = true;
     }
     
-    // Editar Turno 2 - Entrada
-    if (marcacionEditando.idT2Entrada && horaIngresoT2) {
-        console.log(`[GUARDAR] Editando T2 Entrada: ID=${marcacionEditando.idT2Entrada}, Hora=${horaIngresoT2}`);
-        const resultado = await editarMarcacionIndividual(marcacionEditando.idT2Entrada, horaIngresoT2, marcacionEditando.fechaOriginal);
-        console.log(`[GUARDAR] Resultado T2 Entrada: ${resultado}`);
+    // T2 Entrada: usa OFICINA si tiene valor, si no CAMPO
+    if (marcacionEditando.idT2Entrada && ofiT2Ent) {
+        console.log(`[GUARDAR] Editando T2 Entrada (OFI): ID=${marcacionEditando.idT2Entrada}, Hora=${ofiT2Ent}`);
+        const resultado = await editarMarcacionIndividual(marcacionEditando.idT2Entrada, ofiT2Ent, marcacionEditando.fechaOriginal);
         if (resultado) totalEditados++;
         else hayErrores = true;
-    } else {
-        console.log(`[GUARDAR] Saltando T2 Entrada: id=${marcacionEditando.idT2Entrada}, hora=${horaIngresoT2}`);
+    } else if (marcacionEditando.idT2Entrada && cmpT2Ent) {
+        console.log(`[GUARDAR] Editando T2 Entrada (CMP): ID=${marcacionEditando.idT2Entrada}, Hora=${cmpT2Ent}`);
+        const resultado = await editarMarcacionIndividual(marcacionEditando.idT2Entrada, cmpT2Ent, marcacionEditando.fechaOriginal);
+        if (resultado) totalEditados++;
+        else hayErrores = true;
     }
     
-    // Editar Turno 2 - Salida
-    if (marcacionEditando.idT2Salida && horaSalidaT2) {
-        console.log(`[GUARDAR] Editando T2 Salida: ID=${marcacionEditando.idT2Salida}, Hora=${horaSalidaT2}`);
-        const resultado = await editarMarcacionIndividual(marcacionEditando.idT2Salida, horaSalidaT2, marcacionEditando.fechaOriginal);
-        console.log(`[GUARDAR] Resultado T2 Salida: ${resultado}`);
+    // T2 Salida: usa OFICINA si tiene valor, si no CAMPO
+    if (marcacionEditando.idT2Salida && ofiT2Sal) {
+        console.log(`[GUARDAR] Editando T2 Salida (OFI): ID=${marcacionEditando.idT2Salida}, Hora=${ofiT2Sal}`);
+        const resultado = await editarMarcacionIndividual(marcacionEditando.idT2Salida, ofiT2Sal, marcacionEditando.fechaOriginal);
         if (resultado) totalEditados++;
         else hayErrores = true;
-    } else {
-        console.log(`[GUARDAR] Saltando T2 Salida: id=${marcacionEditando.idT2Salida}, hora=${horaSalidaT2}`);
+    } else if (marcacionEditando.idT2Salida && cmpT2Sal) {
+        console.log(`[GUARDAR] Editando T2 Salida (CMP): ID=${marcacionEditando.idT2Salida}, Hora=${cmpT2Sal}`);
+        const resultado = await editarMarcacionIndividual(marcacionEditando.idT2Salida, cmpT2Sal, marcacionEditando.fechaOriginal);
+        if (resultado) totalEditados++;
+        else hayErrores = true;
     }
     
     console.log(`[GUARDAR] Total editados: ${totalEditados}, Errores: ${hayErrores}`);
@@ -895,5 +1233,171 @@ async function editarMarcacionIndividual(idMarcacion, nuevaHora, fechaOriginal) 
         console.error(`[EDITAR] [X] Error de conexión en marcación ${idMarcacion}:`, error);
         return false;
     }
+}
+
+// ============================================================================
+// MODAL DE JUSTIFICACIÓN
+// ============================================================================
+function verJustificacion(nombre, dia, mes, anio, turno, texto) {
+    const turnoLabel = turno === 'T1' ? 'Turno 1 (Mañana)' : 'Turno 2 (Tarde)';
+    document.getElementById('justificacion-modal-nombre').textContent = nombre;
+    document.getElementById('justificacion-modal-fecha').textContent = `${dia}/${mes}/${anio}`;
+    document.getElementById('justificacion-modal-turno').textContent = turnoLabel;
+    document.getElementById('justificacion-modal-texto').textContent = texto || 'Sin justificación registrada';
+    document.getElementById('modalVerJustificacion').classList.remove('hidden');
+}
+
+function cerrarModalJustificacion() {
+    document.getElementById('modalVerJustificacion').classList.add('hidden');
+}
+
+// ============================================================================
+// VER JUSTIFICACIONES DEL DÍA (todas las justificaciones de una fila)
+// ============================================================================
+function verJustificacionesDia(nombre, dia, mes, anio, justEntT1, justSalT1, justEntT2, justSalT2) {
+    const fecha = `${dia}/${mes}/${anio}`;
+    document.getElementById('just-dia-nombre').textContent = nombre;
+    document.getElementById('just-dia-fecha').textContent = fecha;
+    
+    let html = '';
+    
+    // TURNO MAÑANA (T1)
+    const t1Ent = justEntT1 && justEntT1 !== 'null' && justEntT1.trim() !== '';
+    const t1Sal = justSalT1 && justSalT1 !== 'null' && justSalT1.trim() !== '';
+    
+    if (t1Ent || t1Sal) {
+        html += `<div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-4">`;
+        html += `<p class="text-xs text-emerald-600 dark:text-emerald-400 mb-3 font-semibold"><i class="fas fa-sun mr-1"></i>Turno Mañana</p>`;
+        
+        if (t1Ent) {
+            html += `
+                <div class="mb-2 last:mb-0">
+                    <span class="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200 mr-2">ENTRADA</span>
+                    <span class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">${escapeHtml(justEntT1)}</span>
+                </div>
+            `;
+        }
+        if (t1Sal) {
+            html += `
+                <div class="mb-2 last:mb-0">
+                    <span class="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-orange-200 text-orange-800 dark:bg-orange-800 dark:text-orange-200 mr-2">SALIDA</span>
+                    <span class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">${escapeHtml(justSalT1)}</span>
+                </div>
+            `;
+        }
+        html += `</div>`;
+    }
+    
+    // TURNO TARDE (T2)
+    const t2Ent = justEntT2 && justEntT2 !== 'null' && justEntT2.trim() !== '';
+    const t2Sal = justSalT2 && justSalT2 !== 'null' && justSalT2.trim() !== '';
+    
+    if (t2Ent || t2Sal) {
+        html += `<div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-4">`;
+        html += `<p class="text-xs text-emerald-600 dark:text-emerald-400 mb-3 font-semibold"><i class="fas fa-moon mr-1"></i>Turno Tarde</p>`;
+        
+        if (t2Ent) {
+            html += `
+                <div class="mb-2 last:mb-0">
+                    <span class="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200 mr-2">ENTRADA</span>
+                    <span class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">${escapeHtml(justEntT2)}</span>
+                </div>
+            `;
+        }
+        if (t2Sal) {
+            html += `
+                <div class="mb-2 last:mb-0">
+                    <span class="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-orange-200 text-orange-800 dark:bg-orange-800 dark:text-orange-200 mr-2">SALIDA</span>
+                    <span class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">${escapeHtml(justSalT2)}</span>
+                </div>
+            `;
+        }
+        html += `</div>`;
+    }
+    
+    if (!html) {
+        html = `
+            <div class="text-center text-gray-500 dark:text-gray-400 py-4">
+                <i class="fas fa-info-circle mr-2"></i>No hay justificaciones registradas
+            </div>
+        `;
+    }
+    
+    document.getElementById('just-dia-contenido').innerHTML = html;
+    document.getElementById('modalVerJustificacionesDia').classList.remove('hidden');
+}
+
+function cerrarModalJustificacionesDia() {
+    document.getElementById('modalVerJustificacionesDia').classList.add('hidden');
 }</script>
+
+<!-- Modal Ver Justificación -->
+<div id="modalVerJustificacion" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-200 dark:border-slate-600">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+                <i class="fas fa-file-alt mr-2 text-yellow-500"></i>Justificación
+            </h3>
+            <button onclick="cerrarModalJustificacion()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="space-y-3">
+            <div class="bg-gray-50 dark:bg-slate-700 rounded-xl p-3">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Empleado</p>
+                <p id="justificacion-modal-nombre" class="text-sm font-semibold text-gray-900 dark:text-white">-</p>
+            </div>
+            <div class="flex gap-3">
+                <div class="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 flex-1">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Fecha</p>
+                    <p id="justificacion-modal-fecha" class="text-sm font-semibold text-gray-900 dark:text-white">-</p>
+                </div>
+                <div class="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 flex-1">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Turno</p>
+                    <p id="justificacion-modal-turno" class="text-sm font-semibold text-gray-900 dark:text-white">-</p>
+                </div>
+            </div>
+            <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl p-4">
+                <p class="text-xs text-yellow-600 dark:text-yellow-400 mb-2 font-semibold">
+                    <i class="fas fa-pen mr-1"></i>Motivo de justificación
+                </p>
+                <p id="justificacion-modal-texto" class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">-</p>
+            </div>
+        </div>
+        <button onclick="cerrarModalJustificacion()" 
+            class="w-full mt-4 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-slate-600 dark:hover:bg-slate-500 text-gray-800 dark:text-white rounded-xl font-semibold transition-colors">
+            Cerrar
+        </button>
+    </div>
+</div>
+
+<!-- Modal Ver Justificaciones del Día -->
+<div id="modalVerJustificacionesDia" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-gray-200 dark:border-slate-600">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+                <i class="fas fa-file-alt mr-2 text-yellow-500"></i>Justificaciones del día
+            </h3>
+            <button onclick="cerrarModalJustificacionesDia()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="space-y-3 mb-4">
+            <div class="bg-gray-50 dark:bg-slate-700 rounded-xl p-3">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Empleado</p>
+                <p id="just-dia-nombre" class="text-sm font-semibold text-gray-900 dark:text-white">-</p>
+            </div>
+            <div class="bg-gray-50 dark:bg-slate-700 rounded-xl p-3">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Fecha</p>
+                <p id="just-dia-fecha" class="text-sm font-semibold text-gray-900 dark:text-white">-</p>
+            </div>
+        </div>
+        <div id="just-dia-contenido" class="space-y-3 mb-4"></div>
+        <button onclick="cerrarModalJustificacionesDia()" 
+            class="w-full py-3 bg-gray-200 hover:bg-gray-300 dark:bg-slate-600 dark:hover:bg-slate-500 text-gray-800 dark:text-white rounded-xl font-semibold transition-colors">
+            Cerrar
+        </button>
+    </div>
+</div>
+
 {% endblock %}

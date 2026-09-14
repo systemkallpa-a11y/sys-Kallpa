@@ -94,10 +94,12 @@ def registrar_marcacion():
         longitud = data.get('longitud')
         precision = data.get('precision')
         foto_base64 = data.get('foto_base64')
+        justificacion = data.get('justificacion')  # NUEVO
         
         print(f"[MARCACION] [...] Intentando registrar: documento={num_documento}, tipo={tipo_marcacion}")
         print(f"[MARCACION]  GPS: lat={latitud}, lon={longitud}, precisin={precision}")
         print(f"[MARCACION]  Foto: {'S' if foto_base64 else 'No'}")
+        print(f"[MARCACION]  Justificacion: {'S' if justificacion else 'No'}")
         
         if not num_documento or not tipo_marcacion:
             print(f"[MARCACION] [X] Datos incompletos")
@@ -111,9 +113,9 @@ def registrar_marcacion():
         try:
             cursor = connection.cursor(dictionary=True)
             
-            print(f"[MARCACION]  Llamando a SP con GPS y foto")
+            print(f"[MARCACION]  Llamando a SP con GPS, foto y justificacion")
             
-            # Llamar SP para registrar marcacin con GPS y foto
+            # Llamar SP para registrar marcacin con GPS, foto y justificacion
             cursor.execute("""
                 CALL sp_RegistrarMarcacionCompleta(
                     %s,  -- p_num_documento
@@ -122,10 +124,11 @@ def registrar_marcacion():
                     %s,  -- p_longitud
                     %s,  -- p_precision
                     %s,  -- p_foto_base64
+                    %s,  -- p_justificacion
                     @p_id_marcacion,
                     @p_mensaje
                 )
-            """, (num_documento, tipo_marcacion, latitud, longitud, precision, foto_base64))
+            """, (num_documento, tipo_marcacion, latitud, longitud, precision, foto_base64, justificacion))
             
             # Leer OUT parameters
             cursor.execute("SELECT @p_id_marcacion as id_marcacion, @p_mensaje as mensaje")
@@ -975,26 +978,36 @@ def exportar_control_asistencia_excel():
             )
             
             # ====================================================================
-            # ENCABEZADOS
+            # ENCABEZADOS (25 columnas - coincide con el SP)
             # ====================================================================
             
             headers = [
-                'Empresa',
-                'Nombres',
-                'DNI/CE',
-                'Cargo',
-                'Sede',
-                'Da',
-                'Mes',
-                'Ao',
-                'H. Ingreso T1',
-                'H. Salida T1',
-                'Min T1',
-                'Detalle T1',
-                'H. Ingreso T2',
-                'H. Salida T2',
-                'Min T2',
-                'Detalle T2'
+                'Empresa',           # 1
+                'Nombres',           # 2
+                'DNI/CE',            # 3
+                'Cargo',             # 4
+                'Sede',              # 5
+                'Dia',               # 6
+                'Mes',               # 7
+                'Ano',               # 8
+                'OFI T1 Entrada',    # 9
+                'OFI T1 Salida',     # 10
+                'CMP T1 Entrada',    # 11
+                'CMP T1 Salida',     # 12
+                'OFI T2 Entrada',    # 13
+                'OFI T2 Salida',     # 14
+                'CMP T2 Entrada',    # 15
+                'CMP T2 Salida',     # 16
+                'Min T1',            # 17
+                'Min T2',            # 18
+                'Detalle OFI T1',    # 19
+                'Detalle OFI T2',    # 20
+                'Detalle CMP T1',    # 21
+                'Detalle CMP T2',    # 22
+                'Justificacion ENT T1',  # 23
+                'Justificacion SAL T1',  # 24
+                'Justificacion ENT T2',  # 25
+                'Justificacion SAL T2'   # 26
             ]
             
             for col_num, header in enumerate(headers, 1):
@@ -1018,97 +1031,87 @@ def exportar_control_asistencia_excel():
             naranja_font = Font(color="92400E", bold=True, size=10)
             gris_fill = PatternFill(start_color="F3F4F6", end_color="F3F4F6", fill_type="solid")
             gris_font = Font(color="6B7280", size=10)
+            campo_fill = PatternFill(start_color="DBEAFE", end_color="DBEAFE", fill_type="solid")
+            campo_font = Font(color="1E40AF", bold=True, size=10)
             
             row_num = 2
             for reg in registros:
-                # Datos del empleado
+                # Datos del empleado (columnas 1-8)
                 ws.cell(row=row_num, column=1, value=reg.get('EMPRESA', '')).alignment = cell_alignment_center
                 ws.cell(row=row_num, column=2, value=reg.get('NOMBRES', '')).alignment = cell_alignment
                 ws.cell(row=row_num, column=3, value=reg.get('DNI_CE', '')).alignment = cell_alignment_center
                 ws.cell(row=row_num, column=4, value=reg.get('CARGO', '')).alignment = cell_alignment
                 ws.cell(row=row_num, column=5, value=reg.get('SEDE_TRABAJO', '')).alignment = cell_alignment
-                
-                # Fecha
                 ws.cell(row=row_num, column=6, value=reg.get('DIA', '')).alignment = cell_alignment_center
                 ws.cell(row=row_num, column=7, value=reg.get('MES', '')).alignment = cell_alignment_center
                 ws.cell(row=row_num, column=8, value=reg.get('ANO', '')).alignment = cell_alignment_center
                 
-                # Turno 1
-                ws.cell(row=row_num, column=9, value=reg.get('H_INGRESO_T1', '')).alignment = cell_alignment_center
-                ws.cell(row=row_num, column=10, value=reg.get('H_SALIDA_T1', '')).alignment = cell_alignment_center
+                # OFICINA T1 (columnas 9-10)
+                ws.cell(row=row_num, column=9, value=reg.get('H_ENTRADA_OFI_T1', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=10, value=reg.get('H_SALIDA_OFI_T1', '')).alignment = cell_alignment_center
                 
-                # Minutos T1 con formato horas:minutos
-                min_t1 = reg.get('MINUTOS_T1', '')
-                if min_t1 and min_t1 != '-' and min_t1 != 'Sin Marcacin':
-                    try:
-                        num_min = int(min_t1)
-                        horas = abs(num_min) // 60
-                        mins = abs(num_min) % 60
-                        formato = f"{horas}:{mins:02d}"
-                        if num_min > 0:
-                            min_t1_display = f"+{formato}"
-                        elif num_min < 0:
-                            min_t1_display = f"-{formato}"
-                        else:
-                            min_t1_display = "0:00"
-                    except:
-                        min_t1_display = str(min_t1)
-                else:
-                    min_t1_display = '-'
-                ws.cell(row=row_num, column=11, value=min_t1_display).alignment = cell_alignment_center
+                # CAMPO T1 (columnas 11-12)
+                ws.cell(row=row_num, column=11, value=reg.get('H_ENTRADA_CMP_T1', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=12, value=reg.get('H_SALIDA_CMP_T1', '')).alignment = cell_alignment_center
                 
-                # Detalle T1 con color
-                cell_detalle_t1 = ws.cell(row=row_num, column=12, value=reg.get('DETALLE_T1', ''))
-                cell_detalle_t1.alignment = cell_alignment_center
-                if reg.get('DETALLE_T1') == 'ASISTENCIA':
-                    cell_detalle_t1.fill = verde_fill
-                    cell_detalle_t1.font = verde_font
-                elif reg.get('DETALLE_T1') == 'TARDANZA':
-                    cell_detalle_t1.fill = amarillo_fill
-                    cell_detalle_t1.font = amarillo_font
-                elif reg.get('DETALLE_T1') == 'SIN MARCACIN':
-                    cell_detalle_t1.fill = gris_fill
-                    cell_detalle_t1.font = gris_font
+                # OFICINA T2 (columnas 13-14)
+                ws.cell(row=row_num, column=13, value=reg.get('H_ENTRADA_OFI_T2', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=14, value=reg.get('H_SALIDA_OFI_T2', '')).alignment = cell_alignment_center
                 
-                # Turno 2
-                ws.cell(row=row_num, column=13, value=reg.get('H_INGRESO_T2', '')).alignment = cell_alignment_center
-                ws.cell(row=row_num, column=14, value=reg.get('H_SALIDA_T2', '')).alignment = cell_alignment_center
+                # CAMPO T2 (columnas 15-16)
+                ws.cell(row=row_num, column=15, value=reg.get('H_ENTRADA_CMP_T2', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=16, value=reg.get('H_SALIDA_CMP_T2', '')).alignment = cell_alignment_center
                 
-                # Minutos T2 con formato horas:minutos
-                min_t2 = reg.get('MINUTOS_T2', '')
-                if min_t2 and min_t2 != '-' and min_t2 != 'Sin Marcacin':
-                    try:
-                        num_min = int(min_t2)
-                        horas = abs(num_min) // 60
-                        mins = abs(num_min) % 60
-                        formato = f"{horas}:{mins:02d}"
-                        if num_min > 0:
-                            min_t2_display = f"+{formato}"
-                        elif num_min < 0:
-                            min_t2_display = f"-{formato}"
-                        else:
-                            min_t2_display = "0:00"
-                    except:
-                        min_t2_display = str(min_t2)
-                else:
-                    min_t2_display = '-'
-                ws.cell(row=row_num, column=15, value=min_t2_display).alignment = cell_alignment_center
+                # Minutos T1 (columna 17)
+                min_t1 = reg.get('MINUTOS_T1', '-')
+                ws.cell(row=row_num, column=17, value=min_t1).alignment = cell_alignment_center
                 
-                # Detalle T2 con color
-                cell_detalle_t2 = ws.cell(row=row_num, column=16, value=reg.get('DETALLE_T2', ''))
-                cell_detalle_t2.alignment = cell_alignment_center
-                if reg.get('DETALLE_T2') == 'CUMPLI HORARIO':
-                    cell_detalle_t2.fill = verde_fill
-                    cell_detalle_t2.font = verde_font
-                elif reg.get('DETALLE_T2') == 'SALIDA TEMPRANA':
-                    cell_detalle_t2.fill = naranja_fill
-                    cell_detalle_t2.font = naranja_font
-                elif reg.get('DETALLE_T2') == 'SIN MARCACIN':
-                    cell_detalle_t2.fill = gris_fill
-                    cell_detalle_t2.font = gris_font
+                # Minutos T2 (columna 18)
+                min_t2 = reg.get('MINUTOS_T2', '-')
+                ws.cell(row=row_num, column=18, value=min_t2).alignment = cell_alignment_center
+                
+                # Detalle OFI T1 (columna 19)
+                cell_detalle_ofi_t1 = ws.cell(row=row_num, column=19, value=reg.get('DETALLE_OFI_T1', ''))
+                cell_detalle_ofi_t1.alignment = cell_alignment_center
+                if reg.get('DETALLE_OFI_T1') == 'ASISTENCIA':
+                    cell_detalle_ofi_t1.fill = verde_fill
+                    cell_detalle_ofi_t1.font = verde_font
+                elif reg.get('DETALLE_OFI_T1') == 'TARDANZA':
+                    cell_detalle_ofi_t1.fill = amarillo_fill
+                    cell_detalle_ofi_t1.font = amarillo_font
+                
+                # Detalle OFI T2 (columna 20)
+                cell_detalle_ofi_t2 = ws.cell(row=row_num, column=20, value=reg.get('DETALLE_OFI_T2', ''))
+                cell_detalle_ofi_t2.alignment = cell_alignment_center
+                if reg.get('DETALLE_OFI_T2') == 'ASISTENCIA':
+                    cell_detalle_ofi_t2.fill = verde_fill
+                    cell_detalle_ofi_t2.font = verde_font
+                elif reg.get('DETALLE_OFI_T2') == 'TARDANZA':
+                    cell_detalle_ofi_t2.fill = amarillo_fill
+                    cell_detalle_ofi_t2.font = amarillo_font
+                
+                # Detalle CMP T1 (columna 21)
+                cell_detalle_cmp_t1 = ws.cell(row=row_num, column=21, value=reg.get('DETALLE_CMP_T1', ''))
+                cell_detalle_cmp_t1.alignment = cell_alignment_center
+                if reg.get('DETALLE_CMP_T1') == 'CAMPO':
+                    cell_detalle_cmp_t1.fill = campo_fill
+                    cell_detalle_cmp_t1.font = campo_font
+                
+                # Detalle CMP T2 (columna 22)
+                cell_detalle_cmp_t2 = ws.cell(row=row_num, column=22, value=reg.get('DETALLE_CMP_T2', ''))
+                cell_detalle_cmp_t2.alignment = cell_alignment_center
+                if reg.get('DETALLE_CMP_T2') == 'CAMPO':
+                    cell_detalle_cmp_t2.fill = campo_fill
+                    cell_detalle_cmp_t2.font = campo_font
+                
+                # Justificaciones (columnas 23-26)
+                ws.cell(row=row_num, column=23, value=reg.get('JUSTIFICACION_ENT_T1', '')).alignment = cell_alignment
+                ws.cell(row=row_num, column=24, value=reg.get('JUSTIFICACION_SAL_T1', '')).alignment = cell_alignment
+                ws.cell(row=row_num, column=25, value=reg.get('JUSTIFICACION_ENT_T2', '')).alignment = cell_alignment
+                ws.cell(row=row_num, column=26, value=reg.get('JUSTIFICACION_SAL_T2', '')).alignment = cell_alignment
                 
                 # Aplicar bordes a toda la fila
-                for col in range(1, 17):
+                for col in range(1, 27):
                     ws.cell(row=row_num, column=col).border = border_style
                 
                 row_num += 1
@@ -1122,17 +1125,27 @@ def exportar_control_asistencia_excel():
             ws.column_dimensions['C'].width = 12  # DNI
             ws.column_dimensions['D'].width = 20  # Cargo
             ws.column_dimensions['E'].width = 15  # Sede
-            ws.column_dimensions['F'].width = 8   # Da
-            ws.column_dimensions['G'].width = 8   # Mes
-            ws.column_dimensions['H'].width = 8   # Ao
-            ws.column_dimensions['I'].width = 12  # H.Ingreso T1
-            ws.column_dimensions['J'].width = 12  # H.Salida T1
-            ws.column_dimensions['K'].width = 8   # Min T1
-            ws.column_dimensions['L'].width = 15  # Detalle T1
-            ws.column_dimensions['M'].width = 12  # H.Ingreso T2
-            ws.column_dimensions['N'].width = 12  # H.Salida T2
-            ws.column_dimensions['O'].width = 8   # Min T2
-            ws.column_dimensions['P'].width = 15  # Detalle T2
+            ws.column_dimensions['F'].width = 6   # Dia
+            ws.column_dimensions['G'].width = 6   # Mes
+            ws.column_dimensions['H'].width = 6   # Ano
+            ws.column_dimensions['I'].width = 12  # OFI T1 Entrada
+            ws.column_dimensions['J'].width = 12  # OFI T1 Salida
+            ws.column_dimensions['K'].width = 12  # CMP T1 Entrada
+            ws.column_dimensions['L'].width = 12  # CMP T1 Salida
+            ws.column_dimensions['M'].width = 12  # OFI T2 Entrada
+            ws.column_dimensions['N'].width = 12  # OFI T2 Salida
+            ws.column_dimensions['O'].width = 12  # CMP T2 Entrada
+            ws.column_dimensions['P'].width = 12  # CMP T2 Salida
+            ws.column_dimensions['Q'].width = 8   # Min T1
+            ws.column_dimensions['R'].width = 8   # Min T2
+            ws.column_dimensions['S'].width = 15  # Detalle OFI T1
+            ws.column_dimensions['T'].width = 15  # Detalle OFI T2
+            ws.column_dimensions['U'].width = 15  # Detalle CMP T1
+            ws.column_dimensions['V'].width = 15  # Detalle CMP T2
+            ws.column_dimensions['W'].width = 25  # Justificacion ENT T1
+            ws.column_dimensions['X'].width = 25  # Justificacion SAL T1
+            ws.column_dimensions['Y'].width = 25  # Justificacion ENT T2
+            ws.column_dimensions['Z'].width = 25  # Justificacion SAL T2
             
             # Fijar primera fila (encabezado)
             ws.freeze_panes = 'A2'
@@ -1212,13 +1225,18 @@ def obtener_ids_marcacion():
             
             if ids:
                 print(f"[OBTENER_IDS] [OK] IDs encontrados: T1E={ids['id_t1_entrada']}, T1S={ids['id_t1_salida']}, T2E={ids['id_t2_entrada']}, T2S={ids['id_t2_salida']}")
+                print(f"[OBTENER_IDS] [OK] Tipos: T1E={ids['tipo_ubi_t1_ent']}, T1S={ids['tipo_ubi_t1_sal']}, T2E={ids['tipo_ubi_t2_ent']}, T2S={ids['tipo_ubi_t2_sal']}")
                 return jsonify({
                     'success': True,
                     'data': {
                         'id_t1_entrada': ids['id_t1_entrada'],
                         'id_t1_salida': ids['id_t1_salida'],
                         'id_t2_entrada': ids['id_t2_entrada'],
-                        'id_t2_salida': ids['id_t2_salida']
+                        'id_t2_salida': ids['id_t2_salida'],
+                        'tipo_ubi_t1_ent': ids['tipo_ubi_t1_ent'],
+                        'tipo_ubi_t1_sal': ids['tipo_ubi_t1_sal'],
+                        'tipo_ubi_t2_ent': ids['tipo_ubi_t2_ent'],
+                        'tipo_ubi_t2_sal': ids['tipo_ubi_t2_sal']
                     }
                 })
             else:
