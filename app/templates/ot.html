@@ -4,9 +4,9 @@
 <div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
     <!-- Topbar -->
     <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
-        <div class="px-6 py-4 flex items-center justify-between">
+        <div class="px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Gestión de O.T (Órdenes de Trabajo)</h1>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Gestión de O.T (Órdenes de Trabajo)</h1>
                 <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Administra las órdenes de trabajo del proyecto</p>
             </div>
             <button id="btn-crear-ot" class="flex items-center gap-2 px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg">
@@ -49,7 +49,7 @@
 
 <!-- Modal: Crear/Editar O.T -->
 <div id="modal-ot" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-full md:max-w-2xl max-h-[90vh] overflow-y-auto">
         <!-- Header -->
         <div class="sticky top-0 bg-gradient-to-r from-slate-600 to-slate-700 text-white px-8 py-6 flex items-center justify-between border-b-2 border-slate-700">
             <div>
@@ -71,7 +71,7 @@
                     <i class="fas fa-info-circle text-slate-600 dark:text-slate-400"></i>
                     Información Básica
                 </h3>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Número O.T <span class="text-red-500">*</span>
@@ -127,7 +127,7 @@
                     <i class="fas fa-file-invoice-dollar text-slate-600 dark:text-slate-400"></i>
                     Presupuesto
                 </h3>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Monto Presupuestado (S/.) <span class="text-red-500">*</span>

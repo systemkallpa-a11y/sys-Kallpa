@@ -14,18 +14,18 @@
 
     <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
 
-        <div class="px-6 py-4">
+        <div class="px-4 md:px-6 py-3 md:py-4">
 
             <div class="flex items-center justify-between">
 
                 <div>
 
-                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">📊 Reporte de Asistencia</h1>
+                    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">📊 Reporte de Asistencia</h1>
                     <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Control y seguimiento de asistencia de todos los usuarios</p>
 
                 </div>
 
-                <div class="flex gap-2">
+                <div class="flex gap-2 flex-wrap">
 
                     <button id="btn-exportar" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
 
@@ -49,7 +49,7 @@
 
         <!-- Filtros -->
 
-        <div class="px-6 py-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700">
+        <div class="px-4 md:px-6 py-3 md:py-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700">
 
             <div class="flex items-end gap-4">
 
@@ -201,7 +201,7 @@
 
 <div id="modal-detalle-dia" class="hidden fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
 
-    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-full md:max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
 
         <!-- Header -->
 
@@ -482,7 +482,7 @@
 
 <div id="modal-detalle-memos" class="hidden fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
 
-    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-full md:max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
 
         <!-- Header -->
 
@@ -2265,7 +2265,7 @@ function renderizarListaMemos(memos) {
 
                             <h3 class="font-bold text-base mb-1">${memo.tipo_memo}</h3>
 
-                            <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
 
                                 <div>
 

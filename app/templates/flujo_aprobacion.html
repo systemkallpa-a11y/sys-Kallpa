@@ -4,9 +4,9 @@
 <div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
     <!-- Topbar -->
     <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
-        <div class="px-6 py-4 flex items-center justify-between">
+        <div class="px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Flujo de Aprobación</h1>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Flujo de Aprobación</h1>
                 <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Gestiona tipos de documentos y flujos de aprobación</p>
             </div>
         </div>
@@ -106,7 +106,7 @@
 
 <!-- MODAL: Crear Tipo de Documento -->
 <div id="modal-tipo-documento" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-full md:max-w-2xl">
         <!-- Header -->
         <div class="bg-gradient-to-r from-slate-700 to-slate-800 text-white px-6 py-5 flex items-center justify-between border-b border-slate-700">
             <div class="flex items-center gap-3">
@@ -139,7 +139,7 @@
                 </div>
 
                 <!-- Grid: Icono y Color -->
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Icono -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Icono (Font Awesome) *</label>
@@ -176,7 +176,7 @@
 
 <!-- MODAL: Crear Flujo de Aprobación - DINÁMICA V2.1 -->
 <div id="modal-flujo" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-    <div class="bg-white dark:bg-slate-900 rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div class="bg-white dark:bg-slate-900 rounded-lg shadow-2xl w-full max-w-full md:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         
         <!-- HEADER -->
         <div class="bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-600 text-white px-6 py-5 flex items-center justify-between border-b-2 border-blue-500">
@@ -207,7 +207,7 @@
                         <h3 class="font-bold text-gray-900 dark:text-white text-base">Información del Paso</h3>
                     </div>
                     
-                    <form id="form-flujo" class="grid grid-cols-2 gap-4">
+                    <form id="form-flujo" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <!-- Tipo de Documento (Full Width) -->
                         <div class="col-span-2">
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -261,7 +261,7 @@
 
                     <div class="space-y-4">
                         <!-- Selección: Área + Cargo + Orden -->
-                        <div class="grid grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wider">
                                     <i class="fas fa-building text-green-600 mr-1"></i>Área
@@ -337,7 +337,7 @@
 
 <!-- MODAL: Editar Flujo - NUEVO DISEÑO SIMPLIFICADO -->
 <div id="modal-detalles-flujo" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div class="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-full md:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         
         <!-- HEADER -->
         <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-5 flex items-center justify-between border-b-2 border-blue-500">

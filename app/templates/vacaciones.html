@@ -4,9 +4,9 @@
 <div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
     <!-- Topbar -->
     <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
-            <div class="px-6 py-4 flex items-center justify-between">
+            <div class="px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Gestión de Vacaciones</h1>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Gestión de Vacaciones</h1>
                 <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Administra las solicitudes y periodos de vacaciones del personal</p>
             </div>
         </div>
@@ -14,9 +14,9 @@
 
     <!-- Filtros -->
     <div class="px-6 py-4 bg-gray-100 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800">
-        <div class="flex items-center gap-3">
+        <div class="flex flex-col md:flex-row items-center gap-3">
             <input type="text" id="filtro-empleado" placeholder="Buscar empleado..." 
-                   class="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 w-64">
+                   class="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 w-full md:w-64">
             
             <select id="filtro-estado" class="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
                 <option value="">Todos los estados</option>
@@ -47,7 +47,7 @@
     <!-- Contenido Principal -->
     <div class="p-6">
         <!-- Estadísticas rápidas -->
-        <div class="grid grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md p-4 border-l-4 border-blue-500">
                 <div class="flex items-center justify-between">
                     <div>
@@ -130,7 +130,7 @@
 
 <!-- Modal: Solicitar/Editar Vacaciones -->
 <div id="modal-vacaciones" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-full md:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <!-- Header -->
         <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 flex items-center justify-between border-b border-blue-800">
             <div class="flex items-center gap-3">
@@ -163,7 +163,7 @@
                     </div>
 
                     <!-- Fechas -->
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Fecha Inicio *
@@ -231,7 +231,7 @@
 
 <!-- Modal: Ver Detalle Vacacion -->
 <div id="modal-detalle-vacacion" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-full md:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <!-- Header -->
         <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-6 py-4 flex items-center justify-between border-b border-indigo-800">
             <div class="flex items-center gap-3">
@@ -273,7 +273,7 @@
                     </div>
                     <span class="text-sm font-semibold text-gray-900 dark:text-white">Periodo</span>
                 </div>
-                <div class="ml-10 grid grid-cols-2 gap-4">
+                <div class="ml-10 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Inicio</p>
                         <p class="text-sm font-medium text-gray-900 dark:text-white" id="detalle-fecha-inicio">-</p>
@@ -293,7 +293,7 @@
                     </div>
                     <span class="text-sm font-semibold text-gray-900 dark:text-white">Informacion</span>
                 </div>
-                <div class="ml-10 grid grid-cols-3 gap-4">
+                <div class="ml-10 grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 text-center">
                         <p class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="detalle-dias">0</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400">Dias</p>
@@ -330,7 +330,7 @@
                     </div>
                     <span class="text-sm font-semibold text-gray-900 dark:text-white">Control</span>
                 </div>
-                <div class="ml-10 grid grid-cols-2 gap-4 text-xs text-gray-500 dark:text-gray-400">
+                <div class="ml-10 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-500 dark:text-gray-400">
                     <div>
                         <p>Solicitado: <span class="text-gray-700 dark:text-gray-300" id="detalle-fecha-solicitud">-</span></p>
                     </div>
