@@ -42,27 +42,57 @@ BEGIN
         TIME_FORMAT(MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.tipo_ubicacion = 'CAMPO' AND TIME(m.fecha_marcacion) >= '12:00:00' THEN TIME(m.fecha_marcacion) END), '%H:%i') AS H_ENTRADA_CMP_T2,
         TIME_FORMAT(MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.tipo_ubicacion = 'CAMPO' AND TIME(m.fecha_marcacion) > '14:00:00' THEN TIME(m.fecha_marcacion) END), '%H:%i') AS H_SALIDA_CMP_T2,
         
-        -- 8. MINUTOS T1
+        -- 8. MINUTOS T1 (reales - programados)
         CASE 
+            WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND TIME(m.fecha_marcacion) < '12:00:00' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             WHEN MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND TIME(m.fecha_marcacion) < '14:00:00' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
-            WHEN h.hora_salida IS NULL THEN '-'
+            WHEN h.hora_entrada IS NULL OR h.hora_salida IS NULL THEN '-'
             ELSE CONCAT(
-                IF(TIMESTAMPDIFF(MINUTE, h.hora_salida, MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND TIME(m.fecha_marcacion) < '14:00:00' THEN TIME(m.fecha_marcacion) END)) >= 0, '+', '-'),
-                LPAD(ABS(TIMESTAMPDIFF(MINUTE, h.hora_salida, MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND TIME(m.fecha_marcacion) < '14:00:00' THEN TIME(m.fecha_marcacion) END))) DIV 60, 2, '0'),
+                IF(
+                    (TIMESTAMPDIFF(MINUTE, 
+                        MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND TIME(m.fecha_marcacion) < '12:00:00' THEN TIME(m.fecha_marcacion) END),
+                        MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND TIME(m.fecha_marcacion) < '14:00:00' THEN TIME(m.fecha_marcacion) END)
+                    ) - TIMESTAMPDIFF(MINUTE, h.hora_entrada, h.hora_salida)) >= 0, '+', '-'),
+                LPAD(ABS(
+                    TIMESTAMPDIFF(MINUTE, 
+                        MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND TIME(m.fecha_marcacion) < '12:00:00' THEN TIME(m.fecha_marcacion) END),
+                        MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND TIME(m.fecha_marcacion) < '14:00:00' THEN TIME(m.fecha_marcacion) END)
+                    ) - TIMESTAMPDIFF(MINUTE, h.hora_entrada, h.hora_salida)
+                ) DIV 60, 2, '0'),
                 ':',
-                LPAD(ABS(TIMESTAMPDIFF(MINUTE, h.hora_salida, MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND TIME(m.fecha_marcacion) < '14:00:00' THEN TIME(m.fecha_marcacion) END))) MOD 60, 2, '0')
+                LPAD(ABS(
+                    TIMESTAMPDIFF(MINUTE, 
+                        MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND TIME(m.fecha_marcacion) < '12:00:00' THEN TIME(m.fecha_marcacion) END),
+                        MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND TIME(m.fecha_marcacion) < '14:00:00' THEN TIME(m.fecha_marcacion) END)
+                    ) - TIMESTAMPDIFF(MINUTE, h.hora_entrada, h.hora_salida)
+                ) MOD 60, 2, '0')
             )
         END AS MINUTOS_T1,
         
-        -- 9. MINUTOS T2
+        -- 9. MINUTOS T2 (reales - programados)
         CASE 
+            WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND TIME(m.fecha_marcacion) >= '12:00:00' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             WHEN MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND TIME(m.fecha_marcacion) > '14:00:00' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
-            WHEN h.hora_salida2 IS NULL THEN '-'
+            WHEN h.hora_entrada2 IS NULL OR h.hora_salida2 IS NULL THEN '-'
             ELSE CONCAT(
-                IF(TIMESTAMPDIFF(MINUTE, h.hora_salida2, MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND TIME(m.fecha_marcacion) > '14:00:00' THEN TIME(m.fecha_marcacion) END)) >= 0, '+', '-'),
-                LPAD(ABS(TIMESTAMPDIFF(MINUTE, h.hora_salida2, MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND TIME(m.fecha_marcacion) > '14:00:00' THEN TIME(m.fecha_marcacion) END))) DIV 60, 2, '0'),
+                IF(
+                    (TIMESTAMPDIFF(MINUTE, 
+                        MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND TIME(m.fecha_marcacion) >= '12:00:00' THEN TIME(m.fecha_marcacion) END),
+                        MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND TIME(m.fecha_marcacion) > '14:00:00' THEN TIME(m.fecha_marcacion) END)
+                    ) - TIMESTAMPDIFF(MINUTE, h.hora_entrada2, h.hora_salida2)) >= 0, '+', '-'),
+                LPAD(ABS(
+                    TIMESTAMPDIFF(MINUTE, 
+                        MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND TIME(m.fecha_marcacion) >= '12:00:00' THEN TIME(m.fecha_marcacion) END),
+                        MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND TIME(m.fecha_marcacion) > '14:00:00' THEN TIME(m.fecha_marcacion) END)
+                    ) - TIMESTAMPDIFF(MINUTE, h.hora_entrada2, h.hora_salida2)
+                ) DIV 60, 2, '0'),
                 ':',
-                LPAD(ABS(TIMESTAMPDIFF(MINUTE, h.hora_salida2, MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND TIME(m.fecha_marcacion) > '14:00:00' THEN TIME(m.fecha_marcacion) END))) MOD 60, 2, '0')
+                LPAD(ABS(
+                    TIMESTAMPDIFF(MINUTE, 
+                        MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND TIME(m.fecha_marcacion) >= '12:00:00' THEN TIME(m.fecha_marcacion) END),
+                        MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND TIME(m.fecha_marcacion) > '14:00:00' THEN TIME(m.fecha_marcacion) END)
+                    ) - TIMESTAMPDIFF(MINUTE, h.hora_entrada2, h.hora_salida2)
+                ) MOD 60, 2, '0')
             )
         END AS MINUTOS_T2,
         

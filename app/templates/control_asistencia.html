@@ -53,32 +53,48 @@
 
         <!-- Filtros compactos -->
         <div class="px-4 py-2 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700">
-            <div class="flex items-center gap-3 flex-wrap">
-                <!-- Fecha Inicio -->
-                <div>
-                    <input type="date" id="filtro-fecha-inicio" 
-                           class="px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <!-- Filtros izquierda -->
+                <div class="flex items-center gap-3 flex-wrap">
+                    <!-- Fecha Inicio -->
+                    <div>
+                        <input type="date" id="filtro-fecha-inicio" 
+                               class="px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
+                    </div>
+
+                    <!-- Separador -->
+                    <span class="text-gray-500 dark:text-gray-400 text-xs">al</span>
+
+                    <!-- Fecha Fin -->
+                    <div>
+                        <input type="date" id="filtro-fecha-fin" 
+                               class="px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
+                    </div>
+
+                    <!-- Empleado -->
+                    <div class="w-48">
+                        <input type="text" id="filtro-empleado" placeholder="Buscar empleado..."
+                               class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
+                    </div>
+
+                    <!-- Botón Buscar -->
+                    <button onclick="aplicarFiltrosControl()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors">
+                        <i class="fas fa-search mr-1"></i>Buscar
+                    </button>
                 </div>
 
-                <!-- Separador -->
-                <span class="text-gray-500 dark:text-gray-400 text-xs">al</span>
+                <!-- Botones derecha -->
+                <div class="flex items-center gap-2">
+                    <!-- Botón Tardanzas -->
+                    <button onclick="exportarTardanzas()" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-colors">
+                        <i class="fas fa-clock mr-1"></i>Exportaciones Excel de Tardanzas
+                    </button>
 
-                <!-- Fecha Fin -->
-                <div>
-                    <input type="date" id="filtro-fecha-fin" 
-                           class="px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
+                    <!-- Botón Horas Laboradas -->
+                    <button onclick="abrirModalHorasLaboradas()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-medium transition-colors">
+                        <i class="fas fa-business-time mr-1"></i>Horas Laboradas
+                    </button>
                 </div>
-
-                <!-- Empleado -->
-                <div class="w-48">
-                    <input type="text" id="filtro-empleado" placeholder="Buscar empleado..."
-                           class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
-                </div>
-
-                <!-- Botón Buscar -->
-                <button onclick="aplicarFiltrosControl()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors">
-                    <i class="fas fa-search mr-1"></i>Buscar
-                </button>
             </div>
         </div>
     </div>
@@ -357,6 +373,55 @@ MODAL: EDITAR HORAS DE MARCACIÓN
                     <i class="fas fa-save mr-1"></i>Guardar Cambios
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================================
+MODAL: HORAS LABORADAS - Seleccionar Empleado
+============================================================================ -->
+<div id="modal-horas-laboradas" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md">
+        <!-- Header -->
+        <div class="px-4 py-3 bg-purple-600 rounded-t-xl">
+            <h3 class="text-white font-bold text-sm">
+                <i class="fas fa-business-time mr-2"></i>Horas Laboradas - Seleccionar Empleado
+            </h3>
+        </div>
+        
+        <!-- Body -->
+        <div class="p-4">
+            <div class="mb-3">
+                <label class="block text-gray-700 dark:text-gray-300 text-xs font-semibold mb-1">Empleado *</label>
+                <select id="horas-lab-empleado" 
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm">
+                    <option value="">-- Seleccionar empleado --</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 text-xs font-semibold mb-1">Fecha Inicio</label>
+                    <input type="date" id="horas-lab-fecha-inicio" 
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-300 text-xs font-semibold mb-1">Fecha Fin</label>
+                    <input type="date" id="horas-lab-fecha-fin" 
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="px-4 py-3 bg-gray-50 dark:bg-slate-700 rounded-b-xl flex justify-end gap-2">
+            <button onclick="cerrarModalHorasLaboradas()" 
+                    class="px-4 py-2 bg-gray-300 dark:bg-slate-600 hover:bg-gray-400 dark:hover:bg-slate-500 text-gray-700 dark:text-white rounded-lg text-sm font-medium transition-colors">
+                Cancelar
+            </button>
+            <button onclick="exportarHorasLaboradas()" 
+                    class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors">
+                <i class="fas fa-download mr-1"></i>Exportar Excel
+            </button>
         </div>
     </div>
 </div>
@@ -934,6 +999,85 @@ function exportarExcel() {
     
     // Descargar archivo
     window.location.href = `/api/reportes/control-asistencia/excel?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;
+}
+
+// ============================================================================
+// EXPORTAR TARDANZAS A EXCEL
+// ============================================================================
+function exportarTardanzas() {
+    const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
+    const fechaFin = document.getElementById('filtro-fecha-fin').value;
+    
+    if (!fechaInicio || !fechaFin) {
+        alert('Seleccioná ambas fechas para exportar tardanzas');
+        return;
+    }
+    
+    console.log(`[TARDANZAS] Exportando tardanzas: ${fechaInicio} a ${fechaFin}`);
+    
+    window.location.href = `/api/reportes/control-asistencia/tardanzas-excel?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;
+}
+
+// ============================================================================
+// HORAS LABORADAS - MODAL Y EXPORTAR
+// ============================================================================
+function abrirModalHorasLaboradas() {
+    const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
+    const fechaFin = document.getElementById('filtro-fecha-fin').value;
+    
+    document.getElementById('horas-lab-fecha-inicio').value = fechaInicio;
+    document.getElementById('horas-lab-fecha-fin').value = fechaFin;
+    
+    cargarEmpleadosParaHorasLaboradas();
+    
+    document.getElementById('modal-horas-laboradas').classList.remove('hidden');
+}
+
+function cerrarModalHorasLaboradas() {
+    document.getElementById('modal-horas-laboradas').classList.add('hidden');
+}
+
+async function cargarEmpleadosParaHorasLaboradas() {
+    const select = document.getElementById('horas-lab-empleado');
+    
+    try {
+        const response = await fetch('/api/marcacion/empleados-activos');
+        const data = await response.json();
+        if (data.success && data.data) {
+            select.innerHTML = '<option value="">-- Seleccionar empleado --</option>';
+            data.data.forEach(emp => {
+                const option = document.createElement('option');
+                option.value = emp.num_documento;
+                option.textContent = `${emp.nombre_completo} (${emp.dni})`;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('[HORAS_LABORADAS] Error cargando empleados:', error);
+        select.innerHTML = '<option value="">-- Error al cargar empleados --</option>';
+    }
+}
+
+function exportarHorasLaboradas() {
+    const numDocumento = document.getElementById('horas-lab-empleado').value;
+    const fechaInicio = document.getElementById('horas-lab-fecha-inicio').value;
+    const fechaFin = document.getElementById('horas-lab-fecha-fin').value;
+    
+    if (!numDocumento) {
+        alert('Seleccioná un empleado');
+        return;
+    }
+    
+    if (!fechaInicio || !fechaFin) {
+        alert('Seleccioná ambas fechas');
+        return;
+    }
+    
+    console.log(`[HORAS_LABORADAS] Exportando: empleado=${numDocumento}, ${fechaInicio} a ${fechaFin}`);
+    
+    window.location.href = `/api/reportes/control-asistencia/horas-laboradas-excel?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}&num_documento=${numDocumento}`;
+    
+    cerrarModalHorasLaboradas();
 }
 
 // ============================================================================

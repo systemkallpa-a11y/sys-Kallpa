@@ -1344,3 +1344,444 @@ def editar_marcacion():
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+
+
+# ============================================================================
+# API: EXPORTAR TARDANZAS POR EMPLEADO A EXCEL
+# ============================================================================
+
+@marcacion_bp.route('/api/reportes/control-asistencia/tardanzas-excel', methods=['GET'])
+@login_required
+def exportar_tardanzas_excel():
+    """Exportar tardanzas por empleado a Excel usando sp_tardanzas_por_empleado"""
+    try:
+        fecha_inicio = request.args.get('fecha_inicio')
+        fecha_fin = request.args.get('fecha_fin')
+        
+        if not fecha_inicio or not fecha_fin:
+            return jsonify({'success': False, 'error': 'Se requieren fecha_inicio y fecha_fin'}), 400
+        
+        print(f"[TARDANZAS_EXCEL] [-] Exportando: {fecha_inicio} al {fecha_fin}")
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexion a BD'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            cursor.callproc('sp_tardanzas_por_empleado', [fecha_inicio, fecha_fin])
+            
+            registros = []
+            for result in cursor.stored_results():
+                registros = result.fetchall()
+            
+            cursor.close()
+            connection.close()
+            
+            print(f"[TARDANZAS_EXCEL] [OK] {len(registros)} registros obtenidos")
+            
+            if not registros:
+                return jsonify({'success': False, 'error': 'No hay datos de tardanzas para exportar'}), 404
+            
+            # ====================================================================
+            # CREAR ARCHIVO EXCEL
+            # ====================================================================
+            
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Tardanzas por Empleado"
+            
+            # Estilos
+            header_fill = PatternFill(start_color="DC2626", end_color="DC2626", fill_type="solid")
+            header_font = Font(color="FFFFFF", bold=True, size=10)
+            header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            
+            cell_alignment = Alignment(horizontal="left", vertical="center")
+            cell_alignment_center = Alignment(horizontal="center", vertical="center")
+            
+            border_style = Border(
+                left=Side(style='thin', color='D1D5DB'),
+                right=Side(style='thin', color='D1D5DB'),
+                top=Side(style='thin', color='D1D5DB'),
+                bottom=Side(style='thin', color='D1D5DB')
+            )
+            
+            # ====================================================================
+            # ENCABEZADOS (8 columnas)
+            # ====================================================================
+            
+            headers = [
+                'N°',                        # 1
+                'Empresa',                   # 2
+                'DNI',                       # 3
+                'Apellidos y Nombres',       # 4
+                'Cargo',                     # 5
+                'Horario',                   # 6
+                'Total Minutos Tarde',       # 7
+                'Total Horas Tarde'          # 8
+            ]
+            
+            for col_num, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col_num)
+                cell.value = header
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = header_alignment
+                cell.border = border_style
+            
+            # ====================================================================
+            # DATOS
+            # ====================================================================
+            
+            rojo_claro_fill = PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid")
+            rojo_claro_font = Font(color="991B1B", bold=True, size=10)
+            
+            row_num = 2
+            for reg in registros:
+                ws.cell(row=row_num, column=1, value=reg.get('N', row_num - 1)).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=2, value=reg.get('empresa', '')).alignment = cell_alignment
+                ws.cell(row=row_num, column=3, value=reg.get('dni_ce', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=4, value=reg.get('nombres', '')).alignment = cell_alignment
+                ws.cell(row=row_num, column=5, value=reg.get('cargo', '')).alignment = cell_alignment
+                ws.cell(row=row_num, column=6, value=reg.get('horario', '')).alignment = cell_alignment_center
+                
+                minutos = reg.get('total_minutos_tarde', 0)
+                celda_minutos = ws.cell(row=row_num, column=7, value=minutos)
+                celda_minutos.alignment = cell_alignment_center
+                if minutos > 60:
+                    celda_minutos.fill = rojo_claro_fill
+                    celda_minutos.font = rojo_claro_font
+                
+                ws.cell(row=row_num, column=8, value=reg.get('total_horas_tarde', '00:00')).alignment = cell_alignment_center
+                
+                for col in range(1, 9):
+                    ws.cell(row=row_num, column=col).border = border_style
+                
+                row_num += 1
+            
+            # ====================================================================
+            # AJUSTAR ANCHO DE COLUMNAS
+            # ====================================================================
+            
+            ws.column_dimensions['A'].width = 6   # N°
+            ws.column_dimensions['B'].width = 25  # Empresa
+            ws.column_dimensions['C'].width = 12  # DNI
+            ws.column_dimensions['D'].width = 35  # Apellidos y Nombres
+            ws.column_dimensions['E'].width = 20  # Cargo
+            ws.column_dimensions['F'].width = 28  # Horario
+            ws.column_dimensions['G'].width = 18  # Total Minutos Tarde
+            ws.column_dimensions['H'].width = 18  # Total Horas Tarde
+            
+            ws.freeze_panes = 'A2'
+            
+            # ====================================================================
+            # GUARDAR EN MEMORIA Y ENVIAR
+            # ====================================================================
+            
+            output = BytesIO()
+            wb.save(output)
+            output.seek(0)
+            
+            from datetime import datetime as dt
+            timestamp = dt.now().strftime('%Y%m%d_%H%M%S')
+            filename = f'Tardanzas_{fecha_inicio}_a_{fecha_fin}_{timestamp}.xlsx'
+            
+            print(f"[TARDANZAS_EXCEL] [OK] Archivo generado: {filename}")
+            
+            return send_file(
+                output,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=filename
+            )
+        
+        except Error as e:
+            print(f"[TARDANZAS_EXCEL] [X] Error SQL: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    except Exception as e:
+        print(f"[TARDANZAS_EXCEL] [X] Error general: {e}")
+        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+
+
+# ============================================================================
+# API: EXPORTAR HORAS LABORADAS A EXCEL
+# ============================================================================
+
+@marcacion_bp.route('/api/reportes/control-asistencia/horas-laboradas-excel', methods=['GET'])
+@login_required
+def exportar_horas_laboradas_excel():
+    """Exportar horas laboradas por empleado a Excel usando sp_horas_laboradas"""
+    try:
+        fecha_inicio = request.args.get('fecha_inicio')
+        fecha_fin = request.args.get('fecha_fin')
+        num_documento = request.args.get('num_documento')
+        
+        if not fecha_inicio or not fecha_fin:
+            return jsonify({'success': False, 'error': 'Se requieren fecha_inicio y fecha_fin'}), 400
+        
+        if not num_documento:
+            return jsonify({'success': False, 'error': 'Se requiere num_documento del empleado'}), 400
+        
+        print(f"[HORAS_LABORADAS] [-] Exportando: {fecha_inicio} al {fecha_fin}, empleado={num_documento}")
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexion a BD'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            cursor.callproc('sp_horas_laboradas', [fecha_inicio, fecha_fin, int(num_documento)])
+            
+            registros = []
+            for result in cursor.stored_results():
+                registros = result.fetchall()
+            
+            cursor.close()
+            connection.close()
+            
+            print(f"[HORAS_LABORADAS] [OK] {len(registros)} registros obtenidos")
+            
+            if not registros:
+                return jsonify({'success': False, 'error': 'No hay datos de horas laboradas para exportar'}), 404
+            
+            # ====================================================================
+            # CREAR ARCHIVO EXCEL
+            # ====================================================================
+            
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Horas Laboradas"
+            
+            # Estilos
+            header_fill = PatternFill(start_color="2563EB", end_color="2563EB", fill_type="solid")
+            header_font = Font(color="FFFFFF", bold=True, size=10)
+            header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            
+            subheader_fill = PatternFill(start_color="DBEAFE", end_color="DBEAFE", fill_type="solid")
+            subheader_font = Font(color="1E40AF", bold=True, size=10)
+            
+            cell_alignment = Alignment(horizontal="left", vertical="center")
+            cell_alignment_center = Alignment(horizontal="center", vertical="center")
+            
+            border_style = Border(
+                left=Side(style='thin', color='D1D5DB'),
+                right=Side(style='thin', color='D1D5DB'),
+                top=Side(style='thin', color='D1D5DB'),
+                bottom=Side(style='thin', color='D1D5DB')
+            )
+            
+            verde_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+            verde_font = Font(color="006100", bold=True, size=10)
+            gris_fill = PatternFill(start_color="F3F4F6", end_color="F3F4F6", fill_type="solid")
+            gris_font = Font(color="6B7280", size=10)
+            
+            # ====================================================================
+            # ENCABEZADO DEL REPORTE (Filas 1-3)
+            # ====================================================================
+            
+            # Fila 1: Titulo
+            ws.merge_cells('A1:H1')
+            cell_titulo = ws.cell(row=1, column=1, value='HORAS LABORADAS')
+            cell_titulo.font = Font(color="FFFFFF", bold=True, size=14)
+            cell_titulo.fill = header_fill
+            cell_titulo.alignment = Alignment(horizontal="center", vertical="center")
+            for col in range(1, 9):
+                ws.cell(row=1, column=col).fill = header_fill
+                ws.cell(row=1, column=col).border = border_style
+            
+            # Fila 2: Info del empleado
+            reg0 = registros[0]
+            nombre_completo = f"{reg0.get('apellido_paterno', '')} {reg0.get('apellido_materno', '')}, {reg0.get('nombres', '')}"
+            horario = reg0.get('horario', 'Sin horario')
+            dni = reg0.get('dni', '')
+            empresa = reg0.get('empresa', '')
+            cargo = reg0.get('cargo', '')
+            
+            ws.merge_cells('A2:H2')
+            cell_info = ws.cell(row=2, column=1, value=f'Empleado: {nombre_completo}  |  DNI: {dni}  |  Empresa: {empresa}  |  Cargo: {cargo}  |  Horario: {horario}')
+            cell_info.font = subheader_font
+            cell_info.fill = subheader_fill
+            cell_info.alignment = Alignment(horizontal="left", vertical="center")
+            for col in range(1, 9):
+                ws.cell(row=2, column=col).fill = subheader_fill
+                ws.cell(row=2, column=col).border = border_style
+            
+            # Fila 3: Resumen
+            total_minutos = sum(reg.get('minutos_totales', 0) for reg in registros)
+            total_horas = f"{total_minutos // 60}:{total_minutos % 60:02d}"
+            dias_con_asistencia = sum(1 for reg in registros if reg.get('minutos_totales', 0) > 0)
+            
+            ws.merge_cells('A3:H3')
+            cell_resumen = ws.cell(row=3, column=1, value=f'Total Horas: {total_horas}  |  Dias con Asistencia: {dias_con_asistencia}  |  Total Minutos: {total_minutos}')
+            cell_resumen.font = Font(color="374151", bold=True, size=10)
+            cell_resumen.fill = PatternFill(start_color="F9FAFB", end_color="F9FAFB", fill_type="solid")
+            cell_resumen.alignment = Alignment(horizontal="left", vertical="center")
+            for col in range(1, 9):
+                ws.cell(row=3, column=col).fill = PatternFill(start_color="F9FAFB", end_color="F9FAFB", fill_type="solid")
+                ws.cell(row=3, column=col).border = border_style
+            
+            # ====================================================================
+            # ENCABEZADOS DE LA TABLA (Fila 4)
+            # ====================================================================
+            
+            headers = [
+                'FECHA',           # 1
+                'DIA',             # 2
+                'ING. T1',         # 3
+                'SAL. T1',         # 4
+                'ING. T2',         # 5
+                'SAL. T2',         # 6
+                'HORAS LABORADAS', # 7
+                'MINUTOS'          # 8
+            ]
+            
+            for col_num, header in enumerate(headers, 1):
+                cell = ws.cell(row=4, column=col_num)
+                cell.value = header
+                cell.fill = PatternFill(start_color="374151", end_color="374151", fill_type="solid")
+                cell.font = Font(color="FFFFFF", bold=True, size=10)
+                cell.alignment = header_alignment
+                cell.border = border_style
+            
+            # ====================================================================
+            # DATOS (Fila 5 en adelante)
+            # ====================================================================
+            
+            row_num = 5
+            for reg in registros:
+                fecha = reg.get('fecha', '')
+                if hasattr(fecha, 'strftime'):
+                    fecha_str = fecha.strftime('%d/%m/%Y')
+                else:
+                    fecha_str = str(fecha)
+                
+                dia = reg.get('dia', '')
+                entrada_t1 = reg.get('entrada_t1', '-') or '-'
+                salida_t1 = reg.get('salida_t1', '-') or '-'
+                entrada_t2 = reg.get('entrada_t2', '-') or '-'
+                salida_t2 = reg.get('salida_t2', '-') or '-'
+                horas = reg.get('horas_laboradas', '00:00')
+                minutos = reg.get('minutos_totales', 0)
+                
+                ws.cell(row=row_num, column=1, value=fecha_str).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=2, value=dia).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=3, value=entrada_t1).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=4, value=salida_t1).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=5, value=entrada_t2).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=6, value=salida_t2).alignment = cell_alignment_center
+                
+                celda_horas = ws.cell(row=row_num, column=7, value=horas)
+                celda_horas.alignment = cell_alignment_center
+                
+                celda_minutos = ws.cell(row=row_num, column=8, value=minutos)
+                celda_minutos.alignment = cell_alignment_center
+                
+                if minutos > 0:
+                    celda_horas.fill = verde_fill
+                    celda_horas.font = verde_font
+                    celda_minutos.fill = verde_fill
+                    celda_minutos.font = verde_font
+                else:
+                    celda_horas.fill = gris_fill
+                    celda_horas.font = gris_font
+                    celda_minutos.fill = gris_fill
+                    celda_minutos.font = gris_font
+                
+                for col in range(1, 9):
+                    ws.cell(row=row_num, column=col).border = border_style
+                
+                row_num += 1
+            
+            # ====================================================================
+            # AJUSTAR ANCHO DE COLUMNAS
+            # ====================================================================
+            
+            ws.column_dimensions['A'].width = 14  # FECHA
+            ws.column_dimensions['B'].width = 14  # DIA
+            ws.column_dimensions['C'].width = 12  # ING. T1
+            ws.column_dimensions['D'].width = 12  # SAL. T1
+            ws.column_dimensions['E'].width = 12  # ING. T2
+            ws.column_dimensions['F'].width = 12  # SAL. T2
+            ws.column_dimensions['G'].width = 18  # HORAS LABORADAS
+            ws.column_dimensions['H'].width = 12  # MINUTOS
+            
+            ws.freeze_panes = 'A5'
+            
+            # ====================================================================
+            # GUARDAR EN MEMORIA Y ENVIAR
+            # ====================================================================
+            
+            output = BytesIO()
+            wb.save(output)
+            output.seek(0)
+            
+            from datetime import datetime as dt
+            timestamp = dt.now().strftime('%Y%m%d_%H%M%S')
+            nombre_limpio = nombre_completo.replace(' ', '_').replace(',', '')
+            filename = f'Horas_Laboradas_{nombre_limpio}_{fecha_inicio}_a_{fecha_fin}_{timestamp}.xlsx'
+            
+            print(f"[HORAS_LABORADAS] [OK] Archivo generado: {filename}")
+            
+            return send_file(
+                output,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=filename
+            )
+        
+        except Error as e:
+            print(f"[HORAS_LABORADAS] [X] Error SQL: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    except Exception as e:
+        print(f"[HORAS_LABORADAS] [X] Error general: {e}")
+        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+
+
+# ============================================================================
+# API: OBTENER EMPLEADOS ACTIVOS
+# ============================================================================
+
+@marcacion_bp.route('/api/marcacion/empleados-activos', methods=['GET'])
+@login_required
+def obtener_empleados_activos():
+    """Obtener lista de empleados activos para selects"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexion a BD'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            cursor.execute("""
+                SELECT DISTINCT 
+                    p.num_documento,
+                    CONCAT(p.nombres, ' ', p.apellido_paterno, ' ', p.apellido_materno) AS nombre_completo,
+                    p.documento_numero AS dni
+                FROM TblPersona p
+                INNER JOIN TblUsuario u ON p.num_documento = u.num_documento
+                WHERE u.estado = 'ACTIVO'
+                ORDER BY p.apellido_paterno, p.apellido_materno, p.nombres
+            """)
+            
+            empleados = cursor.fetchall()
+            
+            cursor.close()
+            connection.close()
+            
+            return jsonify({
+                'success': True,
+                'data': empleados
+            })
+        
+        except Error as e:
+            print(f"[EMPLEADOS_ACTIVOS] [X] Error SQL: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    except Exception as e:
+        print(f"[EMPLEADOS_ACTIVOS] [X] Error general: {e}")
+        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
