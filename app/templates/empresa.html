@@ -441,7 +441,7 @@
                 radio_metros: radio_metros
             })
         })
-        .then(response => response.json())
+        .then(parseJsonRespuesta)
         .then(data => {
             if (data.success) {
                 // Si hay archivo de logo, cargarlo
@@ -459,7 +459,7 @@
                     return { success: true, message: 'Empresa actualizada' };
                 }
             } else {
-                throw new Error(data.error || 'Error al guardar la empresa');
+                throw errorAplicacion(data.error || data.message || 'Error al guardar la empresa');
             }
         })
         .then(data => {
@@ -472,8 +472,7 @@
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            mostrarNotificacion('Error de conexión', 'error');
+            mostrarNotificacion(mensajeErrorFetch(error), 'error');
         })
         .finally(() => {
             btnGuardar.disabled = false;
@@ -817,7 +816,7 @@
                 radio_metros: parseInt(radio_metros)
             })
         })
-        .then(response => response.json())
+        .then(parseJsonRespuesta)
         .then(data => {
             if (data.success) {
                 const id_empresa_nueva = data.id_empresa;
@@ -837,7 +836,7 @@
                     return { success: true, message: 'Empresa creada sin logo' };
                 }
             } else {
-                throw new Error(data.error || 'Error al guardar la empresa');
+                throw errorAplicacion(data.error || data.message || 'Error al guardar la empresa');
             }
         })
         .then(data => {
@@ -850,13 +849,32 @@
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            mostrarNotificacion('Error de conexión', 'error');
+            mostrarNotificacion(mensajeErrorFetch(error), 'error');
         })
         .finally(() => {
             btnGuardar.disabled = false;
             btnGuardar.innerHTML = textoOriginal;
         });
+    }
+
+    // Diferencia un error devuelto por el backend de un fallo real de red
+    function errorAplicacion(mensaje) {
+        const error = new Error(mensaje);
+        error.esErrorAplicacion = true;
+        return error;
+    }
+
+    function parseJsonRespuesta(response) {
+        return response.json().catch(() => {
+            throw errorAplicacion(`El servidor no devolvió JSON (HTTP ${response.status})`);
+        });
+    }
+
+    function mensajeErrorFetch(error) {
+        console.error('Error:', error);
+        if (error && error.esErrorAplicacion) return error.message;
+        if (error instanceof SyntaxError) return 'Respuesta inválida del servidor';
+        return 'Error de conexión';
     }
 
     function mostrarNotificacion(mensaje, tipo) {
