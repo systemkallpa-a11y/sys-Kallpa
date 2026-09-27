@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
+    <!-- Topbar -->
+    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
+        <div class="px-6 py-4 flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                    <i class="fas fa-truck text-[#4D148C]"></i>
+                    Proveedores
+                </h1>
+                <p class="text-gray-600 dark:text-gray-400 mt-1">Gestiona los proveedores del sistema</p>
+            </div>
+            <button onclick="abrirModalCrear()" class="bg-[#4D148C] hover:bg-[#3D0F6F] text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2">
+                <i class="fas fa-plus"></i>
+                Nuevo Proveedor
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="p-6">
+        <!-- Filtros -->
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-search mr-2"></i>Buscar
+                    </label>
+                    <input type="text" id="buscar" placeholder="Buscar por RUC, razón social..." class="w-full px-4 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-[#4D148C] dark:bg-slate-800 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-filter mr-2"></i>Estado
+                    </label>
+                    <select id="filtro-estado" class="w-full px-4 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-[#4D148C] dark:bg-slate-800 dark:text-white">
+                        <option value="">Todos</option>
+                        <option value="ACTIVO">Activo</option>
+                        <option value="INACTIVO">Inactivo</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="limpiarFiltros()" class="w-full bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-eraser mr-2"></i>Limpiar Filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Proveedores -->
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gradient-to-r from-[#4D148C] to-[#6B21A8] text-white">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-sm font-semibold">RUC</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold">Razón Social</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold">Nombre Comercial</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold">Contacto</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold">Teléfono</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold">Estado</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-proveedores" class="divide-y divide-gray-200 dark:divide-slate-800">
+                        <!-- Se carga dinámicamente con JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            <!-- Mensaje cuando no hay datos -->
+            <div id="sin-proveedores" class="hidden text-center py-12">
+                <i class="fas fa-truck text-6xl text-gray-300 dark:text-gray-700 mb-4"></i>
+                <p class="text-gray-500 dark:text-gray-400 text-lg">No hay proveedores registrados</p>
+                <button onclick="abrirModalCrear()" class="mt-4 text-[#4D148C] hover:text-[#3D0F6F] font-medium">
+                    <i class="fas fa-plus mr-2"></i>Crear el primero
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Crear/Editar Proveedor -->
+<div id="modal-proveedor" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <!-- Header del Modal -->
+        <div class="bg-gradient-to-r from-[#4D148C] to-[#6B21A8] p-6 rounded-t-2xl">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 id="modal-titulo" class="text-2xl font-bold text-white">Nuevo Proveedor</h2>
+                    <p class="text-white/80 text-sm mt-1">Completa los datos del proveedor</p>
+                </div>
+                <button onclick="cerrarModal()" class="text-white hover:text-gray-200 transition-colors p-2 hover:bg-white/10 rounded-lg">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Body del Modal -->
+        <form id="form-proveedor" class="p-6 space-y-6">
+            <input type="hidden" id="id-proveedor">
+            <input type="hidden" id="es-edicion" value="false">
+
+            <!-- Información Básica -->
+            <div class="border-b border-gray-200 dark:border-slate-700 pb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Información Básica</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            RUC <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="ruc" required maxlength="11" class="w-full px-4 py-3 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#4D148C] dark:bg-slate-800 dark:text-white" placeholder="20123456789">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Razón Social <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="razon-social" required class="w-full px-4 py-3 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#4D148C] dark:bg-slate-800 dark:text-white" placeholder="Empresa SAC">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Nombre Comercial
+                        </label>
+                        <input type="text" id="nombre-comercial" class="w-full px-4 py-3 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#4D148C] dark:bg-slate-800 dark:text-white" placeholder="Nombre comercial">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contacto -->
+            <div class="border-b border-gray-200 dark:border-slate-700 pb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Información de Contacto</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Teléfono
+                        </label>
+                        <input type="text" id="telefono" class="w-full px-4 py-3 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#4D148C] dark:bg-slate-800 dark:text-white" placeholder="999 999 999">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Email
+                        </label>
+                        <input type="email" id="email" class="w-full px-4 py-3 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#4D148C] dark:bg-slate-800 dark:text-white" placeholder="contacto@empresa.com">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Dirección
+                        </label>
+                        <textarea id="direccion" rows="2" class="w-full px-4 py-3 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#4D148C] dark:bg-slate-800 dark:text-white resize-none" placeholder="Dirección completa"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Persona de Contacto -->
+            <div class="border-b border-gray-200 dark:border-slate-700 pb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Persona de Contacto</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Nombre
+                        </label>
+                        <input type="text" id="contacto-nombre" class="w-full px-4 py-3 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#4D148C] dark:bg-slate-800 dark:text-white" placeholder="Juan Pérez">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Teléfono
+                        </label>
+                        <input type="text" id="contacto-telefono" class="w-full px-4 py-3 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#4D148C] dark:bg-slate-800 dark:text-white" placeholder="999 999 999">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Email
+                        </label>
+                        <input type="email" id="contacto-email" class="w-full px-4 py-3 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#4D148C] dark:bg-slate-800 dark:text-white" placeholder="contacto@correo.com">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información Bancaria -->
+            <div class="border-b border-gray-200 dark:border-slate-700 pb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Información Bancaria</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Banco
+                        </label>
+                        <input type="text" id="banco" class="w-full px-4 py-3 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#4D148C] dark:bg-slate-800 dark:text-white" placeholder="BCP, BBVA, etc">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Cuenta Bancaria
+                        </label>
+                        <input type="text" id="cuenta-bancaria" class="w-full px-4 py-3 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#4D148C] dark:bg-slate-800 dark:text-white" placeholder="0011-0222-0333-0444">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estado (solo en edición) -->
+            <div id="campo-estado" class="hidden">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Estado
+                </label>
+                <select id="estado" class="w-full px-4 py-3 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#4D148C] dark:bg-slate-800 dark:text-white">
+                    <option value="ACTIVO">Activo</option>
+                    <option value="INACTIVO">Inactivo</option>
+                </select>
+            </div>
+
+            <!-- Botones -->
+            <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-800">
+                <button type="button" onclick="cerrarModal()" class="px-6 py-3 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors">
+                    Cancelar
+                </button>
+                <button type="submit" class="px-6 py-3 bg-[#4D148C] hover:bg-[#3D0F6F] text-white rounded-xl font-medium transition-colors shadow-lg">
+                    <i class="fas fa-save mr-2"></i>
+                    <span id="btn-guardar-texto">Guardar Proveedor</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/proveedores.js') }}"></script>
+{% endblock %}
