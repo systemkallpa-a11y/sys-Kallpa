@@ -25,6 +25,7 @@ BEGIN
         DAY(m.fecha_marcacion) AS DIA,
         MONTH(m.fecha_marcacion) AS MES,
         YEAR(m.fecha_marcacion) AS ANO,
+        ELT(DAYOFWEEK(MIN(m.fecha_marcacion)), 'Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado') AS DIA_SEMANA,
         
         -- 4. OFICINA - TURNO MAÑANA
         TIME_FORMAT(MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.tipo_ubicacion = 'OFICINA' AND TIME(m.fecha_marcacion) < '12:00:00' THEN TIME(m.fecha_marcacion) END), '%H:%i') AS H_ENTRADA_OFI_T1,

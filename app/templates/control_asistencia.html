@@ -698,7 +698,7 @@ function renderizarTabla(data) {
                 <td class="px-2 py-2 text-center text-gray-900 dark:text-white font-mono border-r border-gray-200 dark:border-slate-700 sticky-col-3">${escapeHtml(fila.DNI_CE || '-')}</td>
                 <td class="px-2 py-2 text-left text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-slate-700 whitespace-nowrap">${escapeHtml(fila.CARGO || '-')}</td>
                 <td class="px-2 py-2 text-left text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-slate-700 whitespace-nowrap sticky-col-5">${escapeHtml(fila.SEDE_TRABAJO || '-')}</td>
-                <td class="px-2 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.DIA || '-')}</td>
+                <td class="px-2 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700">${escapeHtml([fila.DIA, fila.DIA_SEMANA].filter(v => v).join(' ') || '-')}</td>
                 <td class="px-2 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.MES || '-')}</td>
                 <td class="px-2 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.ANO || '-')}</td>
                 ${celdaHora(fila.H_ENTRADA_OFI_T1, 'oficina')}

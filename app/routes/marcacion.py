@@ -1042,7 +1042,7 @@ def exportar_control_asistencia_excel():
                 ws.cell(row=row_num, column=3, value=reg.get('DNI_CE', '')).alignment = cell_alignment_center
                 ws.cell(row=row_num, column=4, value=reg.get('CARGO', '')).alignment = cell_alignment
                 ws.cell(row=row_num, column=5, value=reg.get('SEDE_TRABAJO', '')).alignment = cell_alignment
-                ws.cell(row=row_num, column=6, value=reg.get('DIA', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=6, value='{} {}'.format(reg.get('DIA', ''), reg.get('DIA_SEMANA', '')).strip()).alignment = cell_alignment_center
                 ws.cell(row=row_num, column=7, value=reg.get('MES', '')).alignment = cell_alignment_center
                 ws.cell(row=row_num, column=8, value=reg.get('ANO', '')).alignment = cell_alignment_center
                 
