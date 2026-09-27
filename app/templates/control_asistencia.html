@@ -5,23 +5,77 @@
 {% block content %}
 
 <style>
-    /* Sticky columns - SIEMPRE oscuro */
-    .sticky-col-1 { position: sticky; left: 0; z-index: 20; background: #0f172a; }
-    .sticky-col-2 { position: sticky; left: 60px; z-index: 20; background: #0f172a; }
-    .sticky-col-3 { position: sticky; left: 180px; z-index: 20; background: #0f172a; }
-    .sticky-col-5 { position: sticky; left: 260px; z-index: 20; background: #0f172a; }
+    /* Fondo por defecto para todas las celdas de la tabla */
+    #tabla-control-asistencia td {
+        background-color: white;
+    }
     
-    /* Colores OFICINA - SIEMPRE oscuro */
-    .bg-oficina { background: #1E3A5F; }
-    .text-oficina { color: #93C5FD; }
+    @media (prefers-color-scheme: dark) {
+        #tabla-control-asistencia td {
+            background-color: #0f172a;
+        }
+    }
     
-    /* Colores CAMPO - SIEMPRE oscuro */
-    .bg-campo { background: #064E3B; }
-    .text-campo { color: #6EE7B7; }
+    .dark #tabla-control-asistencia td {
+        background-color: #0f172a;
+    }
     
-    /* Fondo oscuro para todas las celdas de la tabla */
-    #tabla-control-asistencia td { background: #0f172a; }
-    #tabla-control-asistencia tr { background: #0f172a; }
+    /* Sticky columns - Responsive al tema */
+    .sticky-col-1 { position: sticky; left: 0; z-index: 20; }
+    .sticky-col-2 { position: sticky; left: 60px; z-index: 20; }
+    .sticky-col-3 { position: sticky; left: 180px; z-index: 20; }
+    .sticky-col-5 { position: sticky; left: 260px; z-index: 20; }
+    
+    /* Fondo para sticky columns según tema - override el fondo por defecto */
+    .sticky-col-1, .sticky-col-2, .sticky-col-3, .sticky-col-5 {
+        background: white !important;
+        color: #111827; /* gray-900 */
+    }
+    
+    @media (prefers-color-scheme: dark) {
+        .sticky-col-1, .sticky-col-2, .sticky-col-3, .sticky-col-5 {
+            background: #0f172a !important;
+            color: white;
+        }
+    }
+    
+    /* Soporte para clase dark de Tailwind */
+    .dark .sticky-col-1, .dark .sticky-col-2, .dark .sticky-col-3, .dark .sticky-col-5 {
+        background: #0f172a !important;
+        color: white;
+    }
+    
+    /* Colores OFICINA - Responsive al tema */
+    .bg-oficina { 
+        background: #DBEAFE !important; /* Azul claro en tema claro */
+    }
+    .text-oficina { 
+        color: #1E40AF !important; /* Azul oscuro en tema claro */
+    }
+    
+    @media (prefers-color-scheme: dark) {
+        .bg-oficina { background: #1E3A5F !important; }
+        .text-oficina { color: #93C5FD !important; }
+    }
+    
+    .dark .bg-oficina { background: #1E3A5F !important; }
+    .dark .text-oficina { color: #93C5FD !important; }
+    
+    /* Colores CAMPO - Responsive al tema */
+    .bg-campo { 
+        background: #D1FAE5 !important; /* Verde claro en tema claro */
+    }
+    .text-campo { 
+        color: #065F46 !important; /* Verde oscuro en tema claro */
+    }
+    
+    @media (prefers-color-scheme: dark) {
+        .bg-campo { background: #064E3B !important; }
+        .text-campo { color: #6EE7B7 !important; }
+    }
+    
+    .dark .bg-campo { background: #064E3B !important; }
+    .dark .text-campo { color: #6EE7B7 !important; }
 </style>
 
 <div class="flex flex-col h-screen bg-gray-50 dark:bg-slate-950">
@@ -133,14 +187,14 @@
     <!-- Contenido Principal -->
     <div class="flex-1 overflow-auto p-6 space-y-6">
         <!-- Tabla de Asistencia -->
-        <div class="dark bg-slate-900 rounded-xl shadow-lg overflow-hidden border border-slate-700">
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-slate-700">
             <div class="px-4 py-3 bg-gradient-to-r from-green-700 to-green-800">
                 <h2 class="text-white font-bold text-sm flex items-center gap-2">
                     <i class="fas fa-clipboard-check"></i> Control de Asistencia
                 </h2>
             </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-xs bg-slate-900">
+                <table class="w-full text-xs bg-white dark:bg-slate-900">
                     <!-- Encabezado agrupado -->
                     <thead>
                         <tr class="bg-gradient-to-r from-green-700 to-green-800">
@@ -187,7 +241,7 @@
                             <th class="px-2 py-2 text-center text-white font-semibold">ACCIÓN</th>
                         </tr>
                     </thead>
-                    <tbody id="tabla-control-asistencia" class="divide-y divide-slate-700">
+                    <tbody id="tabla-control-asistencia" class="divide-y divide-gray-200 dark:divide-slate-700">
                         <tr>
                             <td colspan="25" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                                 <i class="fas fa-spinner fa-spin mr-2"></i>Cargando datos...
