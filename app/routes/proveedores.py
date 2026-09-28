@@ -5,6 +5,7 @@ Módulo para gestionar proveedores del sistema usando Stored Procedures
 
 from flask import render_template, jsonify, request, session
 from functools import wraps
+import re
 import mysql.connector
 from mysql.connector import Error
 from app.routes import main_bp
@@ -30,6 +31,16 @@ def login_required(f):
             return jsonify({'success': False, 'error': 'No autorizado'}), 401
         return f(*args, **kwargs)
     return decorated_function
+
+
+# ============================================================================
+# VALIDACIÓN: RUC (solo se exige que tenga exactamente 11 dígitos numéricos)
+# ============================================================================
+def validar_ruc(ruc):
+    """Devuelve un mensaje de error o None si el RUC es válido."""
+    if not ruc or not re.fullmatch(r'\d{11}', str(ruc)):
+        return 'El RUC debe tener exactamente 11 dígitos numéricos'
+    return None
 
 
 # ============================================================================
@@ -136,6 +147,11 @@ def crear_proveedor():
             if field not in data or not data[field]:
                 return jsonify({'success': False, 'error': f'Campo requerido: {field}'}), 400
         
+        # Validar RUC (solo 11 dígitos numéricos)
+        error_ruc = validar_ruc(data['ruc'])
+        if error_ruc:
+            return jsonify({'success': False, 'error': error_ruc}), 400
+        
         connection = get_db_connection()
         if not connection:
             return jsonify({'success': False, 'error': 'Error de conexión'}), 500
@@ -210,6 +226,8 @@ def crear_proveedor():
         
     except Error as e:
         print(f"[PROVEEDORES] Error SQL: {e}")
+        if 'ya está registrado' in str(e):
+            return jsonify({'success': False, 'error': 'El RUC ya está registrado'}), 400
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -224,15 +242,22 @@ def actualizar_proveedor(ruc):
         data = request.get_json()
         user_documento = session.get('user_documento')
         
+        # El RUC del formulario puede cambiar; la URL trae el RUC actual (llave primaria)
+        ruc_nuevo = (data.get('ruc') or ruc or '').strip()
+        error_ruc = validar_ruc(ruc_nuevo)
+        if error_ruc:
+            return jsonify({'success': False, 'error': error_ruc}), 400
+        
         connection = get_db_connection()
         if not connection:
             return jsonify({'success': False, 'error': 'Error de conexión'}), 500
         
         cursor = connection.cursor(dictionary=True)
         
-        # Preparar parámetros para el SP
+        # Preparar parámetros para el SP (46): actual (URL) + nuevo (formulario)
         params = [
             ruc,
+            ruc_nuevo,
             data.get('razon_social'),
             data.get('nombre_comercial'),
             data.get('tipo_contribuyente', 'JURIDICA'),
@@ -298,6 +323,10 @@ def actualizar_proveedor(ruc):
         
     except Error as e:
         print(f"[PROVEEDORES] Error SQL: {e}")
+        if 'ya está registrado' in str(e):
+            return jsonify({'success': False, 'error': 'El RUC ya está registrado'}), 400
+        if 'Proveedor no encontrado' in str(e):
+            return jsonify({'success': False, 'error': 'Proveedor no encontrado'}), 404
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

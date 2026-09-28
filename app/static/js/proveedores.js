@@ -7,6 +7,10 @@ let proveedores = [];
 let proveedoresFiltrados = [];
 let modoEdicion = false;
 
+// Paginación
+let paginaActual = 1;
+const registrosPorPagina = 10;
+
 // ============================================================================
 // INICIALIZACIÓN
 // ============================================================================
@@ -48,6 +52,7 @@ async function cargarProveedores() {
         if (result.success) {
             proveedores = result.proveedores || [];
             proveedoresFiltrados = [...proveedores];
+            paginaActual = 1;
             
             console.log(`[PROVEEDORES] ${proveedores.length} proveedores cargados`);
             
@@ -76,13 +81,22 @@ function renderizarTabla() {
     if (proveedoresFiltrados.length === 0) {
         tbody.innerHTML = '';
         sinProveedores.classList.remove('hidden');
+        renderPaginacion();
         return;
     }
     
     sinProveedores.classList.add('hidden');
     
-    // Renderizar filas
-    tbody.innerHTML = proveedoresFiltrados.map(prov => {
+    // Calcular paginación
+    const totalRegistros = proveedoresFiltrados.length;
+    const totalPaginas = Math.ceil(totalRegistros / registrosPorPagina);
+    if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+    if (paginaActual < 1) paginaActual = 1;
+    const inicio = (paginaActual - 1) * registrosPorPagina;
+    const registrosPagina = proveedoresFiltrados.slice(inicio, inicio + registrosPorPagina);
+    
+    // Renderizar filas de la página actual
+    tbody.innerHTML = registrosPagina.map(prov => {
         const badgeEstado = obtenerBadgeEstado(prov.estado);
         
         return `
@@ -128,6 +142,76 @@ function renderizarTabla() {
             </tr>
         `;
     }).join('');
+    
+    renderPaginacion();
+}
+
+// ============================================================================
+// PAGINACIÓN
+// ============================================================================
+/**
+ * Renderizar los controles de paginación
+ */
+function renderPaginacion() {
+    const contenedor = document.getElementById('paginacion-controles');
+    if (!contenedor) return;
+    
+    const totalRegistros = proveedoresFiltrados.length;
+    if (totalRegistros === 0) {
+        contenedor.innerHTML = '';
+        return;
+    }
+    
+    const totalPaginas = Math.ceil(totalRegistros / registrosPorPagina);
+    if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+    const inicio = (paginaActual - 1) * registrosPorPagina + 1;
+    const fin = Math.min(paginaActual * registrosPorPagina, totalRegistros);
+    
+    const btnBase = 'px-2 py-1 rounded text-xs font-medium transition-colors';
+    const btnDisabled = `${btnBase} bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed`;
+    const btnNormal = `${btnBase} bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600`;
+    const btnActivo = `${btnBase} bg-[#4D148C] text-white`;
+    
+    // Botón anterior
+    let botones = `
+        <button onclick="irAPagina(1)" ${paginaActual === 1 ? 'disabled' : ''} class="${paginaActual === 1 ? btnDisabled : btnNormal}" title="Primera página">&laquo;</button>
+        <button onclick="irAPagina(${paginaActual - 1})" ${paginaActual === 1 ? 'disabled' : ''} class="${paginaActual === 1 ? btnDisabled : btnNormal}" title="Anterior">&lsaquo;</button>`;
+    
+    // Páginas alrededor de la actual
+    let startPage = Math.max(1, paginaActual - 2);
+    let endPage = Math.min(totalPaginas, startPage + 4);
+    startPage = Math.max(1, endPage - 4);
+    
+    if (startPage > 1) botones += `<span class="px-1 py-1 text-xs text-gray-500 dark:text-gray-400">...</span>`;
+    for (let i = startPage; i <= endPage; i++) {
+        botones += `
+        <button onclick="irAPagina(${i})" class="${i === paginaActual ? btnActivo : btnNormal}">${i}</button>`;
+    }
+    if (endPage < totalPaginas) botones += `<span class="px-1 py-1 text-xs text-gray-500 dark:text-gray-400">...</span>`;
+    
+    // Botón siguiente
+    botones += `
+        <button onclick="irAPagina(${paginaActual + 1})" ${paginaActual === totalPaginas ? 'disabled' : ''} class="${paginaActual === totalPaginas ? btnDisabled : btnNormal}" title="Siguiente">&rsaquo;</button>
+        <button onclick="irAPagina(${totalPaginas})" ${paginaActual === totalPaginas ? 'disabled' : ''} class="${paginaActual === totalPaginas ? btnDisabled : btnNormal}" title="Última página">&raquo;</button>`;
+    
+    contenedor.innerHTML = `
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <span class="text-xs text-gray-600 dark:text-gray-400">
+                Mostrando <span class="font-semibold">${inicio}</span>-<span class="font-semibold">${fin}</span>
+                de <span class="font-semibold">${totalRegistros}</span> proveedores
+            </span>
+            <div class="flex items-center gap-1">${botones}</div>
+        </div>`;
+}
+
+/**
+ * Ir a una página de la tabla
+ */
+function irAPagina(pagina) {
+    paginaActual = pagina;
+    renderizarTabla();
+    const tabla = document.getElementById('tabla-proveedores');
+    if (tabla) tabla.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ============================================================================
@@ -154,6 +238,7 @@ function filtrarProveedores() {
     });
     
     console.log(`[PROVEEDORES] Filtrado: ${proveedoresFiltrados.length} de ${proveedores.length}`);
+    paginaActual = 1;
     renderizarTabla();
 }
 
@@ -182,6 +267,7 @@ function abrirModalCrear() {
     // Limpiar formulario
     document.getElementById('form-proveedor').reset();
     document.getElementById('id-proveedor').value = '';
+    document.getElementById('ruc').disabled = false;
     
     // Mostrar modal
     document.getElementById('modal-proveedor').classList.remove('hidden');
@@ -207,7 +293,7 @@ async function editarProveedor(ruc) {
             // Llenar formulario
             document.getElementById('id-proveedor').value = prov.ruc;
             document.getElementById('ruc').value = prov.ruc;
-            document.getElementById('ruc').disabled = true; // RUC no se puede editar
+            document.getElementById('ruc').disabled = false; // RUC editable también en edición
             document.getElementById('razon-social').value = prov.razon_social;
             document.getElementById('nombre-comercial').value = prov.nombre_comercial || '';
             document.getElementById('telefono').value = prov.telefono || '';
@@ -248,6 +334,14 @@ async function guardarProveedor() {
     const esEdicion = document.getElementById('es-edicion').value === 'true';
     const ruc = document.getElementById('ruc').value;
     
+    // Validación de RUC (solo 11 dígitos numéricos)
+    const errorRuc = validarRUC(ruc);
+    if (errorRuc) {
+        mostrarNotificacion(errorRuc, 'error');
+        document.getElementById('ruc').focus();
+        return;
+    }
+    
     // Recopilar datos
     const datos = {
         ruc: ruc,
@@ -268,8 +362,10 @@ async function guardarProveedor() {
     }
     
     try {
+        // En edición la URL lleva el RUC original (llave primaria); el body, el nuevo
+        const rucOriginal = document.getElementById('id-proveedor').value || ruc;
         const url = esEdicion 
-            ? `/api/proveedores/actualizar/${ruc}`
+            ? `/api/proveedores/actualizar/${rucOriginal}`
             : '/api/proveedores/crear';
         
         const method = esEdicion ? 'PUT' : 'POST';
@@ -329,34 +425,120 @@ async function eliminarProveedor(ruc) {
 // VER DETALLES
 // ============================================================================
 /**
- * Ver detalles completos del proveedor
+ * Ver detalles completos del proveedor (modal con diseño propio)
  */
-function verDetalles(ruc) {
-    const prov = proveedores.find(p => p.ruc === ruc);
-    if (!prov) return;
+async function verDetalles(ruc) {
+    document.getElementById('detalle-cargando').classList.remove('hidden');
+    document.getElementById('detalle-contenido').classList.add('hidden');
+    document.getElementById('detalle-titulo').textContent = 'Detalle del Proveedor';
+    document.getElementById('detalle-ruc').textContent = ruc;
+    document.getElementById('detalle-estado').innerHTML = '';
+    document.getElementById('modal-detalles').classList.remove('hidden');
     
-    const detalles = `
-RUC: ${prov.ruc}
-Razón Social: ${prov.razon_social}
-Nombre Comercial: ${prov.nombre_comercial || 'N/A'}
-Teléfono: ${prov.telefono || 'N/A'}
-Email: ${prov.email || 'N/A'}
-Dirección: ${prov.direccion_fiscal || 'N/A'}
+    try {
+        const response = await fetch(`/api/proveedores/obtener/${ruc}`);
+        const result = await response.json();
+        if (!result.success || !result.proveedor) {
+            throw new Error(result.error || 'Proveedor no encontrado');
+        }
+        renderDetalles(result.proveedor);
+    } catch (error) {
+        console.error('[PROVEEDORES] Error al cargar detalles:', error);
+        cerrarModalDetalles();
+        mostrarNotificacion(error.message || 'Error al cargar los detalles del proveedor', 'error');
+    }
+}
 
-CONTACTO:
-Nombre: ${prov.contacto_nombre || 'N/A'}
-Teléfono: ${prov.contacto_telefono || 'N/A'}
-Email: ${prov.contacto_email || 'N/A'}
-
-INFORMACIÓN BANCARIA:
-Banco: ${prov.banco_1 || 'N/A'}
-Cuenta: ${prov.cuenta_banco_1 || 'N/A'}
-
-Estado: ${prov.estado}
-Creado por: ${prov.creado_por_nombre || 'N/A'}
-    `.trim();
+/**
+ * Rellenar el modal de detalles con la información del proveedor
+ */
+function renderDetalles(p) {
+    const o = v => (v !== null && v !== undefined && String(v).trim() !== '') ? String(v) : '—';
+    const set = (id, valor) => { document.getElementById(id).textContent = valor; };
+    const combo = (...vals) => {
+        const partes = vals.filter(v => v !== null && v !== undefined && String(v).trim() !== '');
+        return partes.length ? partes.join(' · ') : '—';
+    };
     
-    alert(`Detalles del Proveedor ${prov.ruc}\n\n${detalles}`);
+    document.getElementById('detalle-titulo').textContent = p.razon_social || 'Proveedor';
+    document.getElementById('detalle-ruc').textContent = p.ruc || '—';
+    document.getElementById('detalle-estado').innerHTML = obtenerBadgeEstado(p.estado);
+    
+    // Datos generales
+    set('d-razon-social', o(p.razon_social));
+    set('d-nombre-comercial', o(p.nombre_comercial));
+    set('d-rubro', o(p.rubro_negocio));
+    set('d-categoria', o(p.categoria));
+    set('d-condicion-pago', o(p.condicion_pago));
+    set('d-plazo-entrega', o(p.plazo_entrega));
+    
+    // Contacto de la empresa
+    set('d-telefono', o(p.telefono));
+    set('d-email', o(p.email));
+    set('d-direccion', o(p.direccion_fiscal));
+    set('d-ubigeo-texto', combo(p.distrito, p.provincia, p.departamento));
+    
+    // Persona de contacto
+    set('d-contacto-nombre', o(p.contacto_nombre));
+    set('d-contacto-cargo', o(p.contacto_cargo));
+    set('d-contacto-telefono', o(p.contacto_telefono));
+    set('d-contacto-email', o(p.contacto_email));
+    
+    // Cuentas bancarias
+    set('d-banco-1', o(p.banco_1));
+    set('d-cuenta-1', o(p.cuenta_banco_1));
+    set('d-tipo-moneda-1', combo(p.tipo_cuenta_1, p.moneda_1));
+    set('d-cci-1', o(p.cci_1));
+    
+    const tieneCuenta2 = [p.banco_2, p.cuenta_banco_2, p.cci_2]
+        .some(v => v !== null && v !== undefined && String(v).trim() !== '');
+    document.getElementById('detalle-cuenta-2').classList.toggle('hidden', !tieneCuenta2);
+    if (tieneCuenta2) {
+        set('d-banco-2', o(p.banco_2));
+        set('d-cuenta-2', o(p.cuenta_banco_2));
+        set('d-tipo-moneda-2', combo(p.tipo_cuenta_2, p.moneda_2));
+        set('d-cci-2', o(p.cci_2));
+    }
+    
+    // Registro del sistema
+    set('d-creado-por', o(p.creado_por_nombre));
+    set('d-fecha-creacion', formatearFecha(p.fecha_creacion));
+    set('d-actualizado-por', o(p.actualizado_por_nombre));
+    set('d-fecha-actualizacion', formatearFecha(p.fecha_actualizacion));
+    
+    document.getElementById('detalle-cargando').classList.add('hidden');
+    document.getElementById('detalle-contenido').classList.remove('hidden');
+}
+
+/**
+ * Cerrar modal de detalles
+ */
+function cerrarModalDetalles() {
+    document.getElementById('modal-detalles').classList.add('hidden');
+}
+
+/**
+ * Abrir el modal de edición desde el detalle
+ */
+function editarDesdeDetalles() {
+    const ruc = document.getElementById('detalle-ruc').textContent.trim();
+    cerrarModalDetalles();
+    if (ruc && ruc !== '—') {
+        editarProveedor(ruc);
+    }
+}
+
+/**
+ * Formatear fecha (formato local) o mostrar "—"
+ */
+function formatearFecha(fecha) {
+    if (!fecha) return '—';
+    const d = new Date(String(fecha).replace(' ', 'T'));
+    if (isNaN(d.getTime())) return String(fecha);
+    return d.toLocaleString('es-PE', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
 }
 
 // ============================================================================
@@ -378,6 +560,18 @@ function obtenerBadgeEstado(estado) {
     };
     
     return `<span class="px-3 py-1 rounded-full text-xs font-semibold ${clases}">${textos[estado] || estado}</span>`;
+}
+
+/**
+ * Validar RUC: solo se exige que tenga exactamente 11 dígitos numéricos
+ * (no se valida contra SUNAT ni dígito verificador)
+ * @returns {string|null} mensaje de error, o null si el RUC es válido
+ */
+function validarRUC(ruc) {
+    if (!ruc || !/^\d{11}$/.test(String(ruc))) {
+        return 'El RUC debe tener exactamente 11 dígitos numéricos';
+    }
+    return null;
 }
 
 /**
