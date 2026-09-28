@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, request, session, jsonify, send_fi
 from functools import wraps
 from mysql.connector import Error
 from app.config import DatabaseConfig
-from datetime import datetime
+from datetime import datetime, date, timedelta
 import mysql.connector
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -278,22 +278,18 @@ def obtener_historial_marcacion():
             
             print(f"[HISTORIAL] [OK] {len(marcaciones)} marcaciones encontradas con estados")
             
-            #  Serializar datos para JSON (convertir datetime, date, timedelta, etc.)
-            import datetime as dt_module
+            # Serializar datos para JSON (convertir datetime, date, timedelta, etc.)
             for marcacion in marcaciones:
                 for key, value in marcacion.items():
                     # Convertir datetime a ISO string
                     if isinstance(value, datetime):
                         marcacion[key] = value.isoformat()
                     # Convertir date a string YYYY-MM-DD
-                    elif isinstance(value, dt_module.date):
+                    elif isinstance(value, date):
                         marcacion[key] = value.strftime('%Y-%m-%d')
                     # Convertir timedelta a string
-                    elif hasattr(value, 'total_seconds'):  # timedelta
+                    elif isinstance(value, timedelta):
                         marcacion[key] = str(value)
-                    # Asegurar que cualquier fecha sea string
-                    elif hasattr(value, 'strftime'):
-                        marcacion[key] = value.strftime('%Y-%m-%d')
             
             cursor.close()
             connection.close()
@@ -309,6 +305,155 @@ def obtener_historial_marcacion():
     
     except Exception as e:
         print(f"[HISTORIAL] [X] Error general: {e}")
+        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+
+
+# ============================================================================
+# API: OBTENER MARCACIONES POR FECHA ESPECÍFICA
+# ============================================================================
+
+@marcacion_bp.route('/api/marcacion/por-fecha', methods=['GET'])
+@login_required
+def obtener_marcaciones_por_fecha():
+    """Obtener marcaciones del usuario para una fecha específica"""
+    try:
+        num_documento = session.get('user_documento')
+        fecha = request.args.get('fecha')
+        
+        if not fecha:
+            return jsonify({'success': False, 'error': 'Fecha requerida'}), 400
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            print(f"[MARCACION_POR_FECHA] Obteniendo marcaciones para {num_documento} en fecha {fecha}")
+            
+            # Consulta directa para obtener marcaciones de una fecha específica
+            cursor.execute("""
+                SELECT 
+                    id_marcacion,
+                    num_documento,
+                    tipo_marcacion,
+                    DATE(fecha_marcacion) as fecha,
+                    TIME(fecha_marcacion) as hora_marcacion,
+                    latitud,
+                    longitud,
+                    `precision`,
+                    justificacion,
+                    estado,
+                    fecha_registro
+                FROM TblMarcacion
+                WHERE num_documento = %s 
+                  AND DATE(fecha_marcacion) = %s
+                ORDER BY fecha_marcacion ASC
+            """, (num_documento, fecha))
+            
+            marcaciones = cursor.fetchall()
+            
+            print(f"[MARCACION_POR_FECHA] [OK] {len(marcaciones)} marcaciones encontradas")
+            
+            # Serializar datos
+            for marcacion in marcaciones:
+                for key, value in marcacion.items():
+                    if isinstance(value, datetime):
+                        marcacion[key] = value.isoformat()
+                    elif isinstance(value, date):
+                        marcacion[key] = value.strftime('%Y-%m-%d')
+                    elif isinstance(value, timedelta):
+                        marcacion[key] = str(value)
+            
+            # Calcular el estado de asistencia para cada marcación
+            for marcacion in marcaciones:
+                if marcacion['tipo_marcacion'] == 'ENTRADA':
+                    hora_entrada = marcacion['hora_marcacion']
+                    # Aquí podrías calcular el estado basado en la hora de entrada
+                    # Por ahora, simplemente asignamos "ASISTIÓ"
+                    marcacion['estado_asistencia'] = 'ASISTIÓ'
+            
+            cursor.close()
+            connection.close()
+            
+            return jsonify({
+                'success': True,
+                'data': marcaciones
+            }), 200
+        
+        except Error as e:
+            print(f"[MARCACION_POR_FECHA] [X] Error SQL: {e}")
+            return jsonify({'success': False, 'error': 'Error en la base de datos'}), 500
+    
+    except Exception as e:
+        print(f"[MARCACION_POR_FECHA] [X] Error general: {e}")
+        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+
+
+# ============================================================================
+# API: EDITAR HORA DE MARCACIÓN
+# ============================================================================
+
+@marcacion_bp.route('/api/marcacion/editar/<int:id_marcacion>', methods=['PUT'])
+@login_required
+def editar_marcacion(id_marcacion):
+    """Editar la hora de una marcación existente"""
+    try:
+        data = request.get_json()
+        nueva_hora = data.get('nueva_hora')
+        
+        if not nueva_hora:
+            return jsonify({'success': False, 'error': 'Nueva hora requerida'}), 400
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            print(f"[EDITAR_MARCACION] Editando marcación {id_marcacion} a nueva hora: {nueva_hora}")
+            
+            # Obtener la fecha actual de la marcación
+            cursor.execute("""
+                SELECT DATE(fecha_marcacion) as fecha
+                FROM TblMarcacion
+                WHERE id_marcacion = %s
+            """, (id_marcacion,))
+            
+            result = cursor.fetchone()
+            if not result:
+                return jsonify({'success': False, 'error': 'Marcación no encontrada'}), 404
+            
+            fecha = result['fecha']
+            
+            # Actualizar la hora de marcación
+            cursor.execute("""
+                UPDATE TblMarcacion
+                SET fecha_marcacion = CONCAT(%s, ' ', %s, ':00'),
+                    fecha_actualizacion = NOW()
+                WHERE id_marcacion = %s
+            """, (fecha, nueva_hora, id_marcacion))
+            
+            connection.commit()
+            
+            print(f"[EDITAR_MARCACION] [OK] Marcación {id_marcacion} actualizada exitosamente")
+            
+            cursor.close()
+            connection.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Marcación actualizada exitosamente'
+            }), 200
+        
+        except Error as e:
+            print(f"[EDITAR_MARCACION] [X] Error SQL: {e}")
+            return jsonify({'success': False, 'error': 'Error en la base de datos'}), 500
+    
+    except Exception as e:
+        print(f"[EDITAR_MARCACION] [X] Error general: {e}")
         return jsonify({'success': False, 'error': 'Error del servidor'}), 500
 
 
@@ -1262,10 +1407,10 @@ def obtener_ids_marcacion():
 # API: EDITAR MARCACION (HORAS)
 # ============================================================================
 
-@marcacion_bp.route('/api/marcacion/editar', methods=['PUT'])
+@marcacion_bp.route('/api/marcacion/editar-legacy', methods=['PUT'])
 @login_required
-def editar_marcacion():
-    """Editar hora de entrada/salida de una marcación"""
+def editar_marcacion_legacy():
+    """Editar hora de entrada/salida de una marcación (legacy endpoint)"""
     try:
         data = request.get_json()
         

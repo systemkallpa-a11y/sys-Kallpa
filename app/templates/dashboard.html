@@ -62,14 +62,10 @@
     <!-- USER INFO CARD -->
     <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Información Personal</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="border-l-4 border-slate-600 pl-4">
                 <p class="text-gray-500 dark:text-gray-400 text-sm">Nombre</p>
                 <p class="text-gray-900 dark:text-white font-semibold">{{ session.get('user_name', '--') }}</p>
-            </div>
-            <div class="border-l-4 border-slate-600 pl-4">
-                <p class="text-gray-500 dark:text-gray-400 text-sm">Documento</p>
-                <p class="text-gray-900 dark:text-white font-semibold">{{ session.get('user_documento', '--') }}</p>
             </div>
             <div class="border-l-4 border-slate-600 pl-4">
                 <p class="text-gray-500 dark:text-gray-400 text-sm">Cargo</p>
@@ -79,6 +75,80 @@
                 <p class="text-gray-500 dark:text-gray-400 text-sm">Área</p>
                 <p class="text-gray-900 dark:text-white font-semibold">{{ session.get('user_area', '--') }}</p>
             </div>
+        </div>
+    </div>
+
+    <!-- ACCIONES RÁPIDAS -->
+    <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4 md:p-6">
+        <div class="flex items-center justify-between mb-3">
+            <div>
+                <h2 class="text-base md:text-lg font-bold text-gray-900 dark:text-white">Acciones Rápidas</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Operaciones frecuentes</p>
+            </div>
+        </div>
+        
+        <!-- Botones de Acción - Diseño Compacto -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <!-- Botón Nuevo Requerimiento -->
+            <button onclick="abrirModalNuevoRequerimiento()" class="group relative overflow-hidden bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg p-3 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900">
+                <div class="absolute inset-0 bg-gradient-to-br from-purple-600/20 via-pink-600/20 to-orange-600/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div class="relative flex flex-col items-center text-center gap-1.5">
+                    <div class="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <i class="fas fa-file-invoice text-base"></i>
+                    </div>
+                    <span class="font-semibold text-xs leading-tight">Nuevo<br>Requerimiento</span>
+                </div>
+            </button>
+
+            <!-- Botón 2 (Placeholder para futuro) -->
+            <button disabled class="group relative overflow-hidden bg-gray-50 dark:bg-slate-700/30 border border-gray-200 dark:border-slate-600/50 border-dashed text-gray-400 dark:text-gray-500 rounded-lg p-3 cursor-not-allowed">
+                <div class="relative flex flex-col items-center text-center gap-1.5">
+                    <div class="w-8 h-8 bg-gray-100 dark:bg-slate-600/30 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-plus text-base"></i>
+                    </div>
+                    <span class="font-medium text-xs leading-tight">Próximamente</span>
+                </div>
+            </button>
+
+            <!-- Botón 3 (Placeholder para futuro) -->
+            <button disabled class="group relative overflow-hidden bg-gray-50 dark:bg-slate-700/30 border border-gray-200 dark:border-slate-600/50 border-dashed text-gray-400 dark:text-gray-500 rounded-lg p-3 cursor-not-allowed">
+                <div class="relative flex flex-col items-center text-center gap-1.5">
+                    <div class="w-8 h-8 bg-gray-100 dark:bg-slate-600/30 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-plus text-base"></i>
+                    </div>
+                    <span class="font-medium text-xs leading-tight">Próximamente</span>
+                </div>
+            </button>
+
+            <!-- Botón 4 (Placeholder para futuro) -->
+            <button disabled class="group relative overflow-hidden bg-gray-50 dark:bg-slate-700/30 border border-gray-200 dark:border-slate-600/50 border-dashed text-gray-400 dark:text-gray-500 rounded-lg p-3 cursor-not-allowed">
+                <div class="relative flex flex-col items-center text-center gap-1.5">
+                    <div class="w-8 h-8 bg-gray-100 dark:bg-slate-600/30 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-plus text-base"></i>
+                    </div>
+                    <span class="font-medium text-xs leading-tight">Próximamente</span>
+                </div>
+            </button>
+
+            <!-- Botón 5 (Placeholder para futuro) -->
+            <button disabled class="group relative overflow-hidden bg-gray-50 dark:bg-slate-700/30 border border-gray-200 dark:border-slate-600/50 border-dashed text-gray-400 dark:text-gray-500 rounded-lg p-3 cursor-not-allowed">
+                <div class="relative flex flex-col items-center text-center gap-1.5">
+                    <div class="w-8 h-8 bg-gray-100 dark:bg-slate-600/30 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-plus text-base"></i>
+                    </div>
+                    <span class="font-medium text-xs leading-tight">Próximamente</span>
+                </div>
+            </button>
+
+            <!-- Botón 6 (Placeholder para futuro) -->
+            <button disabled class="group relative overflow-hidden bg-gray-50 dark:bg-slate-700/30 border border-gray-200 dark:border-slate-600/50 border-dashed text-gray-400 dark:text-gray-500 rounded-lg p-3 cursor-not-allowed">
+                <div class="relative flex flex-col items-center text-center gap-1.5">
+                    <div class="w-8 h-8 bg-gray-100 dark:bg-slate-600/30 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-plus text-base"></i>
+                    </div>
+                    <span class="font-medium text-xs leading-tight">Próximamente</span>
+                </div>
+            </button>
         </div>
     </div>
 
@@ -106,10 +176,238 @@
     </div>
 </div>
 
+<!-- MODAL: Nuevo Requerimiento -->
+<div id="modalNuevoRequerimiento" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onclick="if(event.target === this) cerrarModalNuevoRequerimiento()">
+    <div class="modal-content bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden transform transition-all duration-300 scale-95 opacity-0">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-5 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                    <i class="fas fa-file-invoice text-white text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-white">Nuevo Requerimiento</h3>
+                    <p class="text-white/80 text-sm">Crear solicitud de materiales</p>
+                </div>
+            </div>
+            <button onclick="cerrarModalNuevoRequerimiento()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Body - Formulario -->
+        <div class="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+            <form id="formNuevoRequerimiento" class="space-y-5">
+                
+                <!-- Fila 1: Código y Fecha -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Código (Auto-generado) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-hashtag text-orange-500 mr-1"></i>
+                            Código de Requerimiento
+                        </label>
+                        <input type="text" value="REQ-2026-001" readonly 
+                               class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600 rounded-lg text-gray-500 dark:text-gray-400 cursor-not-allowed">
+                    </div>
+
+                    <!-- Fecha -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-calendar text-orange-500 mr-1"></i>
+                            Fecha de Solicitud
+                        </label>
+                        <input type="date" id="fechaSolicitud"
+                               class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
+                    </div>
+                </div>
+
+                <!-- Fila 2: Proyecto y Obra -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Proyecto -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-project-diagram text-orange-500 mr-1"></i>
+                            Proyecto <span class="text-red-500">*</span>
+                        </label>
+                        <select class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
+                            <option value="">Seleccionar proyecto...</option>
+                            <option value="1">La Floresta I</option>
+                            <option value="2">Villa Verde</option>
+                            <option value="3">Prado Verde</option>
+                        </select>
+                    </div>
+
+                    <!-- Obra -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-building text-orange-500 mr-1"></i>
+                            Obra <span class="text-red-500">*</span>
+                        </label>
+                        <select class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
+                            <option value="">Seleccionar obra...</option>
+                            <option value="1">Estructura - Torre A</option>
+                            <option value="2">Acabados - Torre B</option>
+                            <option value="3">Instalaciones</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Descripción -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-align-left text-orange-500 mr-1"></i>
+                        Descripción del Requerimiento <span class="text-red-500">*</span>
+                    </label>
+                    <textarea rows="3" 
+                              placeholder="Describa brevemente la necesidad o propósito del requerimiento..."
+                              class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white resize-none"></textarea>
+                </div>
+
+                <!-- Prioridad -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-exclamation-circle text-orange-500 mr-1"></i>
+                        Prioridad <span class="text-red-500">*</span>
+                    </label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <label class="flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-red-500 transition-colors has-[:checked]:border-red-500 has-[:checked]:bg-red-50 dark:has-[:checked]:bg-red-900/20">
+                            <input type="radio" name="prioridad" value="alta" class="text-red-500 focus:ring-red-500">
+                            <span class="font-semibold text-gray-900 dark:text-white">🔴 Alta</span>
+                        </label>
+                        <label class="flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-yellow-500 transition-colors has-[:checked]:border-yellow-500 has-[:checked]:bg-yellow-50 dark:has-[:checked]:bg-yellow-900/20">
+                            <input type="radio" name="prioridad" value="media" class="text-yellow-500 focus:ring-yellow-500" checked>
+                            <span class="font-semibold text-gray-900 dark:text-white">🟡 Media</span>
+                        </label>
+                        <label class="flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-green-500 transition-colors has-[:checked]:border-green-500 has-[:checked]:bg-green-50 dark:has-[:checked]:bg-green-900/20">
+                            <input type="radio" name="prioridad" value="baja" class="text-green-500 focus:ring-green-500">
+                            <span class="font-semibold text-gray-900 dark:text-white">🟢 Baja</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Materiales (Tabla Simple) -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-boxes text-orange-500 mr-1"></i>
+                        Materiales Requeridos <span class="text-red-500">*</span>
+                    </label>
+                    <div class="border border-gray-300 dark:border-slate-600 rounded-lg overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 dark:bg-slate-700/50">
+                                <tr>
+                                    <th class="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Material</th>
+                                    <th class="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300 w-24">Cantidad</th>
+                                    <th class="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300 w-24">Unidad</th>
+                                    <th class="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300 w-12"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaMateriales" class="divide-y divide-gray-200 dark:divide-slate-700">
+                                <tr class="bg-white dark:bg-slate-700">
+                                    <td class="px-3 py-2">
+                                        <input type="text" placeholder="Ej: Cemento Portland Tipo I" 
+                                               class="w-full px-2 py-1 bg-transparent border-0 focus:ring-0 text-gray-900 dark:text-white placeholder-gray-400">
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <input type="number" placeholder="0" 
+                                               class="w-full px-2 py-1 bg-transparent border-0 focus:ring-0 text-center text-gray-900 dark:text-white">
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <select class="w-full px-2 py-1 bg-transparent border-0 focus:ring-0 text-gray-900 dark:text-white text-sm">
+                                            <option value="BLS">BLS</option>
+                                            <option value="UND">UND</option>
+                                            <option value="M2">M2</option>
+                                            <option value="M3">M3</option>
+                                        </select>
+                                    </td>
+                                    <td class="px-3 py-2 text-center">
+                                        <button type="button" class="text-red-500 hover:text-red-700">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <button type="button" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-700/30 hover:bg-gray-100 dark:hover:bg-slate-700/50 text-gray-700 dark:text-gray-300 font-medium transition-colors">
+                            <i class="fas fa-plus mr-2"></i>
+                            Agregar Material
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Observaciones -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-sticky-note text-orange-500 mr-1"></i>
+                        Observaciones Adicionales
+                    </label>
+                    <textarea rows="2" 
+                              placeholder="Notas u observaciones adicionales (opcional)..."
+                              class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white resize-none"></textarea>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 bg-gray-50 dark:bg-slate-900/50 border-t border-gray-200 dark:border-slate-700 flex flex-col sm:flex-row gap-3 justify-end">
+            <button type="button" onclick="cerrarModalNuevoRequerimiento()" 
+                    class="px-6 py-2.5 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">
+                <i class="fas fa-times mr-2"></i>
+                Cancelar
+            </button>
+            <button type="button" onclick="crearRequerimiento()" 
+                    class="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-lg transition-all shadow-lg shadow-orange-500/30">
+                <i class="fas fa-save mr-2"></i>
+                Crear Requerimiento
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .modal-show {
+        transform: scale(1);
+        opacity: 1;
+    }
+</style>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
+    // Función para abrir el modal de nuevo requerimiento
+    function abrirModalNuevoRequerimiento() {
+        const modal = document.getElementById('modalNuevoRequerimiento');
+        modal.classList.remove('hidden');
+        
+        // Establecer fecha actual
+        const fechaInput = document.getElementById('fechaSolicitud');
+        const hoy = new Date();
+        const fechaFormateada = hoy.toISOString().split('T')[0]; // YYYY-MM-DD
+        fechaInput.value = fechaFormateada;
+        
+        setTimeout(() => {
+            modal.querySelector('.modal-content').classList.add('modal-show');
+        }, 10);
+    }
+
+    // Función para cerrar el modal
+    function cerrarModalNuevoRequerimiento() {
+        const modal = document.getElementById('modalNuevoRequerimiento');
+        modal.querySelector('.modal-content').classList.remove('modal-show');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300);
+    }
+
+    // Función para crear el requerimiento (placeholder)
+    function crearRequerimiento() {
+        // Por ahora solo mostrar un mensaje de éxito
+        alert('Funcionalidad en desarrollo. Este es solo el diseño del modal.');
+        cerrarModalNuevoRequerimiento();
+    }
+
     // Cargar historial de marcaciones
     function cargarHistorial() {
         fetch('{{ url_for("marcacion.obtener_historial_marcacion") }}', {
@@ -117,7 +415,12 @@
                 'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             const container = document.getElementById('historialContainer');
             
@@ -192,11 +495,12 @@
             }
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Error al cargar historial:', error);
             document.getElementById('historialContainer').innerHTML = `
-                <div class="text-center text-red-500 dark:text-red-400 py-12">
-                    <i class="fas fa-exclamation-circle text-3xl mb-2"></i>
-                    <p>Error al cargar el historial</p>
+                <div class="text-center text-gray-500 dark:text-gray-400 py-12">
+                    <i class="fas fa-info-circle text-3xl mb-2"></i>
+                    <p>No hay historial disponible en este momento</p>
+                    <p class="text-xs mt-2">El sistema de marcaciones puede no estar configurado</p>
                 </div>
             `;
         });

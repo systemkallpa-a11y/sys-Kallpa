@@ -296,6 +296,8 @@
 
                                 <th class="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">Justificación</th>
 
+                                <th class="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">Acciones</th>
+
                             </tr>
 
                         </thead>
@@ -330,6 +332,105 @@
 
     </div>
 
+</div>
+
+
+
+<!-- Modal: Editar Marcación -->
+<div id="modal-editar-marcacion" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md transform transition-all">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white px-6 py-5 rounded-t-2xl">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-edit text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold">Editar Marcación</h3>
+                        <p class="text-indigo-100 text-sm">Ajustar hora de marcación</p>
+                    </div>
+                </div>
+                <button onclick="cerrarModalEditarMarcacion()" class="text-white hover:text-gray-200 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div class="p-6 space-y-4">
+            <input type="hidden" id="edit-id-marcacion">
+            
+            <!-- Hora Actual -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <i class="fas fa-clock text-indigo-600 mr-1"></i>
+                    Hora Actual de Marcación
+                </label>
+                <input type="text" id="edit-hora-actual" readonly 
+                       class="w-full px-4 py-3 bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-600 dark:text-gray-400 cursor-not-allowed">
+            </div>
+
+            <!-- Tipo de Marcación -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <i class="fas fa-tag text-indigo-600 mr-1"></i>
+                    Tipo de Marcación
+                </label>
+                <input type="text" id="edit-tipo-marcacion" readonly 
+                       class="w-full px-4 py-3 bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-600 dark:text-gray-400 cursor-not-allowed">
+            </div>
+
+            <!-- Ajuste Rápido -->
+            <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-lg p-4">
+                <p class="text-sm font-semibold text-indigo-900 dark:text-indigo-100 mb-3">
+                    <i class="fas fa-zap text-indigo-600 mr-1"></i>
+                    Ajuste Rápido
+                </p>
+                <button onclick="ajustarAHoraOficial()" class="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-lg transition-all shadow-md">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    Marcar como "ASISTIÓ" (Hora Oficial de Entrada)
+                </button>
+                <p class="text-xs text-indigo-700 dark:text-indigo-300 mt-2 text-center">
+                    La hora se ajustará automáticamente a la hora oficial de entrada
+                </p>
+            </div>
+
+            <!-- O cambiar manualmente -->
+            <div class="relative">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-gray-300 dark:border-slate-600"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="px-2 bg-white dark:bg-slate-900 text-gray-500">O cambiar manualmente</span>
+                </div>
+            </div>
+
+            <!-- Nueva Hora -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <i class="fas fa-clock text-indigo-600 mr-1"></i>
+                    Nueva Hora (HH:MM)
+                </label>
+                <input type="time" id="edit-nueva-hora" 
+                       class="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-white">
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 bg-gray-50 dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 flex gap-3 justify-end rounded-b-2xl">
+            <button onclick="cerrarModalEditarMarcacion()" 
+                    class="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors">
+                <i class="fas fa-times mr-2"></i>
+                Cancelar
+            </button>
+            <button onclick="guardarMarcacionEditada()" 
+                    class="px-6 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-semibold rounded-lg transition-all shadow-lg">
+                <i class="fas fa-save mr-2"></i>
+                Guardar Cambios
+            </button>
+        </div>
+    </div>
 </div>
 
 
@@ -1216,6 +1317,92 @@ function cerrarModalDetalle() {
 
 
 
+// ==================== FUNCIONES PARA EDITAR MARCACIÓN ====================
+function abrirModalEditarMarcacion(idMarcacion, hora, tipo) {
+    document.getElementById('modal-editar-marcacion').classList.remove('hidden');
+    document.getElementById('edit-id-marcacion').value = idMarcacion;
+    document.getElementById('edit-hora-actual').value = hora;
+    document.getElementById('edit-tipo-marcacion').value = tipo;
+    document.getElementById('edit-nueva-hora').value = hora;
+}
+
+function cerrarModalEditarMarcacion() {
+    document.getElementById('modal-editar-marcacion').classList.add('hidden');
+    document.getElementById('edit-id-marcacion').value = '';
+    document.getElementById('edit-hora-actual').value = '';
+    document.getElementById('edit-tipo-marcacion').value = '';
+    document.getElementById('edit-nueva-hora').value = '';
+}
+
+function ajustarAHoraOficial() {
+    // Hora oficial de entrada (por defecto 08:00)
+    const horaOficial = '08:00';
+    document.getElementById('edit-nueva-hora').value = horaOficial;
+    
+    // Mostrar mensaje
+    mostrarMensajeTemp('Hora ajustada a hora oficial de entrada: ' + horaOficial, 'info');
+}
+
+function guardarMarcacionEditada() {
+    const idMarcacion = document.getElementById('edit-id-marcacion').value;
+    const nuevaHora = document.getElementById('edit-nueva-hora').value;
+    
+    if (!nuevaHora) {
+        mostrarMensaje('Por favor ingresa una nueva hora', 'warning');
+        return;
+    }
+    
+    // Confirmar cambio
+    if (!confirm(`¿Estás seguro de cambiar la hora de marcación a ${nuevaHora}?`)) {
+        return;
+    }
+    
+    // Llamar API para actualizar
+    fetch('/api/marcacion/editar/' + idMarcacion, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            nueva_hora: nuevaHora
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarMensaje('Marcación actualizada exitosamente', 'success');
+            cerrarModalEditarMarcacion();
+            // Recargar el detalle del día
+            const modalInfo = document.getElementById('modal-info-usuario').textContent;
+            if (modalInfo) {
+                // Extraer datos y recargar
+                setTimeout(() => {
+                    location.reload(); // Por ahora recargamos la página
+                }, 1000);
+            }
+        } else {
+            mostrarMensaje(data.error || 'Error al actualizar la marcación', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarMensaje('Error al actualizar la marcación', 'error');
+    });
+}
+
+function mostrarMensajeTemp(mensaje, tipo) {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-[99999] ${
+        tipo === 'info' ? 'bg-blue-600' : tipo === 'success' ? 'bg-green-600' : 'bg-yellow-600'
+    } text-white font-semibold`;
+    toast.textContent = mensaje;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+
+
 function renderizarFotos(marcaciones) {
 
     const gridFotos = document.getElementById('grid-fotos');
@@ -1361,6 +1548,12 @@ function renderizarTablaDetalle(marcaciones) {
                     ? `<button onclick="verJustificacionReporte('${escapeHtml((m.justificacion || '').replace(/'/g, "\\'").replace(/\n/g, " "))}')" class="px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-[10px] font-medium transition-colors" title="Ver justificación"><i class="fas fa-eye mr-1"></i>Ver</button>`
                     : '<span class="text-gray-400 dark:text-gray-500">-</span>'
                 }
+            </td>
+
+            <td class="px-4 py-3 text-center">
+                <button onclick="abrirModalEditarMarcacion(${m.id_marcacion}, '${m.hora}', '${m.tipo_marcacion}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-medium transition-colors" title="Editar marcación">
+                    <i class="fas fa-edit mr-1"></i>Editar
+                </button>
             </td>
 
         </tr>
