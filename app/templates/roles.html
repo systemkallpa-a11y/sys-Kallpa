@@ -14,6 +14,43 @@
 
     <!-- Contenido Principal -->
     <div class="p-6">
+        <!-- Filtros -->
+        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md border border-gray-200 dark:border-slate-800 p-4 mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div>
+                    <label for="filtro-nombre" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Nombre</label>
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="filtro-nombre" placeholder="Buscar por nombre..." autocomplete="off"
+                               class="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 dark:bg-slate-800 dark:text-white text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label for="filtro-empresa" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Empresa</label>
+                    <select id="filtro-empresa"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 dark:bg-slate-800 dark:text-white text-sm">
+                        <option value="">Todas las empresas</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filtro-area" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Área</label>
+                    <select id="filtro-area"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 dark:bg-slate-800 dark:text-white text-sm">
+                        <option value="">Todas las áreas</option>
+                    </select>
+                </div>
+                <div>
+                    <button type="button" onclick="limpiarFiltros()"
+                            class="w-full px-4 py-2 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm font-medium">
+                        <i class="fas fa-times mr-2"></i>Limpiar filtros
+                    </button>
+                </div>
+            </div>
+            <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                <span id="contador-resultados"><i class="fas fa-list-ul mr-1"></i>Mostrando 0 de 0</span>
+            </div>
+        </div>
+
         <!-- Tabla de Usuarios y Accesos -->
         <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
         <div class="overflow-x-auto">
@@ -23,6 +60,7 @@
                         <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Usuario</th>
                         <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Nombre Completo</th>
                         <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Cargo</th>
+                        <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Área</th>
                         <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Empresa</th>
                         <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Menús</th>
                         <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Submenús</th>
@@ -32,7 +70,7 @@
                 </thead>
                 <tbody id="usuarios-accesos-lista" class="divide-y divide-gray-200 dark:divide-slate-700">
                     <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                        <td colspan="8" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <td colspan="9" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                             <i class="fas fa-spinner fa-spin mr-2"></i>Cargando usuarios...
                         </td>
                     </tr>
@@ -97,13 +135,21 @@
         cargarUsuariosAccesos();
     });
 
+    let usuariosDatos = [];
+    let filtrosCargados = false;
+
     async function cargarUsuariosAccesos() {
         try {
             const response = await fetch('/api/usuarios-accesos/obtener');
             const result = await response.json();
             
             if (result.success) {
-                mostrarUsuariosAccesos(result.data);
+                usuariosDatos = result.data || [];
+                if (!filtrosCargados) {
+                    await cargarFiltros();
+                    filtrosCargados = true;
+                }
+                aplicarFiltros();
             } else {
                 console.error('Error:', result.error);
             }
@@ -112,9 +158,84 @@
         }
     }
 
+    // Cargar los desplegables de filtros (empresas y áreas)
+    async function cargarFiltros() {
+        try {
+            const [respEmpresas, respAreas] = await Promise.all([
+                fetch('/api/empresas/listar'),
+                fetch('/api/areas/obtener')
+            ]);
+            const empresas = await respEmpresas.json();
+            const areas = await respAreas.json();
+
+            const selectEmpresa = document.getElementById('filtro-empresa');
+            const selectArea = document.getElementById('filtro-area');
+
+            if (empresas.success && Array.isArray(empresas.data)) {
+                empresas.data.forEach(e => {
+                    const option = document.createElement('option');
+                    option.value = e.id_empresa;
+                    option.textContent = e.nombre;
+                    selectEmpresa.appendChild(option);
+                });
+            }
+
+            if (areas.success && Array.isArray(areas.data)) {
+                areas.data.forEach(a => {
+                    const option = document.createElement('option');
+                    option.value = a.id_area;
+                    option.textContent = a.nombre;
+                    selectArea.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error al cargar filtros:', error);
+        }
+    }
+
+    // Aplicar filtros combinados (nombre + empresa + área)
+    function aplicarFiltros() {
+        const nombre = (document.getElementById('filtro-nombre').value || '').trim().toLowerCase();
+        const idEmpresa = document.getElementById('filtro-empresa').value;
+        const idArea = document.getElementById('filtro-area').value;
+
+        const filtrados = usuariosDatos.filter(u => {
+            const coincideNombre = !nombre || (u.nombre_completo || '').toLowerCase().includes(nombre);
+            const coincideEmpresa = !idEmpresa || String(u.id_empresa) === idEmpresa;
+            const coincideArea = !idArea || String(u.id_area) === idArea;
+            return coincideNombre && coincideEmpresa && coincideArea;
+        });
+
+        mostrarUsuariosAccesos(filtrados);
+
+        const contador = document.getElementById('contador-resultados');
+        if (contador) {
+            contador.innerHTML = `<i class="fas fa-list-ul mr-1"></i>Mostrando ${filtrados.length} de ${usuariosDatos.length}`;
+        }
+    }
+
+    // Limpiar todos los filtros
+    function limpiarFiltros() {
+        document.getElementById('filtro-nombre').value = '';
+        document.getElementById('filtro-empresa').value = '';
+        document.getElementById('filtro-area').value = '';
+        aplicarFiltros();
+    }
+
     function mostrarUsuariosAccesos(usuarios) {
         const tabla = document.getElementById('usuarios-accesos-lista');
         tabla.innerHTML = '';
+
+        if (usuarios.length === 0) {
+            tabla.innerHTML = `
+                <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td colspan="9" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-search-minus mr-2"></i>Sin resultados que coincidan con los filtros
+                    </td>
+                </tr>
+            `;
+            return;
+        }
         
         usuarios.forEach(usuario => {
             const fila = document.createElement('tr');
@@ -128,6 +249,9 @@
                 </td>
                 <td class="px-6 py-4 text-gray-600 dark:text-gray-400">
                     ${usuario.cargo_nombre || '-'}
+                </td>
+                <td class="px-6 py-4 text-gray-600 dark:text-gray-400">
+                    ${usuario.area_nombre || '—'}
                 </td>
                 <td class="px-6 py-4 text-gray-600 dark:text-gray-400">
                     ${usuario.empresa_nombre || '-'}
@@ -365,6 +489,11 @@
             alert('Error al guardar accesos');
         }
     });
+
+    // Listeners de los filtros
+    document.getElementById('filtro-nombre').addEventListener('input', aplicarFiltros);
+    document.getElementById('filtro-empresa').addEventListener('change', aplicarFiltros);
+    document.getElementById('filtro-area').addEventListener('change', aplicarFiltros);
 </script>
 
 {% endblock %}
