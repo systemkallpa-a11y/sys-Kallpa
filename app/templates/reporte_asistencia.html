@@ -1401,6 +1401,14 @@ function mostrarMensajeTemp(mensaje, tipo) {
     setTimeout(() => toast.remove(), 3000);
 }
 
+// ESCAPAR HTML
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 
 
 function renderizarFotos(marcaciones) {
@@ -1535,7 +1543,7 @@ function renderizarTablaDetalle(marcaciones) {
 
             <td class="px-4 py-3 text-center text-sm text-gray-600 dark:text-gray-400">
 
-                ${m.precision ? `ÍÂ±${m.precision}m` : '-'}
+                ${m.precision ? `&plusmn;${m.precision}m` : '-'}
 
             </td>
 
@@ -1666,7 +1674,7 @@ function inicializarMapa(marcaciones) {
 
                     <p style="margin: 2px 0;">Hora: ${m.hora}</p>
 
-                    <p style="margin: 2px 0;">Precisión: ÍÂ±${m.precision}m</p>
+                    <p style="margin: 2px 0;">Precisión: &plusmn;${m.precision}m</p>
 
                     ${m.dispositivo ? `<p style="margin: 2px 0;">Dispositivo: ${m.dispositivo}</p>` : ''}
 
@@ -2545,7 +2553,7 @@ function cerrarModalJustificacionReporte() {
 </script>
 
 <!-- Modal Ver Justificación Reporte -->
-<div id="modalVerJustificacionReporte" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
+<div id="modalVerJustificacionReporte" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100000] hidden flex items-center justify-center p-4">
     <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-200 dark:border-slate-600">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white">

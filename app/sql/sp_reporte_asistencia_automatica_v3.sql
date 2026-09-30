@@ -10,7 +10,7 @@
 --   * usa u.sede, u.nombre_empresa y vista_horarios (no existen aqui).
 -- Resultado: "Reportes > Control de Asistencia" deja de cargar y los
 -- Excel salen vacios. El SP correcto y vigente es:
---   sp_reporte_asistencia_automatica_v2.sql
+--   sp_reporte_asistencia_automatica_v4.sql
 -- ============================================================
 DROP PROCEDURE IF EXISTS sp_reporte_asistencia_automatica;
 

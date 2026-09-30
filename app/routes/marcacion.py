@@ -18,6 +18,11 @@ marcacion_bp = Blueprint('marcacion', __name__)
 # UTILIDADES
 # ============================================================================
 
+# Dias de la semana en espanol (mismos textos que muestra el Dashboard).
+# Se calculan desde la fecha porque DAYNAME() del SP devuelve en ingles.
+DIAS_SEMANA_ES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+
+
 def get_db_connection():
     """Crear conexin a la base de datos Kallpa"""
     try:
@@ -1684,8 +1689,22 @@ def exportar_horas_laboradas_excel():
             for result in cursor.stored_results():
                 registros = result.fetchall()
             
+            # Dias con al menos una marcacion (mismo criterio que el Dashboard)
+            cursor.execute(
+                "SELECT DISTINCT DATE(fecha_marcacion) AS fecha FROM TblMarcacion "
+                "WHERE num_documento = %s AND DATE(fecha_marcacion) BETWEEN %s AND %s",
+                (int(num_documento), fecha_inicio, fecha_fin)
+            )
+            dias_marcados = {row['fecha'] for row in cursor.fetchall()}
+            
             cursor.close()
             connection.close()
+            
+            # sp_horas_laboradas genera una fila por cada dia del rango aunque no haya
+            # marcaciones; el Dashboard (sp_reporte_asistencia_automatica) solo muestra
+            # los dias con marcacion. Se descartan los dias vacios para que el Excel
+            # tenga exactamente los mismos registros que la pantalla.
+            registros = [reg for reg in registros if reg.get('fecha') in dias_marcados]
             
             print(f"[HORAS_LABORADAS] [OK] {len(registros)} registros obtenidos")
             
@@ -1757,7 +1776,7 @@ def exportar_horas_laboradas_excel():
             # Fila 3: Resumen
             total_minutos = sum(reg.get('minutos_totales', 0) for reg in registros)
             total_horas = f"{total_minutos // 60}:{total_minutos % 60:02d}"
-            dias_con_asistencia = sum(1 for reg in registros if reg.get('minutos_totales', 0) > 0)
+            dias_con_asistencia = len(registros)
             
             ws.merge_cells('A3:H3')
             cell_resumen = ws.cell(row=3, column=1, value=f'Total Horas: {total_horas}  |  Dias con Asistencia: {dias_con_asistencia}  |  Total Minutos: {total_minutos}')
@@ -1803,7 +1822,10 @@ def exportar_horas_laboradas_excel():
                 else:
                     fecha_str = str(fecha)
                 
-                dia = reg.get('dia', '')
+                if hasattr(fecha, 'weekday'):
+                    dia = DIAS_SEMANA_ES[fecha.weekday()]
+                else:
+                    dia = reg.get('dia', '')
                 entrada_t1 = reg.get('entrada_t1', '-') or '-'
                 salida_t1 = reg.get('salida_t1', '-') or '-'
                 entrada_t2 = reg.get('entrada_t2', '-') or '-'

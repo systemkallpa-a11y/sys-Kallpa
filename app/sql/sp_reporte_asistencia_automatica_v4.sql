@@ -1,14 +1,47 @@
 -- ============================================================
--- ADVERTENCIA: DESACTUALIZADO - NO EJECUTAR
--- Reemplazado por sp_reporte_asistencia_automatica_v4.sql
--- Motivo: esta copia difiere de la definición real de la BD, que
---   incluye la prórroga de 5 min en DETALLE_OFI_T1 y DETALLE_OFI_T2:
---     acá      : WHEN MIN(entrada) > h.hora_entrada THEN 'TARDANZA'
---     en la BD : WHEN TIMESTAMPDIFF(MINUTE, h.hora_entrada, MIN(entrada)) > 5 THEN 'TARDANZA'
---   Ejecutar este archivo BORRARIA la prórroga de 5 minutos.
---   Tampoco trae los campos AREA / ID_AREA / ID_EMPRESA que usan
---   los filtros de Reportes > Control de Asistencia.
+-- SP: sp_reporte_asistencia_automatica   (v4 - REEMPLAZADO por _v5)
 -- ============================================================
+-- NOTA (2026-09-30): el cuerpo desplegado en BD es este archivo
+--   SIN las columnas opcionales ID_EMPRESA / ID_AREA. La versión
+--   vigente es _v5.sql (GROUP_CONCAT en las 8 celdas para no
+--   perder marcas + ventana de SALIDA T1 <= 14:00:00).
+-- ============================================================
+-- Base: definición real extraída de la BD con SHOW CREATE PROCEDURE
+--       (incluye la prórroga de 5 min en DETALLE_OFI_T1/T2 que NO
+--       tiene sp_reporte_asistencia_automatica_v2.sql).
+--
+-- Cambios sobre la definición original (4 puntos):
+--   1. SELECT    : u.id_empresa AS ID_EMPRESA
+--   2. SELECT    : a.id_area AS ID_AREA, IFNULL(a.nombre,'Sin Área') AS AREA
+--   3. FROM      : LEFT JOIN TblArea a ON c.id_area = a.id_area
+--   4. GROUP BY  : + u.id_empresa, a.id_area, a.nombre
+--
+-- Propósito: habilitar los filtros de Empresa y Área en
+--   Reportes > Control de Asistencia (control_asistencia.html).
+--   El frontend filtra por NOMBRE (columnas EMPRESA y AREA), por lo
+--   que las columnas ID_EMPRESA / ID_AREA son opcionales: si la BD
+--   no las tiene, el sistema funciona igual.
+--
+-- Consumidores (no requieren cambios):
+--   GET /api/reportes/control-asistencia         -> JSON
+--   GET /api/reportes/control-asistencia/excel   -> Excel
+--   Ambos leen por nombre de columna, así que la columna nueva
+--   aparece sola en el JSON y el Excel queda idéntico.
+--
+-- IMPORTANTE: MySQL no permite alterar el cuerpo de un procedimiento
+--   (no existe ALTER PROCEDURE de cuerpo) => siempre DROP + CREATE.
+--   Antes de ejecutar, guardá el estado actual para poder revertir:
+--     SHOW CREATE PROCEDURE sp_reporte_asistencia_automatica\G
+--
+-- Reemplaza a:
+--   _v2.sql  -> desactualizado (falta la prórroga de 5 min)
+--   _v3.sql  -> dañino, NO ejecutar (2 parámetros, columnas incompatibles)
+-- ============================================================
+
+DROP PROCEDURE IF EXISTS sp_reporte_asistencia_automatica;
+
+DELIMITER $$
+
 CREATE DEFINER=`kallpasystem`@`%` PROCEDURE `sp_reporte_asistencia_automatica`(
     IN p_fecha_inicio DATE,
     IN p_fecha_fin DATE,
@@ -18,11 +51,14 @@ BEGIN
     SELECT 
         -- 1. INFORMACIÓN GENERAL
         IFNULL(e.nombre, 'Sin Empresa') AS EMPRESA,
+        u.id_empresa AS ID_EMPRESA,
         CONCAT(p.nombres, ' ', p.apellido_paterno, ' ', p.apellido_materno) AS NOMBRES,
         p.documento_numero AS DNI_CE,
         IFNULL(c.nombre, 'Sin Cargo') AS CARGO,
+        a.id_area AS ID_AREA,
+        IFNULL(a.nombre, 'Sin Área') AS AREA,
         
-        -- 2. SEDE
+        -- 2. SEDE: Siempre traer la sede del usuario
         IFNULL(
             (SELECT ub2.nombre_zona 
              FROM TblUbicacionMarcacion ub2 
@@ -54,7 +90,7 @@ BEGIN
         TIME_FORMAT(MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.tipo_ubicacion = 'CAMPO' AND TIME(m.fecha_marcacion) >= '12:00:00' THEN TIME(m.fecha_marcacion) END), '%H:%i') AS H_ENTRADA_CMP_T2,
         TIME_FORMAT(MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.tipo_ubicacion = 'CAMPO' AND TIME(m.fecha_marcacion) > '14:00:00' THEN TIME(m.fecha_marcacion) END), '%H:%i') AS H_SALIDA_CMP_T2,
         
-        -- 8. MINUTOS T1 (reales - programados)
+        -- 8. MINUTOS T1 (reales - programados, con prórroga 5 min)
         CASE 
             WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND TIME(m.fecha_marcacion) < '12:00:00' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             WHEN MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND TIME(m.fecha_marcacion) < '14:00:00' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
@@ -81,7 +117,7 @@ BEGIN
             )
         END AS MINUTOS_T1,
         
-        -- 9. MINUTOS T2 (reales - programados)
+        -- 9. MINUTOS T2 (reales - programados, con prórroga 5 min)
         CASE 
             WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND TIME(m.fecha_marcacion) >= '12:00:00' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             WHEN MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND TIME(m.fecha_marcacion) > '14:00:00' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
@@ -108,19 +144,19 @@ BEGIN
             )
         END AS MINUTOS_T2,
         
-        -- 10. DETALLE OFICINA MAÑANA
+        -- 10. DETALLE OFICINA MAÑANA (con prórroga 5 min)
         CASE 
             WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.tipo_ubicacion = 'OFICINA' AND TIME(m.fecha_marcacion) < '12:00:00' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             WHEN h.hora_entrada IS NULL THEN 'SIN HORARIO'
-            WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.tipo_ubicacion = 'OFICINA' AND TIME(m.fecha_marcacion) < '12:00:00' THEN TIME(m.fecha_marcacion) END) > h.hora_entrada THEN 'TARDANZA'
+            WHEN TIMESTAMPDIFF(MINUTE, h.hora_entrada, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.tipo_ubicacion = 'OFICINA' AND TIME(m.fecha_marcacion) < '12:00:00' THEN TIME(m.fecha_marcacion) END)) > 5 THEN 'TARDANZA'
             ELSE 'ASISTENCIA'
         END AS DETALLE_OFI_T1,
         
-        -- 11. DETALLE OFICINA TARDE
+        -- 11. DETALLE OFICINA TARDE (con prórroga 5 min)
         CASE 
             WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.tipo_ubicacion = 'OFICINA' AND TIME(m.fecha_marcacion) >= '12:00:00' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             WHEN h.hora_entrada2 IS NULL THEN 'SIN HORARIO'
-            WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.tipo_ubicacion = 'OFICINA' AND TIME(m.fecha_marcacion) >= '12:00:00' THEN TIME(m.fecha_marcacion) END) > h.hora_entrada2 THEN 'TARDANZA'
+            WHEN TIMESTAMPDIFF(MINUTE, h.hora_entrada2, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.tipo_ubicacion = 'OFICINA' AND TIME(m.fecha_marcacion) >= '12:00:00' THEN TIME(m.fecha_marcacion) END)) > 5 THEN 'TARDANZA'
             ELSE 'ASISTENCIA'
         END AS DETALLE_OFI_T2,
         
@@ -136,10 +172,9 @@ BEGIN
             ELSE 'CAMPO'
         END AS DETALLE_CMP_T2,
         
-        -- 14. JUSTIFICACIONES (4 columnas: ENT/SAL x T1/T2)
-        -- ENTRADA T1: justificaciones de ENTRADAs antes de 12:00
+        -- 14. JUSTIFICACIONES
         (
-            SELECT GROUP_CONCAT(mj.justificacion SEPARATOR ' | ') 
+          SELECT GROUP_CONCAT(mj.justificacion SEPARATOR ' | ') 
             FROM TblMarcacion mj 
             WHERE mj.num_documento = m.num_documento 
               AND DATE(mj.fecha_marcacion) = DATE(m.fecha_marcacion)
@@ -147,8 +182,6 @@ BEGIN
               AND mj.tipo_marcacion = 'ENTRADA'
               AND TIME(mj.fecha_marcacion) < '12:00:00'
         ) AS JUSTIFICACION_ENT_T1,
-        
-        -- SALIDA T1: justificaciones de SALIDAs antes de 14:00
         (
             SELECT GROUP_CONCAT(mj.justificacion SEPARATOR ' | ') 
             FROM TblMarcacion mj 
@@ -158,8 +191,6 @@ BEGIN
               AND mj.tipo_marcacion = 'SALIDA'
               AND TIME(mj.fecha_marcacion) < '14:00:00'
         ) AS JUSTIFICACION_SAL_T1,
-        
-        -- ENTRADA T2: justificaciones de ENTRADAs después de 12:00
         (
             SELECT GROUP_CONCAT(mj.justificacion SEPARATOR ' | ') 
             FROM TblMarcacion mj 
@@ -169,8 +200,6 @@ BEGIN
               AND mj.tipo_marcacion = 'ENTRADA'
               AND TIME(mj.fecha_marcacion) >= '12:00:00'
         ) AS JUSTIFICACION_ENT_T2,
-        
-        -- SALIDA T2: justificaciones de SALIDAs después de 14:00
         (
             SELECT GROUP_CONCAT(mj.justificacion SEPARATOR ' | ') 
             FROM TblMarcacion mj 
@@ -186,6 +215,7 @@ BEGIN
     INNER JOIN TblUsuario u ON m.num_usuario = u.num_usuario
     LEFT JOIN TblEmpresa e ON u.id_empresa = e.id_empresa
     LEFT JOIN TblCargo c ON u.id_cargo = c.id_cargo
+    LEFT JOIN TblArea a ON c.id_area = a.id_area
     
     LEFT JOIN TblHorarioTrabajo h ON p.num_documento = h.num_documento 
         AND UPPER(h.dia_semana) = CASE DAYOFWEEK(m.fecha_marcacion)
@@ -205,7 +235,9 @@ BEGIN
     GROUP BY 
         p.num_documento, DATE(m.fecha_marcacion), e.nombre, p.nombres,
         p.apellido_paterno, p.apellido_materno, p.documento_numero,
-        c.nombre
+        c.nombre, u.id_empresa, a.id_area, a.nombre
 
     ORDER BY DATE(m.fecha_marcacion) ASC, p.apellido_paterno ASC;
-END
+END$$
+
+DELIMITER ;

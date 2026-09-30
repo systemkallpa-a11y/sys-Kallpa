@@ -131,6 +131,22 @@
                                class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
                     </div>
 
+                    <!-- Empresa -->
+                    <div class="w-40">
+                        <select id="filtro-empresa" title="Filtrar por empresa"
+                                class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
+                            <option value="">Todas las empresas</option>
+                        </select>
+                    </div>
+
+                    <!-- Área -->
+                    <div class="w-40">
+                        <select id="filtro-area" title="Filtrar por área"
+                                class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
+                            <option value="">Todas las áreas</option>
+                        </select>
+                    </div>
+
                     <!-- Botón Buscar -->
                     <button onclick="aplicarFiltrosControl()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors">
                         <i class="fas fa-search mr-1"></i>Buscar
@@ -145,7 +161,7 @@
                     </button>
 
                     <!-- Botón Horas Laboradas -->
-                    <button onclick="abrirModalHorasLaboradas()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-medium transition-colors">
+                    <button onclick="exportarHorasLaboradas()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-medium transition-colors">
                         <i class="fas fa-business-time mr-1"></i>Horas Laboradas
                     </button>
                 </div>
@@ -431,55 +447,6 @@ MODAL: EDITAR HORAS DE MARCACIÓN
     </div>
 </div>
 
-<!-- ============================================================================
-MODAL: HORAS LABORADAS - Seleccionar Empleado
-============================================================================ -->
-<div id="modal-horas-laboradas" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md">
-        <!-- Header -->
-        <div class="px-4 py-3 bg-purple-600 rounded-t-xl">
-            <h3 class="text-white font-bold text-sm">
-                <i class="fas fa-business-time mr-2"></i>Horas Laboradas - Seleccionar Empleado
-            </h3>
-        </div>
-        
-        <!-- Body -->
-        <div class="p-4">
-            <div class="mb-3">
-                <label class="block text-gray-700 dark:text-gray-300 text-xs font-semibold mb-1">Empleado *</label>
-                <select id="horas-lab-empleado" 
-                        class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm">
-                    <option value="">-- Seleccionar empleado --</option>
-                </select>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-gray-700 dark:text-gray-300 text-xs font-semibold mb-1">Fecha Inicio</label>
-                    <input type="date" id="horas-lab-fecha-inicio" 
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm">
-                </div>
-                <div>
-                    <label class="block text-gray-700 dark:text-gray-300 text-xs font-semibold mb-1">Fecha Fin</label>
-                    <input type="date" id="horas-lab-fecha-fin" 
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm">
-                </div>
-            </div>
-        </div>
-        
-        <!-- Footer -->
-        <div class="px-4 py-3 bg-gray-50 dark:bg-slate-700 rounded-b-xl flex justify-end gap-2">
-            <button onclick="cerrarModalHorasLaboradas()" 
-                    class="px-4 py-2 bg-gray-300 dark:bg-slate-600 hover:bg-gray-400 dark:hover:bg-slate-500 text-gray-700 dark:text-white rounded-lg text-sm font-medium transition-colors">
-                Cancelar
-            </button>
-            <button onclick="exportarHorasLaboradas()" 
-                    class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors">
-                <i class="fas fa-download mr-1"></i>Exportar Excel
-            </button>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
 
 {% block scripts %}
@@ -491,12 +458,14 @@ let datosReporte = [];
 let datosFiltrados = [];
 let vacacionesAprobadas = [];
 let paginaActual = 1;
+let filtrosCargados = false;
+let datosCargados = false;
 const registrosPorPagina = 20;
 
 // ============================================================================
 // INICIALIZACIÓN
 // ============================================================================
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Establecer fechas por defecto: primer día del mes actual hasta hoy
     const hoy = new Date();
     const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
@@ -504,9 +473,59 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('filtro-fecha-inicio').value = formatearFechaInput(primerDiaMes);
     document.getElementById('filtro-fecha-fin').value = formatearFechaInput(hoy);
     
+    // Cargar desplegables de empresa y área (una sola vez)
+    await cargarFiltros();
+    
+    document.getElementById('filtro-empresa').addEventListener('change', filtrarYRenderizar);
+    document.getElementById('filtro-area').addEventListener('change', filtrarYRenderizar);
+    
     // Cargar datos iniciales
     aplicarFiltrosControl();
 });
+
+// ============================================================================
+// CARGAR DESPLEGABLES DE FILTRO (EMPRESAS Y ÁREAS)
+// ============================================================================
+async function cargarFiltros() {
+    if (filtrosCargados) return;
+    
+    try {
+        const [respEmpresas, respAreas] = await Promise.all([
+            fetch('/api/empresas/listar'),
+            fetch('/api/areas/obtener')
+        ]);
+        const empresas = await respEmpresas.json();
+        const areas = await respAreas.json();
+        
+        const selectEmpresa = document.getElementById('filtro-empresa');
+        const selectArea = document.getElementById('filtro-area');
+        
+        if (empresas.success && Array.isArray(empresas.data)) {
+            empresas.data.forEach(e => {
+                const option = document.createElement('option');
+                option.value = e.nombre;
+                option.dataset.id = e.id_empresa;
+                option.textContent = e.nombre;
+                selectEmpresa.appendChild(option);
+            });
+        }
+        
+        if (areas.success && Array.isArray(areas.data)) {
+            areas.data.forEach(a => {
+                const option = document.createElement('option');
+                option.value = a.nombre;
+                option.dataset.id = a.id_area;
+                option.textContent = a.nombre;
+                selectArea.appendChild(option);
+            });
+        }
+        
+        filtrosCargados = true;
+        console.log(`[FILTROS] ${selectEmpresa.options.length - 1} empresas, ${selectArea.options.length - 1} áreas cargadas`);
+    } catch (error) {
+        console.error('[FILTROS] Error al cargar catálogos:', error);
+    }
+}
 
 // ============================================================================
 // FORMATEAR FECHA PARA INPUT
@@ -537,6 +556,56 @@ async function aplicarFiltrosControl() {
 }
 
 // ============================================================================
+// FILTRAR Y RENDERIZAR (empleado + empresa + área + días)
+// ============================================================================
+function filtrarYRenderizar() {
+    if (!datosCargados) return;
+    
+    const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
+    const fechaFin = document.getElementById('filtro-fecha-fin').value;
+    const empleado = document.getElementById('filtro-empleado').value.trim();
+    const empresaSeleccionada = document.getElementById('filtro-empresa').value;
+    const areaSeleccionada = document.getElementById('filtro-area').value;
+    
+    let datos = [...datosReporte];
+    
+    // Filtrar por empleado si se escribió algo
+    if (empleado) {
+        const empLower = empleado.toLowerCase();
+        datos = datos.filter(r => 
+            (r.NOMBRES && r.NOMBRES.toLowerCase().includes(empLower)) ||
+            (r.DNI_CE && r.DNI_CE.toString().includes(empLower))
+        );
+    }
+    
+    // Filtrar por empresa (usuarios sin empresa => 'Sin Empresa' => no matchea)
+    if (empresaSeleccionada) {
+        datos = datos.filter(r => String(r.EMPRESA ?? '') === empresaSeleccionada);
+    }
+    
+    // Filtrar por área (usuarios sin área => 'Sin Área' => no matchea)
+    if (areaSeleccionada) {
+        datos = datos.filter(r => String(r.AREA ?? '') === areaSeleccionada);
+    }
+    
+    // Filtrar por días seleccionados
+    const diasSeleccionados = [];
+    document.querySelectorAll('.dia-btn.bg-blue-600').forEach(btn => {
+        diasSeleccionados.push(parseInt(btn.getAttribute('data-dia')));
+    });
+    
+    if (diasSeleccionados.length > 0) {
+        datos = datos.filter(r => diasSeleccionados.includes(r.DIA));
+    }
+    
+    datosFiltrados = datos;
+    paginaActual = 1;
+    
+    renderizarTabla(datosFiltrados);
+    renderizarVacaciones(fechaInicio, fechaFin, empleado, empresaSeleccionada, areaSeleccionada);
+}
+
+// ============================================================================
 // CARGAR CONTROL DE ASISTENCIA DESDE API
 // ============================================================================
 async function cargarControlAsistencia(fechaInicio, fechaFin, empleado) {
@@ -544,6 +613,7 @@ async function cargarControlAsistencia(fechaInicio, fechaFin, empleado) {
     
     // Resetear paginación al cargar nuevos datos
     paginaActual = 1;
+    datosCargados = false;
     
     tbody.innerHTML = `
         <tr>
@@ -580,31 +650,9 @@ async function cargarControlAsistencia(fechaInicio, fechaFin, empleado) {
             vacacionesAprobadas = [];
         }
         
-        // Filtrar por empleado si se escribió algo
-        if (empleado) {
-            const empLower = empleado.toLowerCase();
-            datosFiltrados = datosReporte.filter(r => 
-                (r.NOMBRES && r.NOMBRES.toLowerCase().includes(empLower)) ||
-                (r.DNI_CE && r.DNI_CE.toString().includes(empLower))
-            );
-        } else {
-            datosFiltrados = [...datosReporte];
-        }
-        
-        // Filtrar por días seleccionados
-        const diasSeleccionados = [];
-        document.querySelectorAll('.dia-btn.bg-blue-600').forEach(btn => {
-            diasSeleccionados.push(parseInt(btn.getAttribute('data-dia')));
-        });
-        
-        if (diasSeleccionados.length > 0) {
-            datosFiltrados = datosFiltrados.filter(r => 
-                diasSeleccionados.includes(r.DIA)
-            );
-        }
-        
-        renderizarTabla(datosFiltrados);
-        renderizarVacaciones(fechaInicio, fechaFin, empleado);
+        // Aplicar filtros activos (empleado, empresa, área, días)
+        datosCargados = true;
+        filtrarYRenderizar();
         
     } catch (error) {
         console.error('[CONTROL] Error:', error);
@@ -661,19 +709,11 @@ function renderizarTabla(data) {
         }
         
         // Función para renderizar detalle con color
-        function celdaDetalle(valor, justificacion, nombre, dia, mes, anio, turno) {
+        function celdaDetalle(valor) {
             if (!valor || valor === '-') {
                 return '<td class="px-2 py-2 text-center text-gray-400 dark:text-gray-500 border-r border-gray-200 dark:border-slate-700">-</td>';
             }
             const colores = obtenerColoresDetalle(valor);
-            if (valor === 'CAMPO' && justificacion) {
-                return `<td class="px-2 py-2 text-center ${colores.colorDetalle} border-r border-gray-200 dark:border-slate-700">
-                    <span class="inline-flex items-center gap-1">
-                        <span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-200 text-emerald-800 dark:bg-emerald-800 dark:text-emerald-200">CAMPO</span>
-                        <button onclick="verJustificacion('${escapeHtml(nombre || '')}', '${escapeHtml(dia || '')}', '${escapeHtml(mes || '')}', '${escapeHtml(anio || '')}', '${turno}', '${escapeHtml((justificacion || '').replace(/'/g, "\\'").replace(/\n/g, " "))}')" class="px-1.5 py-0.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-[10px] font-medium transition-colors" title="Ver justificación"><i class="fas fa-eye"></i></button>
-                    </span>
-                </td>`;
-            }
             return `<td class="px-2 py-2 text-center ${colores.colorDetalle} border-r border-gray-200 dark:border-slate-700">${escapeHtml(valor)}</td>`;
         }
         
@@ -704,19 +744,19 @@ function renderizarTabla(data) {
                 ${celdaHora(fila.H_ENTRADA_OFI_T1, 'oficina')}
                 ${celdaHora(fila.H_SALIDA_OFI_T1, 'oficina')}
                 ${celdaMinutos(fila.MINUTOS_T1)}
-                ${celdaDetalle(fila.DETALLE_OFI_T1, fila.JUSTIFICACION_ENT_T1, fila.NOMBRES, fila.DIA, fila.MES, fila.ANO, 'T1')}
+                ${celdaDetalle(fila.DETALLE_OFI_T1)}
                 ${celdaHora(fila.H_ENTRADA_OFI_T2, 'oficina')}
                 ${celdaHora(fila.H_SALIDA_OFI_T2, 'oficina')}
                 ${celdaMinutos(fila.MINUTOS_T2)}
-                ${celdaDetalle(fila.DETALLE_OFI_T2, fila.JUSTIFICACION_ENT_T2, fila.NOMBRES, fila.DIA, fila.MES, fila.ANO, 'T2')}
+                ${celdaDetalle(fila.DETALLE_OFI_T2)}
                 ${celdaHora(fila.H_ENTRADA_CMP_T1, 'campo')}
                 ${celdaHora(fila.H_SALIDA_CMP_T1, 'campo')}
                 ${celdaMinutos(fila.MINUTOS_T1)}
-                ${celdaDetalle(fila.DETALLE_CMP_T1, fila.JUSTIFICACION_ENT_T1, fila.NOMBRES, fila.DIA, fila.MES, fila.ANO, 'T1')}
+                ${celdaDetalle(fila.DETALLE_CMP_T1)}
                 ${celdaHora(fila.H_ENTRADA_CMP_T2, 'campo')}
                 ${celdaHora(fila.H_SALIDA_CMP_T2, 'campo')}
                 ${celdaMinutos(fila.MINUTOS_T2)}
-                ${celdaDetalle(fila.DETALLE_CMP_T2, fila.JUSTIFICACION_ENT_T2, fila.NOMBRES, fila.DIA, fila.MES, fila.ANO, 'T2')}
+                ${celdaDetalle(fila.DETALLE_CMP_T2)}
                 <td class="px-2 py-2 text-center">
                     <div class="flex items-center justify-center gap-1">
                         <button onclick="abrirModalEditar('${escapeHtml(fila.DNI_CE || '')}', '${escapeHtml(fila.H_ENTRADA_OFI_T1 || '')}', '${escapeHtml(fila.H_SALIDA_OFI_T1 || '')}', '${escapeHtml(fila.H_ENTRADA_OFI_T2 || '')}', '${escapeHtml(fila.H_SALIDA_OFI_T2 || '')}', '${escapeHtml(fila.H_ENTRADA_CMP_T1 || '')}', '${escapeHtml(fila.H_SALIDA_CMP_T1 || '')}', '${escapeHtml(fila.H_ENTRADA_CMP_T2 || '')}', '${escapeHtml(fila.H_SALIDA_CMP_T2 || '')}', '${escapeHtml(fila.NOMBRES || '')}', '${escapeHtml(fila.DIA || '')}', '${escapeHtml(fila.MES || '')}', '${escapeHtml(fila.ANO || '')}')" 
@@ -724,14 +764,6 @@ function renderizarTabla(data) {
                                 title="Editar horas">
                             <i class="fas fa-edit"></i>
                         </button>
-                        ${(fila.JUSTIFICACION_ENT_T1 || fila.JUSTIFICACION_SAL_T1 || fila.JUSTIFICACION_ENT_T2 || fila.JUSTIFICACION_SAL_T2) 
-                            ? `<button onclick="verJustificacionesDia('${escapeHtml(fila.NOMBRES || '')}', '${escapeHtml(fila.DIA || '')}', '${escapeHtml(fila.MES || '')}', '${escapeHtml(fila.ANO || '')}', '${escapeHtml((fila.JUSTIFICACION_ENT_T1 || '').replace(/'/g, "\\'").replace(/\n/g, " "))}', '${escapeHtml((fila.JUSTIFICACION_SAL_T1 || '').replace(/'/g, "\\'").replace(/\n/g, " "))}', '${escapeHtml((fila.JUSTIFICACION_ENT_T2 || '').replace(/'/g, "\\'").replace(/\n/g, " "))}', '${escapeHtml((fila.JUSTIFICACION_SAL_T2 || '').replace(/'/g, "\\'").replace(/\n/g, " "))}')" 
-                                class="px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-[10px] font-medium transition-colors"
-                                title="Ver justificaciones">
-                                <i class="fas fa-file-alt"></i>
-                            </button>`
-                            : ''
-                        }
                     </div>
                 </td>
             </tr>
@@ -835,7 +867,7 @@ function irAPagina(pagina) {
 // ============================================================================
 // RENDERIZAR TABLA DE VACACIONES
 // ============================================================================
-function renderizarVacaciones(fechaInicio, fechaFin, empleado) {
+function renderizarVacaciones(fechaInicio, fechaFin, empleado, empresaSeleccionada, areaSeleccionada) {
     const tbody = document.getElementById('tabla-vacaciones');
     
     if (!vacacionesAprobadas || vacacionesAprobadas.length === 0) {
@@ -861,6 +893,20 @@ function renderizarVacaciones(fechaInicio, fechaFin, empleado) {
         vacacionesFiltradas = vacacionesFiltradas.filter(v => 
             (v.empleado && v.empleado.toLowerCase().includes(empLower)) ||
             (v.num_documento && v.num_documento.toString().includes(empLower))
+        );
+    }
+    
+    // Filtrar por empresa (usuarios sin empresa => null => no matchea)
+    if (empresaSeleccionada) {
+        vacacionesFiltradas = vacacionesFiltradas.filter(v => 
+            String(v.empresa ?? '') === empresaSeleccionada
+        );
+    }
+    
+    // Filtrar por área (usuarios sin área => null => no matchea)
+    if (areaSeleccionada) {
+        vacacionesFiltradas = vacacionesFiltradas.filter(v => 
+            String(v.area ?? '') === areaSeleccionada
         );
     }
     
@@ -1073,65 +1119,86 @@ function exportarTardanzas() {
 }
 
 // ============================================================================
-// HORAS LABORADAS - MODAL Y EXPORTAR
+// HORAS LABORADAS - EXPORTAR DIRECTO USANDO LOS FILTROS DE LA PANTALLA
 // ============================================================================
-function abrirModalHorasLaboradas() {
+async function exportarHorasLaboradas() {
     const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
     const fechaFin = document.getElementById('filtro-fecha-fin').value;
-    
-    document.getElementById('horas-lab-fecha-inicio').value = fechaInicio;
-    document.getElementById('horas-lab-fecha-fin').value = fechaFin;
-    
-    cargarEmpleadosParaHorasLaboradas();
-    
-    document.getElementById('modal-horas-laboradas').classList.remove('hidden');
-}
+    const texto = document.getElementById('filtro-empleado').value.trim();
 
-function cerrarModalHorasLaboradas() {
-    document.getElementById('modal-horas-laboradas').classList.add('hidden');
-}
+    if (!fechaInicio || !fechaFin) {
+        alert('Seleccioná ambas fechas para exportar');
+        return;
+    }
 
-async function cargarEmpleadosParaHorasLaboradas() {
-    const select = document.getElementById('horas-lab-empleado');
-    
+    if (!texto) {
+        alert('Escribí el nombre o DNI del empleado en el buscador para exportar sus horas laboradas');
+        return;
+    }
+
+    const textoLower = texto.toLowerCase();
+
     try {
         const response = await fetch('/api/marcacion/empleados-activos');
         const data = await response.json();
-        if (data.success && data.data) {
-            select.innerHTML = '<option value="">-- Seleccionar empleado --</option>';
-            data.data.forEach(emp => {
-                const option = document.createElement('option');
-                option.value = emp.num_documento;
-                option.textContent = `${emp.nombre_completo} (${emp.dni})`;
-                select.appendChild(option);
-            });
-        }
-    } catch (error) {
-        console.error('[HORAS_LABORADAS] Error cargando empleados:', error);
-        select.innerHTML = '<option value="">-- Error al cargar empleados --</option>';
-    }
-}
 
-function exportarHorasLaboradas() {
-    const numDocumento = document.getElementById('horas-lab-empleado').value;
-    const fechaInicio = document.getElementById('horas-lab-fecha-inicio').value;
-    const fechaFin = document.getElementById('horas-lab-fecha-fin').value;
-    
-    if (!numDocumento) {
-        alert('Seleccioná un empleado');
-        return;
+        if (!data.success || !data.data) {
+            alert('No se pudo obtener la lista de empleados activos');
+            return;
+        }
+
+        const coincidencias = data.data.filter(emp =>
+            (emp.nombre_completo && emp.nombre_completo.toLowerCase().includes(textoLower)) ||
+            (emp.dni && emp.dni.toString().includes(textoLower))
+        );
+
+        if (coincidencias.length === 0) {
+            alert(`No se encontró ningún empleado con "${texto}"`);
+            return;
+        }
+
+        if (coincidencias.length > 1) {
+            const nombres = coincidencias.slice(0, 5).map(emp => emp.nombre_completo);
+            const resto = coincidencias.length > 5 ? ` (+${coincidencias.length - 5} más)` : '';
+            alert(`Tu búsqueda coincide con ${coincidencias.length} empleados: ${nombres.join(', ')}${resto}. Escribí más específico o su DNI.`);
+            return;
+        }
+
+        const empleado = coincidencias[0];
+        const url = `/api/reportes/control-asistencia/horas-laboradas-excel?fecha_inicio=${encodeURIComponent(fechaInicio)}&fecha_fin=${encodeURIComponent(fechaFin)}&num_documento=${empleado.num_documento}`;
+
+        console.log(`[HORAS_LABORADAS] Exportando: empleado=${empleado.num_documento}, ${fechaInicio} a ${fechaFin}`);
+
+        const resp = await fetch(url);
+
+        if (!resp.ok) {
+            let mensaje = 'No hay datos de horas laboradas para exportar';
+            try {
+                const err = await resp.json();
+                if (err && err.error) mensaje = err.error;
+            } catch (e) {
+                // respuesta no JSON
+            }
+            alert(mensaje);
+            return;
+        }
+
+        const blob = await resp.blob();
+        const disposition = resp.headers.get('Content-Disposition') || '';
+        const matchName = disposition.match(/filename="?([^";]+)"?/i);
+        const nombreArchivo = matchName ? matchName[1] : `horas_laboradas_${empleado.num_documento}.xlsx`;
+
+        const enlace = document.createElement('a');
+        enlace.href = URL.createObjectURL(blob);
+        enlace.download = nombreArchivo;
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        URL.revokeObjectURL(enlace.href);
+    } catch (error) {
+        console.error('[HORAS_LABORADAS] Error:', error);
+        alert('Error al exportar las horas laboradas');
     }
-    
-    if (!fechaInicio || !fechaFin) {
-        alert('Seleccioná ambas fechas');
-        return;
-    }
-    
-    console.log(`[HORAS_LABORADAS] Exportando: empleado=${numDocumento}, ${fechaInicio} a ${fechaFin}`);
-    
-    window.location.href = `/api/reportes/control-asistencia/horas-laboradas-excel?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}&num_documento=${numDocumento}`;
-    
-    cerrarModalHorasLaboradas();
 }
 
 // ============================================================================
@@ -1175,15 +1242,23 @@ async function abrirModalEditar(numDocumento, hEntOfi1, hSalOfi1, hEntOfi2, hSal
         return hora && hora !== '-' && hora !== 'null' && hora.trim() !== '';
     }
     
+    // Las celdas pueden traer varias marcas ("13:21, 15:15"): para el
+    // prefill tomamos la 1ª hora (entradas) o la última (salidas)
+    function horaDeCelda(valor, desdeElFinal) {
+        const partes = String(valor || '').split(',').map(s => s.trim()).filter(esHoraValida);
+        if (!partes.length) return '';
+        return desdeElFinal ? partes[partes.length - 1] : partes[0];
+    }
+    
     // Cargar horas existentes (se mostrarán temporalmente, se ajustarán después con tipo_ubicacion)
-    document.getElementById('modal-hora-ofi-t1-ent').value = esHoraValida(hEntOfi1) ? hEntOfi1 : '';
-    document.getElementById('modal-hora-ofi-t1-sal').value = esHoraValida(hSalOfi1) ? hSalOfi1 : '';
-    document.getElementById('modal-hora-ofi-t2-ent').value = esHoraValida(hEntOfi2) ? hEntOfi2 : '';
-    document.getElementById('modal-hora-ofi-t2-sal').value = esHoraValida(hSalOfi2) ? hSalOfi2 : '';
-    document.getElementById('modal-hora-cmp-t1-ent').value = esHoraValida(hEntCmp1) ? hEntCmp1 : '';
-    document.getElementById('modal-hora-cmp-t1-sal').value = esHoraValida(hSalCmp1) ? hSalCmp1 : '';
-    document.getElementById('modal-hora-cmp-t2-ent').value = esHoraValida(hEntCmp2) ? hEntCmp2 : '';
-    document.getElementById('modal-hora-cmp-t2-sal').value = esHoraValida(hSalCmp2) ? hSalCmp2 : '';
+    document.getElementById('modal-hora-ofi-t1-ent').value = horaDeCelda(hEntOfi1, false);
+    document.getElementById('modal-hora-ofi-t1-sal').value = horaDeCelda(hSalOfi1, true);
+    document.getElementById('modal-hora-ofi-t2-ent').value = horaDeCelda(hEntOfi2, false);
+    document.getElementById('modal-hora-ofi-t2-sal').value = horaDeCelda(hSalOfi2, true);
+    document.getElementById('modal-hora-cmp-t1-ent').value = horaDeCelda(hEntCmp1, false);
+    document.getElementById('modal-hora-cmp-t1-sal').value = horaDeCelda(hSalCmp1, true);
+    document.getElementById('modal-hora-cmp-t2-ent').value = horaDeCelda(hEntCmp2, false);
+    document.getElementById('modal-hora-cmp-t2-sal').value = horaDeCelda(hSalCmp2, true);
     
     // Deshabilitar todos temporalmente
     document.querySelectorAll('#modal-editar-marcacion input[type="time"]').forEach(input => {
