@@ -186,8 +186,8 @@
                     <i class="fas fa-file-invoice text-white text-xl"></i>
                 </div>
                 <div>
-                    <h3 class="text-xl font-bold text-white">Nuevo Requerimiento</h3>
-                    <p class="text-white/80 text-sm">Crear solicitud de materiales</p>
+                    <h3 class="text-xl font-bold text-white">Nuevo Requerimiento de Oficina</h3>
+                    <p class="text-white/80 text-sm">Solicitud de materiales para oficina</p>
                 </div>
             </div>
             <button onclick="cerrarModalNuevoRequerimiento()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-white">
@@ -199,6 +199,9 @@
         <div class="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
             <form id="formNuevoRequerimiento" class="space-y-5">
                 
+                <!-- Tipo de Requerimiento (Hidden - Siempre Oficina) -->
+                <input type="hidden" id="tipoRequerimiento" value="OFICINA">
+
                 <!-- Fila 1: Código y Fecha -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Código (Auto-generado) -->
@@ -207,7 +210,7 @@
                             <i class="fas fa-hashtag text-orange-500 mr-1"></i>
                             Código de Requerimiento
                         </label>
-                        <input type="text" value="REQ-2026-001" readonly 
+                        <input type="text" id="codigoRequerimiento" value="REQ-2026-001" readonly 
                                class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600 rounded-lg text-gray-500 dark:text-gray-400 cursor-not-allowed">
                     </div>
 
@@ -222,128 +225,76 @@
                     </div>
                 </div>
 
-                <!-- Fila 2: Proyecto y Obra -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Proyecto -->
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                            <i class="fas fa-project-diagram text-orange-500 mr-1"></i>
-                            Proyecto <span class="text-red-500">*</span>
-                        </label>
-                        <select class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
-                            <option value="">Seleccionar proyecto...</option>
-                            <option value="1">La Floresta I</option>
-                            <option value="2">Villa Verde</option>
-                            <option value="3">Prado Verde</option>
-                        </select>
-                    </div>
-
-                    <!-- Obra -->
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                            <i class="fas fa-building text-orange-500 mr-1"></i>
-                            Obra <span class="text-red-500">*</span>
-                        </label>
-                        <select class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
-                            <option value="">Seleccionar obra...</option>
-                            <option value="1">Estructura - Torre A</option>
-                            <option value="2">Acabados - Torre B</option>
-                            <option value="3">Instalaciones</option>
-                        </select>
-                    </div>
-                </div>
-
                 <!-- Descripción -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                         <i class="fas fa-align-left text-orange-500 mr-1"></i>
                         Descripción del Requerimiento <span class="text-red-500">*</span>
                     </label>
-                    <textarea rows="3" 
+                    <textarea id="descripcionRequerimiento" rows="3" 
                               placeholder="Describa brevemente la necesidad o propósito del requerimiento..."
                               class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white resize-none"></textarea>
                 </div>
 
-                <!-- Prioridad -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                        <i class="fas fa-exclamation-circle text-orange-500 mr-1"></i>
-                        Prioridad <span class="text-red-500">*</span>
-                    </label>
-                    <div class="grid grid-cols-3 gap-3">
-                        <label class="flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-red-500 transition-colors has-[:checked]:border-red-500 has-[:checked]:bg-red-50 dark:has-[:checked]:bg-red-900/20">
-                            <input type="radio" name="prioridad" value="alta" class="text-red-500 focus:ring-red-500">
-                            <span class="font-semibold text-gray-900 dark:text-white">🔴 Alta</span>
-                        </label>
-                        <label class="flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-yellow-500 transition-colors has-[:checked]:border-yellow-500 has-[:checked]:bg-yellow-50 dark:has-[:checked]:bg-yellow-900/20">
-                            <input type="radio" name="prioridad" value="media" class="text-yellow-500 focus:ring-yellow-500" checked>
-                            <span class="font-semibold text-gray-900 dark:text-white">🟡 Media</span>
-                        </label>
-                        <label class="flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-green-500 transition-colors has-[:checked]:border-green-500 has-[:checked]:bg-green-50 dark:has-[:checked]:bg-green-900/20">
-                            <input type="radio" name="prioridad" value="baja" class="text-green-500 focus:ring-green-500">
-                            <span class="font-semibold text-gray-900 dark:text-white">🟢 Baja</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Materiales (Tabla Simple) -->
+                <!-- Materiales (Buscador y Tabla) -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                         <i class="fas fa-boxes text-orange-500 mr-1"></i>
                         Materiales Requeridos <span class="text-red-500">*</span>
                     </label>
+                    
+                    <!-- Buscador de Materiales -->
+                    <div class="relative mb-3">
+                        <div class="relative">
+                            <input type="text" id="buscadorMaterial" 
+                                   placeholder="Buscar material por nombre o código..."
+                                   autocomplete="off"
+                                   class="w-full px-4 py-2.5 pl-10 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
+                            <i class="fas fa-search absolute left-3 top-3.5 text-gray-400"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Resultados de Búsqueda -->
+                    <div id="seccionResultados" class="hidden mb-4 border border-orange-300 dark:border-orange-600 rounded-lg overflow-hidden bg-orange-50 dark:bg-orange-900/20">
+                        <div class="bg-orange-100 dark:bg-orange-900/40 px-4 py-2 border-b border-orange-200 dark:border-orange-700">
+                            <div class="flex items-center justify-between">
+                                <h4 class="font-semibold text-orange-900 dark:text-orange-200 text-sm">
+                                    <i class="fas fa-search mr-2"></i>
+                                    Resultados de búsqueda
+                                </h4>
+                                <button onclick="cerrarResultadosBusqueda()" class="text-orange-700 dark:text-orange-300 hover:text-orange-900 dark:hover:text-orange-100">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="listaResultados" class="max-h-64 overflow-y-auto">
+                            <!-- Los resultados se cargarán aquí -->
+                        </div>
+                    </div>
+                    
+                    <!-- Tabla de Materiales Seleccionados -->
                     <div class="border border-gray-300 dark:border-slate-600 rounded-lg overflow-hidden">
                         <table class="w-full text-sm">
                             <thead class="bg-gray-50 dark:bg-slate-700/50">
                                 <tr>
                                     <th class="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Material</th>
-                                    <th class="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300 w-24">Cantidad</th>
+                                    <th class="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300 w-32">Cantidad</th>
                                     <th class="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300 w-24">Unidad</th>
                                     <th class="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300 w-12"></th>
                                 </tr>
                             </thead>
                             <tbody id="tablaMateriales" class="divide-y divide-gray-200 dark:divide-slate-700">
-                                <tr class="bg-white dark:bg-slate-700">
-                                    <td class="px-3 py-2">
-                                        <input type="text" placeholder="Ej: Cemento Portland Tipo I" 
-                                               class="w-full px-2 py-1 bg-transparent border-0 focus:ring-0 text-gray-900 dark:text-white placeholder-gray-400">
-                                    </td>
-                                    <td class="px-3 py-2">
-                                        <input type="number" placeholder="0" 
-                                               class="w-full px-2 py-1 bg-transparent border-0 focus:ring-0 text-center text-gray-900 dark:text-white">
-                                    </td>
-                                    <td class="px-3 py-2">
-                                        <select class="w-full px-2 py-1 bg-transparent border-0 focus:ring-0 text-gray-900 dark:text-white text-sm">
-                                            <option value="BLS">BLS</option>
-                                            <option value="UND">UND</option>
-                                            <option value="M2">M2</option>
-                                            <option value="M3">M3</option>
-                                        </select>
-                                    </td>
-                                    <td class="px-3 py-2 text-center">
-                                        <button type="button" class="text-red-500 hover:text-red-700">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
+                                <!-- Las filas se agregarán dinámicamente al seleccionar materiales -->
+                                <tr id="filaVacia" class="bg-gray-50 dark:bg-slate-800/50">
+                                    <td colspan="4" class="px-3 py-8 text-center text-gray-500 dark:text-gray-400">
+                                        <i class="fas fa-inbox text-3xl mb-2 opacity-50"></i>
+                                        <p>No hay materiales agregados</p>
+                                        <p class="text-xs mt-1">Use el buscador para agregar materiales</p>
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
-                        <button type="button" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-700/30 hover:bg-gray-100 dark:hover:bg-slate-700/50 text-gray-700 dark:text-gray-300 font-medium transition-colors">
-                            <i class="fas fa-plus mr-2"></i>
-                            Agregar Material
-                        </button>
                     </div>
-                </div>
-
-                <!-- Observaciones -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                        <i class="fas fa-sticky-note text-orange-500 mr-1"></i>
-                        Observaciones Adicionales
-                    </label>
-                    <textarea rows="2" 
-                              placeholder="Notas u observaciones adicionales (opcional)..."
-                              class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white resize-none"></textarea>
                 </div>
 
             </form>
@@ -376,6 +327,251 @@
 
 {% block scripts %}
 <script>
+    // =========================================================================
+    // FUNCIONES DEL BUSCADOR DE MATERIALES
+    // =========================================================================
+    
+    let timeoutBusqueda = null;
+    let materialesSeleccionados = []; // Array para almacenar materiales seleccionados
+    let ultimosResultados = []; // Guardar últimos resultados de búsqueda
+    
+    // Configurar el buscador de materiales
+    document.addEventListener('DOMContentLoaded', function() {
+        const buscador = document.getElementById('buscadorMaterial');
+        if (buscador) {
+            buscador.addEventListener('input', function(e) {
+                const termino = e.target.value.trim();
+                
+                // Cancelar búsqueda anterior
+                if (timeoutBusqueda) {
+                    clearTimeout(timeoutBusqueda);
+                }
+                
+                // Si el término es muy corto, ocultar resultados
+                if (termino.length < 2) {
+                    cerrarResultadosBusqueda();
+                    return;
+                }
+                
+                // Esperar 300ms antes de buscar (debounce)
+                timeoutBusqueda = setTimeout(() => {
+                    buscarMateriales(termino);
+                }, 300);
+            });
+            
+            // Al presionar Enter, realizar búsqueda inmediata
+            buscador.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const termino = e.target.value.trim();
+                    if (termino.length >= 2) {
+                        if (timeoutBusqueda) clearTimeout(timeoutBusqueda);
+                        buscarMateriales(termino);
+                    }
+                }
+            });
+        }
+    });
+    
+    // Buscar materiales vía API
+    function buscarMateriales(termino) {
+        fetch(`/api/materiales/buscar?q=${encodeURIComponent(termino)}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                ultimosResultados = data.data;
+                mostrarResultadosBusqueda(data.data);
+            } else {
+                console.error('Error al buscar materiales:', data.error);
+                mostrarMensajeError('Error al buscar materiales');
+            }
+        })
+        .catch(error => {
+            console.error('Error en la búsqueda:', error);
+            mostrarMensajeError('Error de conexión');
+        });
+    }
+    
+    // Mostrar resultados de la búsqueda en la sección de resultados
+    function mostrarResultadosBusqueda(materiales) {
+        const seccion = document.getElementById('seccionResultados');
+        const lista = document.getElementById('listaResultados');
+        
+        if (materiales.length === 0) {
+            lista.innerHTML = `
+                <div class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                    <i class="fas fa-search text-3xl mb-2 opacity-50"></i>
+                    <p class="font-medium">No se encontraron materiales</p>
+                    <p class="text-xs mt-1">Intente con otro término de búsqueda</p>
+                </div>
+            `;
+            seccion.classList.remove('hidden');
+            return;
+        }
+        
+        let html = '<div class="divide-y divide-orange-200 dark:divide-orange-800">';
+        materiales.forEach(material => {
+            // Verificar si ya está seleccionado
+            const yaSeleccionado = materialesSeleccionados.some(m => m.id_material === material.id_material);
+            
+            html += `
+                <div class="px-4 py-3 bg-white dark:bg-slate-800 hover:bg-orange-50 dark:hover:bg-slate-700 transition-colors">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <h5 class="font-semibold text-gray-900 dark:text-white truncate">
+                                    ${material.nombre}
+                                </h5>
+                                ${yaSeleccionado ? '<span class="flex-shrink-0 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full font-medium"><i class="fas fa-check mr-1"></i>Agregado</span>' : ''}
+                            </div>
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 dark:text-gray-400">
+                                <span><i class="fas fa-barcode mr-1"></i>${material.codigo_material || 'Sin código'}</span>
+                                ${material.categoria ? `<span><i class="fas fa-tag mr-1"></i>${material.categoria}</span>` : ''}
+                                <span class="font-medium text-orange-600 dark:text-orange-400">
+                                    <i class="fas fa-ruler mr-1"></i>${material.unidad_abrev || material.unidad_medida || 'UND'}
+                                </span>
+                            </div>
+                            ${material.descripcion ? `<p class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">${material.descripcion}</p>` : ''}
+                        </div>
+                        <button 
+                            onclick="agregarMaterialDesdeResultados(${material.id_material})"
+                            ${yaSeleccionado ? 'disabled' : ''}
+                            class="flex-shrink-0 px-4 py-2 ${yaSeleccionado ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' : 'bg-orange-500 hover:bg-orange-600 text-white'} rounded-lg transition-colors text-sm font-medium">
+                            <i class="fas ${yaSeleccionado ? 'fa-check' : 'fa-plus'} mr-1"></i>
+                            ${yaSeleccionado ? 'Agregado' : 'Agregar'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        
+        lista.innerHTML = html;
+        seccion.classList.remove('hidden');
+    }
+    
+    // Mostrar mensaje de error
+    function mostrarMensajeError(mensaje) {
+        const seccion = document.getElementById('seccionResultados');
+        const lista = document.getElementById('listaResultados');
+        
+        lista.innerHTML = `
+            <div class="px-4 py-8 text-center text-red-600 dark:text-red-400">
+                <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
+                <p class="font-medium">${mensaje}</p>
+            </div>
+        `;
+        seccion.classList.remove('hidden');
+    }
+    
+    // Cerrar sección de resultados
+    function cerrarResultadosBusqueda() {
+        document.getElementById('seccionResultados').classList.add('hidden');
+        ultimosResultados = [];
+    }
+    
+    // Agregar material desde los resultados de búsqueda
+    window.agregarMaterialDesdeResultados = function(idMaterial) {
+        const material = ultimosResultados.find(m => m.id_material === idMaterial);
+        if (material) {
+            agregarMaterialATabla(material);
+            // Actualizar vista de resultados para mostrar "Agregado"
+            mostrarResultadosBusqueda(ultimosResultados);
+        }
+    };
+    
+    // Agregar material a la tabla de requerimientos
+    function agregarMaterialATabla(material) {
+        // Verificar si ya está agregado
+        if (materialesSeleccionados.some(m => m.id_material === material.id_material)) {
+            return; // Ya está agregado, no hacer nada
+        }
+        
+        // Agregar al array
+        materialesSeleccionados.push(material);
+        
+        const tbody = document.getElementById('tablaMateriales');
+        
+        // Ocultar fila vacía si existe
+        const filaVacia = document.getElementById('filaVacia');
+        if (filaVacia) {
+            filaVacia.remove();
+        }
+        
+        // Crear nueva fila
+        const nuevaFila = document.createElement('tr');
+        nuevaFila.className = 'bg-white dark:bg-slate-700';
+        nuevaFila.dataset.idMaterial = material.id_material;
+        nuevaFila.innerHTML = `
+            <td class="px-3 py-2">
+                <div>
+                    <p class="font-medium text-gray-900 dark:text-white">${material.nombre}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">${material.codigo_material || 'Sin código'}</p>
+                </div>
+            </td>
+            <td class="px-3 py-2">
+                <input type="number" 
+                       step="0.01"
+                       min="0.01"
+                       placeholder="0" 
+                       value="1"
+                       class="w-full px-2 py-1.5 bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 rounded focus:ring-2 focus:ring-orange-500 text-center text-gray-900 dark:text-white">
+            </td>
+            <td class="px-3 py-2 text-center">
+                <span class="inline-block px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded text-xs font-medium">
+                    ${material.unidad_abrev || material.unidad_medida || 'UND'}
+                </span>
+            </td>
+            <td class="px-3 py-2 text-center">
+                <button type="button" onclick="eliminarMaterialDeTabla(${material.id_material})" 
+                        class="text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(nuevaFila);
+    }
+    
+    // Eliminar material de la tabla
+    window.eliminarMaterialDeTabla = function(idMaterial) {
+        // Remover del array
+        materialesSeleccionados = materialesSeleccionados.filter(m => m.id_material !== idMaterial);
+        
+        // Remover fila de la tabla
+        const fila = document.querySelector(`tr[data-id-material="${idMaterial}"]`);
+        if (fila) {
+            fila.remove();
+        }
+        
+        // Si no quedan materiales, mostrar fila vacía
+        const tbody = document.getElementById('tablaMateriales');
+        if (tbody.children.length === 0) {
+            tbody.innerHTML = `
+                <tr id="filaVacia" class="bg-gray-50 dark:bg-slate-800/50">
+                    <td colspan="4" class="px-3 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-inbox text-3xl mb-2 opacity-50"></i>
+                        <p>No hay materiales agregados</p>
+                        <p class="text-xs mt-1">Use el buscador para agregar materiales</p>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        // Actualizar resultados de búsqueda si están visibles
+        if (ultimosResultados.length > 0) {
+            mostrarResultadosBusqueda(ultimosResultados);
+        }
+    };
+
+    // =========================================================================
+    // FUNCIONES DEL MODAL
+    // =========================================================================
+    
     // Función para abrir el modal de nuevo requerimiento
     function abrirModalNuevoRequerimiento() {
         const modal = document.getElementById('modalNuevoRequerimiento');
@@ -398,14 +594,109 @@
         modal.querySelector('.modal-content').classList.remove('modal-show');
         setTimeout(() => {
             modal.classList.add('hidden');
+            // Limpiar formulario
+            document.getElementById('formNuevoRequerimiento').reset();
+            // Limpiar materiales seleccionados
+            materialesSeleccionados = [];
+            const tbody = document.getElementById('tablaMateriales');
+            tbody.innerHTML = `
+                <tr id="filaVacia" class="bg-gray-50 dark:bg-slate-800/50">
+                    <td colspan="4" class="px-3 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-inbox text-3xl mb-2 opacity-50"></i>
+                        <p>No hay materiales agregados</p>
+                        <p class="text-xs mt-1">Use el buscador para agregar materiales</p>
+                    </td>
+                </tr>
+            `;
         }, 300);
     }
 
-    // Función para crear el requerimiento (placeholder)
+    // Función para crear el requerimiento
     function crearRequerimiento() {
-        // Por ahora solo mostrar un mensaje de éxito
-        alert('Funcionalidad en desarrollo. Este es solo el diseño del modal.');
+        // Obtener datos del formulario
+        const codigo = document.getElementById('codigoRequerimiento').value;
+        const fecha = document.getElementById('fechaSolicitud').value;
+        const descripcion = document.getElementById('descripcionRequerimiento').value;
+        const tipoRequerimiento = document.getElementById('tipoRequerimiento').value;
+        
+        // Validaciones básicas
+        if (!fecha || !descripcion) {
+            alert('Por favor complete todos los campos obligatorios (*)');
+            return;
+        }
+        
+        // Obtener materiales de la tabla
+        const tbody = document.getElementById('tablaMateriales');
+        const filas = tbody.querySelectorAll('tr[data-id-material]');
+        const materiales = [];
+        
+        filas.forEach(fila => {
+            const idMaterial = parseInt(fila.dataset.idMaterial);
+            const inputCantidad = fila.querySelector('input[type="number"]');
+            const cantidad = parseFloat(inputCantidad.value);
+            
+            const material = materialesSeleccionados.find(m => m.id_material === idMaterial);
+            
+            if (material && cantidad > 0) {
+                materiales.push({
+                    id_material: idMaterial,
+                    nombre: material.nombre,
+                    codigo: material.codigo_material,
+                    cantidad: cantidad,
+                    unidad: material.unidad_abrev || material.unidad_medida,
+                    id_unidad: material.id_unidad
+                });
+            }
+        });
+        
+        if (materiales.length === 0) {
+            alert('Debe agregar al menos un material con cantidad válida.');
+            return;
+        }
+        
+        // Preparar datos para enviar
+        const datosRequerimiento = {
+            codigo: codigo,
+            fecha: fecha,
+            tipo: tipoRequerimiento,
+            descripcion: descripcion,
+            materiales: materiales
+        };
+        
+        console.log('Datos a enviar:', datosRequerimiento);
+        
+        // Por ahora solo mostrar un mensaje
+        alert('Funcionalidad en desarrollo.\n\nDatos capturados:\n' + 
+              '- Tipo: ' + tipoRequerimiento + '\n' +
+              '- Fecha: ' + fecha + '\n' +
+              '- Materiales: ' + materiales.length);
+        
         cerrarModalNuevoRequerimiento();
+        
+        // TODO: Implementar llamada a API para guardar el requerimiento
+        /*
+        fetch('/api/requerimientos/crear', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(datosRequerimiento)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Requerimiento creado exitosamente');
+                cerrarModalNuevoRequerimiento();
+            } else {
+                alert('Error al crear requerimiento: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al comunicarse con el servidor');
+        });
+        */
     }
 
     // Cargar historial de marcaciones

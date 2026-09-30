@@ -174,3 +174,52 @@ def obtener_unidades_medida():
             'success': False,
             'error': str(e)
         }), 500
+
+
+# ==============================================================================
+# ENDPOINT: Buscar Materiales (Autocompletado)
+# ==============================================================================
+@materiales_bp.route('/api/materiales/buscar', methods=['GET'])
+def buscar_materiales():
+    """
+    Busca materiales activos por nombre o código para autocompletado
+    """
+    try:
+        busqueda = request.args.get('q', '')
+        
+        if len(busqueda) < 2:
+            return jsonify({
+                'success': True,
+                'data': []
+            }), 200
+        
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        
+        print(f"[BUSCAR_MATERIALES] Buscando: '{busqueda}'")
+        
+        # Llamar al SP de búsqueda
+        cursor.callproc('sp_BuscarMaterialesAutocompletado', (busqueda,))
+        
+        # Obtener resultados
+        materiales = []
+        for result in cursor.stored_results():
+            materiales = result.fetchall()
+        
+        print(f"[BUSCAR_MATERIALES] [OK] {len(materiales)} materiales encontrados")
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({
+            'success': True,
+            'data': materiales
+        }), 200
+        
+    except Exception as e:
+        print(f"[BUSCAR_MATERIALES] [X] Error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
