@@ -218,7 +218,10 @@
                             <th colspan="3" class="px-2 py-2 text-center text-white font-bold border-r border-green-600">FECHA</th>
                             <th colspan="8" class="px-2 py-2 text-center text-white font-bold border-r border-green-600" style="background:#1E40AF">OFICINA</th>
                             <th colspan="8" class="px-2 py-2 text-center text-white font-bold border-r border-green-600" style="background:#065F46">CAMPO</th>
+                            <!-- COLUMNA ACCIÓN COMENTADA (reservada a futuro). Para reactivar: quitar comentarios de los 3 th y del td del render, y volver colspan a 25 en los 4 mensajes ("Cargando datos" estatico, "Cargando datos" JS, "Error", "No se encontraron registros"). -->
+                            <!--
                             <th colspan="1" class="px-2 py-2 text-center text-white font-bold">ACCIÓN</th>
+                            -->
                         </tr>
                         <tr class="bg-gradient-to-r from-green-600 to-green-700">
                             <th colspan="5" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500"></th>
@@ -227,7 +230,7 @@
                             <th colspan="4" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#1D4ED8">Turno Tarde</th>
                             <th colspan="4" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#059669">Turno Mañana</th>
                             <th colspan="4" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#047857">Turno Tarde</th>
-                            <th class="px-2 py-1"></th>
+                            <!-- <th class="px-2 py-1"></th> -->
                         </tr>
                         <tr class="bg-gradient-to-r from-green-600 to-green-700">
                             <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500 sticky left-0 bg-green-700 z-20">EMPRESA</th>
@@ -254,12 +257,12 @@
                             <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#059669">H.Sal</th>
                             <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#059669">Min</th>
                             <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#059669">Det</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold">ACCIÓN</th>
+                            <!-- <th class="px-2 py-2 text-center text-white font-semibold">ACCIÓN</th> -->
                         </tr>
                     </thead>
                     <tbody id="tabla-control-asistencia" class="divide-y divide-gray-200 dark:divide-slate-700">
                         <tr>
-                            <td colspan="25" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                            <td colspan="24" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                                 <i class="fas fa-spinner fa-spin mr-2"></i>Cargando datos...
                             </td>
                         </tr>
@@ -617,7 +620,7 @@ async function cargarControlAsistencia(fechaInicio, fechaFin, empleado) {
     
     tbody.innerHTML = `
         <tr>
-            <td colspan="25" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+            <td colspan="24" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                 <i class="fas fa-spinner fa-spin mr-2"></i>Cargando datos...
             </td>
         </tr>
@@ -658,7 +661,7 @@ async function cargarControlAsistencia(fechaInicio, fechaFin, empleado) {
         console.error('[CONTROL] Error:', error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="25" class="px-4 py-8 text-center text-red-500">
+                <td colspan="24" class="px-4 py-8 text-center text-red-500">
                     <i class="fas fa-exclamation-triangle mr-2"></i>Error al cargar datos: ${error.message}
                 </td>
             </tr>
@@ -675,7 +678,7 @@ function renderizarTabla(data) {
     if (!data || data.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="25" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                <td colspan="24" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     <i class="fas fa-inbox mr-2"></i>No se encontraron registros
                 </td>
             </tr>
@@ -701,9 +704,16 @@ function renderizarTabla(data) {
         const colorFila = determinarColorFila(fila.DETALLE_OFI_T1, fila.DETALLE_OFI_T2);
         
         // Dia sin ninguna marca (FALTÓ/VACACIONES/futuro): sin botón de edición
+        const tieneHora = v => v && v !== '-' && v !== 'NULL';
         const hayMarcas = [fila.H_ENTRADA_OFI_T1, fila.H_SALIDA_OFI_T1, fila.H_ENTRADA_OFI_T2, fila.H_SALIDA_OFI_T2,
                            fila.H_ENTRADA_CMP_T1, fila.H_SALIDA_CMP_T1, fila.H_ENTRADA_CMP_T2, fila.H_SALIDA_CMP_T2]
-            .some(v => v && v !== '-' && v !== 'NULL');
+            .some(tieneHora);
+        
+        // Minutos del turno: se muestran solo en la sección (OFICINA/CAMPO) que tenga marcas
+        const hayOfiT1 = tieneHora(fila.H_ENTRADA_OFI_T1) || tieneHora(fila.H_SALIDA_OFI_T1);
+        const hayOfiT2 = tieneHora(fila.H_ENTRADA_OFI_T2) || tieneHora(fila.H_SALIDA_OFI_T2);
+        const hayCmpT1 = tieneHora(fila.H_ENTRADA_CMP_T1) || tieneHora(fila.H_SALIDA_CMP_T1);
+        const hayCmpT2 = tieneHora(fila.H_ENTRADA_CMP_T2) || tieneHora(fila.H_SALIDA_CMP_T2);
         
         // Función para renderizar celda de hora con estilo
         function celdaHora(valor, tipo) {
@@ -748,20 +758,21 @@ function renderizarTabla(data) {
                 <td class="px-2 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700">${escapeHtml(fila.ANO || '-')}</td>
                 ${celdaHora(fila.H_ENTRADA_OFI_T1, 'oficina')}
                 ${celdaHora(fila.H_SALIDA_OFI_T1, 'oficina')}
-                ${celdaMinutos(fila.MINUTOS_T1)}
+                ${celdaMinutos(hayOfiT1 ? fila.MINUTOS_T1 : '-')}
                 ${celdaDetalle(fila.DETALLE_OFI_T1)}
                 ${celdaHora(fila.H_ENTRADA_OFI_T2, 'oficina')}
                 ${celdaHora(fila.H_SALIDA_OFI_T2, 'oficina')}
-                ${celdaMinutos(fila.MINUTOS_T2)}
+                ${celdaMinutos(hayOfiT2 ? fila.MINUTOS_T2 : '-')}
                 ${celdaDetalle(fila.DETALLE_OFI_T2)}
                 ${celdaHora(fila.H_ENTRADA_CMP_T1, 'campo')}
                 ${celdaHora(fila.H_SALIDA_CMP_T1, 'campo')}
-                ${celdaMinutos(fila.MINUTOS_T1)}
+                ${celdaMinutos(hayCmpT1 ? fila.MINUTOS_T1 : '-')}
                 ${celdaDetalle(fila.DETALLE_CMP_T1)}
                 ${celdaHora(fila.H_ENTRADA_CMP_T2, 'campo')}
                 ${celdaHora(fila.H_SALIDA_CMP_T2, 'campo')}
-                ${celdaMinutos(fila.MINUTOS_T2)}
+                ${celdaMinutos(hayCmpT2 ? fila.MINUTOS_T2 : '-')}
                 ${celdaDetalle(fila.DETALLE_CMP_T2)}
+                <!-- COLUMNA ACCIÓN COMENTADA (reservada a futuro)
                 <td class="px-2 py-2 text-center">
                     ${hayMarcas ? `<div class="flex items-center justify-center gap-1">
                         <button onclick="abrirModalEditar('${escapeHtml(fila.DNI_CE || '')}', '${escapeHtml(fila.H_ENTRADA_OFI_T1 || '')}', '${escapeHtml(fila.H_SALIDA_OFI_T1 || '')}', '${escapeHtml(fila.H_ENTRADA_OFI_T2 || '')}', '${escapeHtml(fila.H_SALIDA_OFI_T2 || '')}', '${escapeHtml(fila.H_ENTRADA_CMP_T1 || '')}', '${escapeHtml(fila.H_SALIDA_CMP_T1 || '')}', '${escapeHtml(fila.H_ENTRADA_CMP_T2 || '')}', '${escapeHtml(fila.H_SALIDA_CMP_T2 || '')}', '${escapeHtml(fila.NOMBRES || '')}', '${escapeHtml(fila.DIA || '')}', '${escapeHtml(fila.MES || '')}', '${escapeHtml(fila.ANO || '')}')" 
@@ -771,6 +782,7 @@ function renderizarTabla(data) {
                         </button>
                     </div>` : `<span class="text-gray-400 dark:text-gray-500">--</span>`}
                 </td>
+                -->
             </tr>
         `;
     });

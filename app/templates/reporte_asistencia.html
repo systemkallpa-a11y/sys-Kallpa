@@ -51,6 +51,12 @@
 
         <div class="px-4 md:px-6 py-3 md:py-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700">
 
+            <h2 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+
+                <i class="fas fa-filter text-blue-600"></i>Filtros de Asistencia
+
+            </h2>
+
             <div class="flex flex-wrap items-end gap-4">
 
                 <div class="flex-1">
@@ -293,11 +299,21 @@
 
             <div class="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
 
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                <div class="flex items-center justify-between mb-4">
 
-                    <i class="fas fa-list text-blue-600 mr-2"></i>Detalle de Marcaciones
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
 
-                </h3>
+                        <i class="fas fa-list text-blue-600 mr-2"></i>Detalle de Marcaciones
+
+                    </h3>
+
+                    <button onclick="abrirModalEditarDia()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-md transition-colors" title="Editar todas las horas registradas de este empleado en el día">
+
+                        <i class="fas fa-user-clock mr-2"></i>Editar hora
+
+                    </button>
+
+                </div>
 
                 <div class="overflow-x-auto">
 
@@ -459,6 +475,148 @@
 </div>
 
 
+
+<!-- Modal: Editar Todas las Horas del Día (todas las marcaciones del empleado en la fecha) -->
+<div id="modal-editar-dia" class="fixed inset-0 z-[99999] hidden">
+    <!-- Fondo oscuro -->
+    <div class="fixed inset-0 bg-black bg-opacity-50" onclick="cerrarModalEditarDia()"></div>
+
+    <!-- Contenido del modal -->
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-full md:max-w-md max-h-[90vh] overflow-y-auto">
+            <!-- Header -->
+            <div class="px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-t-xl">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-white font-bold text-sm">
+                        <i class="fas fa-user-clock mr-2"></i>Editar Horas del Día
+                    </h3>
+                    <button onclick="cerrarModalEditarDia()" class="text-white hover:text-gray-200">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div class="px-4 py-4">
+                <!-- Empleado y fecha -->
+                <div class="mb-3 text-center">
+                    <p class="text-gray-900 dark:text-white font-semibold" id="editar-dia-empleado-nombre">Nombre Empleado</p>
+                    <p class="text-gray-500 dark:text-gray-400 text-xs mt-1" id="editar-dia-fecha">Fecha</p>
+                </div>
+
+                <!-- Nota -->
+                <div class="mb-4 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded text-yellow-800 dark:text-yellow-300 text-[11px] text-center">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>Solo horas ya registradas. Las vacías no se pueden editar.
+                </div>
+
+                <!-- Sección OFICINA -->
+                <div id="editar-dia-seccion-oficina" class="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg">
+                    <h4 class="text-green-700 dark:text-green-400 font-semibold text-xs mb-3 uppercase">
+                        <i class="fas fa-building mr-1"></i>Oficina
+                    </h4>
+
+                    <!-- Turno Mañana -->
+                    <div class="mb-3 p-2 bg-white dark:bg-slate-700 rounded">
+                        <p class="text-gray-600 dark:text-gray-400 text-[10px] mb-2 font-semibold uppercase">
+                            <i class="fas fa-sun text-yellow-500 mr-1"></i>Turno Mañana
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Entrada</label>
+                                <input type="time" id="modal-hora-ofi-t1-ent"
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Salida</label>
+                                <input type="time" id="modal-hora-ofi-t1-sal"
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Turno Tarde -->
+                    <div class="p-2 bg-white dark:bg-slate-700 rounded">
+                        <p class="text-gray-600 dark:text-gray-400 text-[10px] mb-2 font-semibold uppercase">
+                            <i class="fas fa-moon text-blue-500 mr-1"></i>Turno Tarde
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Entrada</label>
+                                <input type="time" id="modal-hora-ofi-t2-ent"
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Salida</label>
+                                <input type="time" id="modal-hora-ofi-t2-sal"
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección CAMPO -->
+                <div id="editar-dia-seccion-campo" class="mb-4 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-lg">
+                    <h4 class="text-emerald-700 dark:text-emerald-400 font-semibold text-xs mb-3 uppercase">
+                        <i class="fas fa-map-marker-alt mr-1"></i>Campo
+                    </h4>
+
+                    <!-- Turno Mañana -->
+                    <div class="mb-3 p-2 bg-white dark:bg-slate-700 rounded">
+                        <p class="text-gray-600 dark:text-gray-400 text-[10px] mb-2 font-semibold uppercase">
+                            <i class="fas fa-sun text-yellow-500 mr-1"></i>Turno Mañana
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Entrada</label>
+                                <input type="time" id="modal-hora-cmp-t1-ent"
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Salida</label>
+                                <input type="time" id="modal-hora-cmp-t1-sal"
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Turno Tarde -->
+                    <div class="p-2 bg-white dark:bg-slate-700 rounded">
+                        <p class="text-gray-600 dark:text-gray-400 text-[10px] mb-2 font-semibold uppercase">
+                            <i class="fas fa-moon text-blue-500 mr-1"></i>Turno Tarde
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Entrada</label>
+                                <input type="time" id="modal-hora-cmp-t2-ent"
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Salida</label>
+                                <input type="time" id="modal-hora-cmp-t2-sal"
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mensaje de estado -->
+                <div id="editar-dia-mensaje-estado" class="hidden mb-3 p-2 rounded text-xs text-center"></div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-4 py-3 bg-gray-50 dark:bg-slate-700 rounded-b-xl flex justify-end gap-2">
+                <button onclick="cerrarModalEditarDia()"
+                        class="px-4 py-2 bg-gray-300 dark:bg-slate-600 hover:bg-gray-400 dark:hover:bg-slate-500 text-gray-700 dark:text-white rounded text-sm font-medium transition-colors">
+                    Cancelar
+                </button>
+                <button onclick="guardarCambiosDia()"
+                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-medium transition-colors">
+                    <i class="fas fa-save mr-1"></i>Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Modal: Generar Memo de Amonestación -->
 
@@ -1362,6 +1520,10 @@ let mapaGlobal = null;
 
 let marcadoresGlobales = [];
 
+let detalleActual = { numDocumento: null, fecha: null, nombre: null };
+let marcacionesActuales = [];
+let editarDiaIds = { t1Ent: null, t1Sal: null, t2Ent: null, t2Sal: null };
+
 
 
 async function verDetalleDia(numDocumento, fecha, nombreCompleto) {
@@ -1401,6 +1563,10 @@ async function verDetalleDia(numDocumento, fecha, nombreCompleto) {
         }
 
         
+
+        detalleActual = { numDocumento: numDocumento, fecha: fecha, nombre: nombreCompleto };
+
+        marcacionesActuales = data.marcaciones;
 
         // Actualizar información del usuario
 
@@ -1526,13 +1692,12 @@ function guardarMarcacionEditada() {
         if (data.success) {
             mostrarMensaje('Marcación actualizada exitosamente', 'success');
             cerrarModalEditarMarcacion();
-            // Recargar el detalle del día
-            const modalInfo = document.getElementById('modal-info-usuario').textContent;
-            if (modalInfo) {
-                // Extraer datos y recargar
+            // Refrescar detalle del día y resumen sin recargar la página
+            if (detalleActual.numDocumento) {
                 setTimeout(() => {
-                    location.reload(); // Por ahora recargamos la página
-                }, 1000);
+                    verDetalleDia(detalleActual.numDocumento, detalleActual.fecha, detalleActual.nombre);
+                    aplicarFiltros();
+                }, 800);
             }
         } else {
             mostrarMensaje(data.error || 'Error al actualizar la marcación', 'error');
@@ -1542,6 +1707,189 @@ function guardarMarcacionEditada() {
         console.error('Error:', error);
         mostrarMensaje('Error al actualizar la marcación', 'error');
     });
+}
+
+// ============================================================================
+// TOAST DE MENSAJES + EDICIÓN DE TODAS LAS HORAS DEL DÍA
+// ============================================================================
+function mostrarMensaje(mensaje, tipo) {
+    const colores = {
+        info: 'bg-blue-600',
+        success: 'bg-green-600',
+        warning: 'bg-yellow-600',
+        error: 'bg-red-600'
+    };
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-[99999] ${colores[tipo] || colores.info} text-white font-semibold`;
+    toast.textContent = mensaje;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
+}
+
+// Abrir modal para editar todas las horas registradas del día seleccionado
+async function abrirModalEditarDia() {
+    if (!detalleActual.numDocumento || !detalleActual.fecha) {
+        mostrarMensaje('No hay un día seleccionado para editar', 'warning');
+        return;
+    }
+
+    const msgEstado = document.getElementById('editar-dia-mensaje-estado');
+    msgEstado.textContent = '';
+    msgEstado.classList.add('hidden');
+
+    // Limpiar y deshabilitar todos los inputs
+    document.querySelectorAll('#modal-editar-dia input[type="time"]').forEach(input => {
+        input.value = '';
+        input.disabled = true;
+    });
+
+    try {
+        const response = await fetch(`/api/marcacion/obtener-ids?num_documento=${detalleActual.numDocumento}&fecha=${detalleActual.fecha}`);
+        const result = await response.json();
+
+        if (!result.success) {
+            mostrarMensaje(result.error || 'No se encontraron marcaciones para editar', 'warning');
+            return;
+        }
+
+        editarDiaIds = {
+            t1Ent: result.data.id_t1_entrada,
+            t1Sal: result.data.id_t1_salida,
+            t2Ent: result.data.id_t2_entrada,
+            t2Sal: result.data.id_t2_salida
+        };
+        const ubis = {
+            t1Ent: result.data.tipo_ubi_t1_ent,
+            t1Sal: result.data.tipo_ubi_t1_sal,
+            t2Ent: result.data.tipo_ubi_t2_ent,
+            t2Sal: result.data.tipo_ubi_t2_sal
+        };
+
+        const posiciones = [
+            ['t1Ent', 'modal-hora-ofi-t1-ent', 'modal-hora-cmp-t1-ent'],
+            ['t1Sal', 'modal-hora-ofi-t1-sal', 'modal-hora-cmp-t1-sal'],
+            ['t2Ent', 'modal-hora-ofi-t2-ent', 'modal-hora-cmp-t2-ent'],
+            ['t2Sal', 'modal-hora-ofi-t2-sal', 'modal-hora-cmp-t2-sal']
+        ];
+
+        let algunaEditada = false;
+        for (const [key, idOfi, idCmp] of posiciones) {
+            const idMarc = editarDiaIds[key];
+            if (!idMarc) continue;
+
+            // Hora actual desde las marcaciones ya cargadas en el detalle (match por id)
+            const marc = marcacionesActuales.find(m => String(m.id_marcacion) === String(idMarc));
+            const hora = (marc && marc.hora) ? String(marc.hora).substring(0, 5) : '';
+
+            if (ubis[key] === 'OFICINA') {
+                document.getElementById(idOfi).value = hora;
+                document.getElementById(idOfi).disabled = false;
+                algunaEditada = true;
+            } else if (ubis[key] === 'CAMPO') {
+                document.getElementById(idCmp).value = hora;
+                document.getElementById(idCmp).disabled = false;
+                algunaEditada = true;
+            }
+        }
+
+        if (!algunaEditada) {
+            mostrarMensaje('No hay horas registradas para editar en este día', 'warning');
+            return;
+        }
+
+        // Mostrar/ocultar secciones según las ubicaciones con hora registrada
+        const idsOfi = ['modal-hora-ofi-t1-ent', 'modal-hora-ofi-t1-sal', 'modal-hora-ofi-t2-ent', 'modal-hora-ofi-t2-sal'];
+        const idsCmp = ['modal-hora-cmp-t1-ent', 'modal-hora-cmp-t1-sal', 'modal-hora-cmp-t2-ent', 'modal-hora-cmp-t2-sal'];
+        const hayOfi = idsOfi.some(id => !document.getElementById(id).disabled);
+        const hayCmp = idsCmp.some(id => !document.getElementById(id).disabled);
+        document.getElementById('editar-dia-seccion-oficina').style.display = hayOfi ? 'block' : 'none';
+        document.getElementById('editar-dia-seccion-campo').style.display = hayCmp ? 'block' : 'none';
+
+        document.getElementById('editar-dia-empleado-nombre').textContent = detalleActual.nombre || '';
+        document.getElementById('editar-dia-fecha').textContent = `Fecha: ${detalleActual.fecha}`;
+
+        document.getElementById('modal-editar-dia').classList.remove('hidden');
+    } catch (error) {
+        console.error('[EDITAR_DIA] Error:', error);
+        mostrarMensaje('Error al cargar las horas a editar', 'error');
+    }
+}
+
+function cerrarModalEditarDia() {
+    document.getElementById('modal-editar-dia').classList.add('hidden');
+}
+
+async function guardarCambiosDia() {
+    const msgEstado = document.getElementById('editar-dia-mensaje-estado');
+    const pares = [
+        ['t1Ent', 'modal-hora-ofi-t1-ent'], ['t1Ent', 'modal-hora-cmp-t1-ent'],
+        ['t1Sal', 'modal-hora-ofi-t1-sal'], ['t1Sal', 'modal-hora-cmp-t1-sal'],
+        ['t2Ent', 'modal-hora-ofi-t2-ent'], ['t2Ent', 'modal-hora-cmp-t2-ent'],
+        ['t2Sal', 'modal-hora-ofi-t2-sal'], ['t2Sal', 'modal-hora-cmp-t2-sal']
+    ];
+
+    let totalEditados = 0;
+    let hayErrores = false;
+
+    for (const [key, inputId] of pares) {
+        const input = document.getElementById(inputId);
+        const idMarc = editarDiaIds[key];
+        if (!idMarc || input.disabled || !input.value) continue;
+
+        const ok = await editarHoraDelDia(idMarc, input.value);
+        if (ok) {
+            totalEditados++;
+        } else {
+            hayErrores = true;
+        }
+    }
+
+    if (totalEditados === 0) {
+        msgEstado.textContent = hayErrores ? '⚠ No se pudo actualizar ninguna hora' : 'No se modificó ninguna hora';
+        msgEstado.className = 'mb-3 p-2 rounded text-xs text-center bg-yellow-100 text-yellow-800 border border-yellow-300';
+        msgEstado.classList.remove('hidden');
+        return;
+    }
+
+    if (hayErrores) {
+        msgEstado.textContent = `⚠ ${totalEditados} hora(s) actualizada(s), pero hubo errores en otra(s)`;
+        msgEstado.className = 'mb-3 p-2 rounded text-xs text-center bg-yellow-100 text-yellow-800 border border-yellow-300';
+        msgEstado.classList.remove('hidden');
+        return;
+    }
+
+    msgEstado.textContent = `✓ ${totalEditados} hora(s) actualizada(s) correctamente`;
+    msgEstado.className = 'mb-3 p-2 rounded text-xs text-center bg-green-100 text-green-800 border border-green-300';
+    msgEstado.classList.remove('hidden');
+
+    setTimeout(() => {
+        cerrarModalEditarDia();
+        verDetalleDia(detalleActual.numDocumento, detalleActual.fecha, detalleActual.nombre);
+        aplicarFiltros();
+    }, 1000);
+}
+
+// Envía la nueva hora al backend (endpoint con auditoría: editar-legacy → sp_EditarMarcacion)
+async function editarHoraDelDia(idMarcacion, nuevaHora) {
+    try {
+        const response = await fetch('/api/marcacion/editar-legacy', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                id_marcacion: idMarcacion,
+                nueva_hora: nuevaHora,
+                fecha_original: detalleActual.fecha
+            })
+        });
+        const result = await response.json();
+        return !!result.success;
+    } catch (error) {
+        console.error('[EDITAR_DIA] Error al guardar:', error);
+        return false;
+    }
 }
 
 function mostrarMensajeTemp(mensaje, tipo) {

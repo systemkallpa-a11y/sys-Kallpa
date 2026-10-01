@@ -1436,8 +1436,23 @@ def obtener_ids_marcacion():
         try:
             cursor = connection.cursor(dictionary=True)
             
-            print(f"[OBTENER_IDS] Llamando SP sp_ObtenerIdsMarcacion('{num_documento_str}', '{fecha}')")
-            cursor.callproc('sp_ObtenerIdsMarcacion', [num_documento_str, fecha])
+            # El parámetro puede llegar como DNI (documento_numero) o como id
+            # interno (num_documento): control envía DNI, reporte envía el id
+            # interno. El SP espera siempre el documento, así que se resuelve
+            # antes de llamarlo (si no, retorna una fila de NULLs).
+            cursor.execute(
+                "SELECT documento_numero FROM TblPersona "
+                "WHERE documento_numero = %s OR num_documento = %s "
+                "ORDER BY (documento_numero = %s) DESC LIMIT 1",
+                (num_documento_str, num_documento_str, num_documento_str)
+            )
+            persona = cursor.fetchone()
+            documento = persona['documento_numero'] if persona else num_documento_str
+            if documento != num_documento_str:
+                print(f"[OBTENER_IDS] Identificador resuelto: {num_documento_str} -> documento {documento}")
+            
+            print(f"[OBTENER_IDS] Llamando SP sp_ObtenerIdsMarcacion('{documento}', '{fecha}')")
+            cursor.callproc('sp_ObtenerIdsMarcacion', [documento, fecha])
             
             # Obtener resultados
             ids = None
@@ -1447,7 +1462,9 @@ def obtener_ids_marcacion():
             cursor.close()
             connection.close()
             
-            if ids:
+            ids_campos = ['id_t1_entrada', 'id_t1_salida', 'id_t2_entrada', 'id_t2_salida']
+            
+            if ids and any(ids.get(campo) for campo in ids_campos):
                 print(f"[OBTENER_IDS] [OK] IDs encontrados: T1E={ids['id_t1_entrada']}, T1S={ids['id_t1_salida']}, T2E={ids['id_t2_entrada']}, T2S={ids['id_t2_salida']}")
                 print(f"[OBTENER_IDS] [OK] Tipos: T1E={ids['tipo_ubi_t1_ent']}, T1S={ids['tipo_ubi_t1_sal']}, T2E={ids['tipo_ubi_t2_ent']}, T2S={ids['tipo_ubi_t2_sal']}")
                 return jsonify({
@@ -1463,6 +1480,9 @@ def obtener_ids_marcacion():
                         'tipo_ubi_t2_sal': ids['tipo_ubi_t2_sal']
                     }
                 })
+            elif ids:
+                print(f"[OBTENER_IDS] [!] SP retornó solo NULLs: documento={num_documento_str}, fecha={fecha}")
+                return jsonify({'success': False, 'error': 'No se encontraron marcaciones con hora registrada para esa fecha'}), 404
             else:
                 print("[OBTENER_IDS] [!] SP no retornó resultados")
                 return jsonify({'success': False, 'error': 'No se encontraron marcaciones'}), 404
