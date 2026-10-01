@@ -691,11 +691,14 @@ def exportar_marcaciones_excel():
         # Obtener parmetros de filtro
         fecha_desde = request.args.get('fecha_desde')
         fecha_hasta = request.args.get('fecha_hasta')
+        usuario_filtro = (request.args.get('usuario') or '').strip()
+        empresa_filtro = (request.args.get('empresa') or '').strip()
         
         if not fecha_desde or not fecha_hasta:
             return jsonify({'success': False, 'error': 'Fechas requeridas'}), 400
         
         print(f"[EXPORTAR_EXCEL] [...] Exportando marcaciones: {fecha_desde} a {fecha_hasta}")
+        print(f"[EXPORTAR_EXCEL] [...] Filtros: usuario='{usuario_filtro}', empresa='{empresa_filtro}'")
         
         connection = get_db_connection()
         if not connection:
@@ -714,11 +717,46 @@ def exportar_marcaciones_excel():
             
             print(f"[EXPORTAR_EXCEL] [OK] {len(datos)} registros encontrados")
             
+            # ====================================================================
+            # EMPRESA DE CADA EMPLEADO + FILTROS DE USUARIO Y EMPRESA
+            # (sp_ExportarMarcacionDetallada no trae empresa; se enriquece aqui)
+            # ====================================================================
+            if datos:
+                # Claves reales devueltas por el SP (evita depender de la codificacin)
+                clave_documento = next((k for k in datos[0] if 'documento' in str(k).lower()), None)
+                clave_nombre = next((k for k in datos[0] if 'nombre' in str(k).lower()), None)
+                
+                cursor.execute("""
+                    SELECT u.num_documento, p.documento_numero, e.nombre AS empresa
+                    FROM TblUsuario u
+                    LEFT JOIN TblPersona p ON u.num_documento = p.num_documento
+                    LEFT JOIN TblEmpresa e ON u.id_empresa = e.id_empresa
+                """)
+                empresas_map = {}
+                for fila in cursor.fetchall():
+                    nombre = fila['empresa'] or '-'
+                    if fila['num_documento'] is not None:
+                        empresas_map[str(fila['num_documento'])] = nombre
+                    if fila['documento_numero'] is not None:
+                        empresas_map[str(fila['documento_numero'])] = nombre
+                
+                if empresa_filtro:
+                    datos = [d for d in datos
+                             if empresas_map.get(str(d.get(clave_documento)), '-') == empresa_filtro]
+                    print(f"[EXPORTAR_EXCEL] [...] Tras filtro empresa: {len(datos)} registros")
+                
+                if usuario_filtro:
+                    usuario_lower = usuario_filtro.lower()
+                    datos = [d for d in datos
+                             if usuario_lower in str(d.get(clave_nombre) or '').lower()
+                             or usuario_lower in str(d.get(clave_documento) or '').lower()]
+                    print(f"[EXPORTAR_EXCEL] [...] Tras filtro usuario: {len(datos)} registros")
+            
             cursor.close()
             connection.close()
             
             if not datos:
-                return jsonify({'success': False, 'error': 'No hay datos para exportar'}), 404
+                return jsonify({'success': False, 'error': 'No hay datos que coincidan con los filtros'}), 404
             
             # ====================================================================
             # CREAR ARCHIVO EXCEL
@@ -748,8 +786,9 @@ def exportar_marcaciones_excel():
             # ====================================================================
             
             headers = [
-                'Nmero Documento',
+                'Número Documento',
                 'Nombres Completos',
+                'Empresa',
                 'Fecha',
                 'Entrada 1',
                 'Salida 1',
@@ -774,18 +813,24 @@ def exportar_marcaciones_excel():
             for registro in datos:
                 # Nmero Documento
                 cell = ws.cell(row=row_num, column=1)
-                cell.value = registro.get('Nmero Documento')
+                cell.value = registro.get(clave_documento)
                 cell.alignment = cell_alignment_center
                 cell.border = border_style
                 
                 # Nombres Completos
                 cell = ws.cell(row=row_num, column=2)
-                cell.value = registro.get('Nombres Completos')
+                cell.value = registro.get(clave_nombre)
+                cell.alignment = cell_alignment
+                cell.border = border_style
+                
+                # Empresa
+                cell = ws.cell(row=row_num, column=3)
+                cell.value = empresas_map.get(str(registro.get(clave_documento)), '-')
                 cell.alignment = cell_alignment
                 cell.border = border_style
                 
                 # Fecha
-                cell = ws.cell(row=row_num, column=3)
+                cell = ws.cell(row=row_num, column=4)
                 fecha_val = registro.get('Fecha')
                 if isinstance(fecha_val, datetime):
                     cell.value = fecha_val.strftime('%Y-%m-%d')
@@ -797,7 +842,7 @@ def exportar_marcaciones_excel():
                 cell.border = border_style
                 
                 # Entrada 1
-                cell = ws.cell(row=row_num, column=4)
+                cell = ws.cell(row=row_num, column=5)
                 entrada1 = registro.get('Entrada 1')
                 if entrada1:
                     if hasattr(entrada1, 'total_seconds'):  # timedelta
@@ -814,7 +859,7 @@ def exportar_marcaciones_excel():
                 cell.border = border_style
                 
                 # Salida 1
-                cell = ws.cell(row=row_num, column=5)
+                cell = ws.cell(row=row_num, column=6)
                 salida1 = registro.get('Salida 1')
                 if salida1:
                     if hasattr(salida1, 'total_seconds'):
@@ -831,7 +876,7 @@ def exportar_marcaciones_excel():
                 cell.border = border_style
                 
                 # Entrada 2
-                cell = ws.cell(row=row_num, column=6)
+                cell = ws.cell(row=row_num, column=7)
                 entrada2 = registro.get('Entrada 2')
                 if entrada2:
                     if hasattr(entrada2, 'total_seconds'):
@@ -848,7 +893,7 @@ def exportar_marcaciones_excel():
                 cell.border = border_style
                 
                 # Salida 2
-                cell = ws.cell(row=row_num, column=7)
+                cell = ws.cell(row=row_num, column=8)
                 salida2 = registro.get('Salida 2')
                 if salida2:
                     if hasattr(salida2, 'total_seconds'):
@@ -865,7 +910,7 @@ def exportar_marcaciones_excel():
                 cell.border = border_style
                 
                 # Estado
-                cell = ws.cell(row=row_num, column=8)
+                cell = ws.cell(row=row_num, column=9)
                 estado = registro.get('Estado', 'SIN MARCA')
                 cell.value = estado
                 cell.alignment = cell_alignment_center
@@ -893,12 +938,13 @@ def exportar_marcaciones_excel():
             
             ws.column_dimensions['A'].width = 18  # Nmero Documento
             ws.column_dimensions['B'].width = 35  # Nombres Completos
-            ws.column_dimensions['C'].width = 12  # Fecha
-            ws.column_dimensions['D'].width = 12  # Entrada 1
-            ws.column_dimensions['E'].width = 12  # Salida 1
-            ws.column_dimensions['F'].width = 12  # Entrada 2
-            ws.column_dimensions['G'].width = 12  # Salida 2
-            ws.column_dimensions['H'].width = 15  # Estado
+            ws.column_dimensions['C'].width = 28  # Empresa
+            ws.column_dimensions['D'].width = 12  # Fecha
+            ws.column_dimensions['E'].width = 12  # Entrada 1
+            ws.column_dimensions['F'].width = 12  # Salida 1
+            ws.column_dimensions['G'].width = 12  # Entrada 2
+            ws.column_dimensions['H'].width = 12  # Salida 2
+            ws.column_dimensions['I'].width = 15  # Estado
             
             # Fijar primera fila (encabezado)
             ws.freeze_panes = 'A2'
@@ -1183,6 +1229,10 @@ def exportar_control_asistencia_excel():
             gris_font = Font(color="6B7280", size=10)
             campo_fill = PatternFill(start_color="DBEAFE", end_color="DBEAFE", fill_type="solid")
             campo_font = Font(color="1E40AF", bold=True, size=10)
+            rojo_fill = PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid")
+            rojo_font = Font(color="991B1B", bold=True, size=10)
+            morado_fill = PatternFill(start_color="EDE9FE", end_color="EDE9FE", fill_type="solid")
+            morado_font = Font(color="5B21B6", bold=True, size=10)
             
             row_num = 2
             for reg in registros:
@@ -1229,6 +1279,12 @@ def exportar_control_asistencia_excel():
                 elif reg.get('DETALLE_OFI_T1') == 'TARDANZA':
                     cell_detalle_ofi_t1.fill = amarillo_fill
                     cell_detalle_ofi_t1.font = amarillo_font
+                elif reg.get('DETALLE_OFI_T1') == 'FALTÓ':
+                    cell_detalle_ofi_t1.fill = rojo_fill
+                    cell_detalle_ofi_t1.font = rojo_font
+                elif reg.get('DETALLE_OFI_T1') == 'VACACIONES':
+                    cell_detalle_ofi_t1.fill = morado_fill
+                    cell_detalle_ofi_t1.font = morado_font
                 
                 # Detalle OFI T2 (columna 20)
                 cell_detalle_ofi_t2 = ws.cell(row=row_num, column=20, value=reg.get('DETALLE_OFI_T2', ''))
@@ -1239,6 +1295,12 @@ def exportar_control_asistencia_excel():
                 elif reg.get('DETALLE_OFI_T2') == 'TARDANZA':
                     cell_detalle_ofi_t2.fill = amarillo_fill
                     cell_detalle_ofi_t2.font = amarillo_font
+                elif reg.get('DETALLE_OFI_T2') == 'FALTÓ':
+                    cell_detalle_ofi_t2.fill = rojo_fill
+                    cell_detalle_ofi_t2.font = rojo_font
+                elif reg.get('DETALLE_OFI_T2') == 'VACACIONES':
+                    cell_detalle_ofi_t2.fill = morado_fill
+                    cell_detalle_ofi_t2.font = morado_font
                 
                 # Detalle CMP T1 (columna 21)
                 cell_detalle_cmp_t1 = ws.cell(row=row_num, column=21, value=reg.get('DETALLE_CMP_T1', ''))
@@ -1246,6 +1308,12 @@ def exportar_control_asistencia_excel():
                 if reg.get('DETALLE_CMP_T1') == 'CAMPO':
                     cell_detalle_cmp_t1.fill = campo_fill
                     cell_detalle_cmp_t1.font = campo_font
+                elif reg.get('DETALLE_CMP_T1') == 'FALTÓ':
+                    cell_detalle_cmp_t1.fill = rojo_fill
+                    cell_detalle_cmp_t1.font = rojo_font
+                elif reg.get('DETALLE_CMP_T1') == 'VACACIONES':
+                    cell_detalle_cmp_t1.fill = morado_fill
+                    cell_detalle_cmp_t1.font = morado_font
                 
                 # Detalle CMP T2 (columna 22)
                 cell_detalle_cmp_t2 = ws.cell(row=row_num, column=22, value=reg.get('DETALLE_CMP_T2', ''))
@@ -1253,6 +1321,12 @@ def exportar_control_asistencia_excel():
                 if reg.get('DETALLE_CMP_T2') == 'CAMPO':
                     cell_detalle_cmp_t2.fill = campo_fill
                     cell_detalle_cmp_t2.font = campo_font
+                elif reg.get('DETALLE_CMP_T2') == 'FALTÓ':
+                    cell_detalle_cmp_t2.fill = rojo_fill
+                    cell_detalle_cmp_t2.font = rojo_font
+                elif reg.get('DETALLE_CMP_T2') == 'VACACIONES':
+                    cell_detalle_cmp_t2.fill = morado_fill
+                    cell_detalle_cmp_t2.font = morado_font
                 
                 # Justificaciones (columnas 23-26)
                 ws.cell(row=row_num, column=23, value=reg.get('JUSTIFICACION_ENT_T1', '')).alignment = cell_alignment

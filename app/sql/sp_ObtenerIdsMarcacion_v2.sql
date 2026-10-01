@@ -1,6 +1,6 @@
 -- ============================================================
 -- OBSOLETO: este archivo (_v2) nunca se aplico a la BD.
--- Vigente: sp_ObtenerIdsMarcacion_v3.sql (turno por pareja).
+-- Vigente: sp_ObtenerIdsMarcacion_v4.sql (turno por horario).
 -- ============================================================
 CREATE DEFINER=`kallpasystem`@`%` PROCEDURE `sp_ObtenerIdsMarcacion`(
     IN p_documento_numero VARCHAR(20),

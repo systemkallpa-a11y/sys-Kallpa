@@ -700,6 +700,11 @@ function renderizarTabla(data) {
     datosPagina.forEach((fila, index) => {
         const colorFila = determinarColorFila(fila.DETALLE_OFI_T1, fila.DETALLE_OFI_T2);
         
+        // Dia sin ninguna marca (FALTÓ/VACACIONES/futuro): sin botón de edición
+        const hayMarcas = [fila.H_ENTRADA_OFI_T1, fila.H_SALIDA_OFI_T1, fila.H_ENTRADA_OFI_T2, fila.H_SALIDA_OFI_T2,
+                           fila.H_ENTRADA_CMP_T1, fila.H_SALIDA_CMP_T1, fila.H_ENTRADA_CMP_T2, fila.H_SALIDA_CMP_T2]
+            .some(v => v && v !== '-' && v !== 'NULL');
+        
         // Función para renderizar celda de hora con estilo
         function celdaHora(valor, tipo) {
             const bgColor = tipo === 'campo' ? 'bg-campo' : 'bg-oficina';
@@ -758,13 +763,13 @@ function renderizarTabla(data) {
                 ${celdaMinutos(fila.MINUTOS_T2)}
                 ${celdaDetalle(fila.DETALLE_CMP_T2)}
                 <td class="px-2 py-2 text-center">
-                    <div class="flex items-center justify-center gap-1">
+                    ${hayMarcas ? `<div class="flex items-center justify-center gap-1">
                         <button onclick="abrirModalEditar('${escapeHtml(fila.DNI_CE || '')}', '${escapeHtml(fila.H_ENTRADA_OFI_T1 || '')}', '${escapeHtml(fila.H_SALIDA_OFI_T1 || '')}', '${escapeHtml(fila.H_ENTRADA_OFI_T2 || '')}', '${escapeHtml(fila.H_SALIDA_OFI_T2 || '')}', '${escapeHtml(fila.H_ENTRADA_CMP_T1 || '')}', '${escapeHtml(fila.H_SALIDA_CMP_T1 || '')}', '${escapeHtml(fila.H_ENTRADA_CMP_T2 || '')}', '${escapeHtml(fila.H_SALIDA_CMP_T2 || '')}', '${escapeHtml(fila.NOMBRES || '')}', '${escapeHtml(fila.DIA || '')}', '${escapeHtml(fila.MES || '')}', '${escapeHtml(fila.ANO || '')}')" 
                                 class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-medium transition-colors"
                                 title="Editar horas">
                             <i class="fas fa-edit"></i>
                         </button>
-                    </div>
+                    </div>` : `<span class="text-gray-400 dark:text-gray-500">--</span>`}
                 </td>
             </tr>
         `;
@@ -1020,6 +1025,12 @@ function obtenerColoresDetalle(detalle) {
             colorDetalle: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
         };
     }
+    if (detalleUpper === 'FALTÓ') {
+        return {
+            colorMinutos: 'text-red-600 dark:text-red-400 font-bold',
+            colorDetalle: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 font-semibold'
+        };
+    }
     if (detalleUpper === 'CAMPO') {
         return {
             colorMinutos: 'text-emerald-600 dark:text-emerald-400 font-bold',
@@ -1059,6 +1070,7 @@ function determinarColorFila(detalleT1, detalleT2) {
     const t2 = (detalleT2 || '').toUpperCase();
     
     if (t1 === 'VACACIONES' || t2 === 'VACACIONES') return 'bg-purple-900/30';
+    if (t1 === 'FALTÓ' || t2 === 'FALTÓ') return 'bg-red-900/30';
     if (t1 === 'TARDANZA') return 'bg-yellow-900/30';
     if (t2 === 'SALIDA TEMPRANA') return 'bg-orange-900/30';
     if (t1 === 'ASISTENCIA' && t2 === 'CUMPLIÓ HORARIO') return 'bg-green-900/30';

@@ -1,5 +1,5 @@
 -- ============================================================
--- SP: sp_ObtenerIdsMarcacion   (v3)
+-- SP: sp_ObtenerIdsMarcacion   (v3 - REEMPLAZADO por _v4.sql)
 -- ============================================================
 -- Alimenta al boton lapiz de "Control de Asistencia" (modal de
 -- edicion): /api/marcacion/obtener-ids. El front usa solo estas

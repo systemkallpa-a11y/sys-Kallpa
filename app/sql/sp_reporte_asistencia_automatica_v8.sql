@@ -1,64 +1,55 @@
 -- ============================================================
--- SP: sp_reporte_asistencia_automatica   (v6 - REEMPLAZADO por _v7.sql)
+-- SP: sp_reporte_asistencia_automatica   (v8 - VIGENTE)
 -- ============================================================
--- Base: v5 (aplicado y verificado en BD el 30/09/2026).
+-- Base: v7 (turnos por horario - Opcion A; aplicada y
+--   verificada en BD el 30/09/2026).
 --
--- Problema que resuelve (v6):
---   Las marcas se repartían por VENTANAS DE RELOJ (entrada
---   <12:00, salida <=14:00, etc.). Con eso, una salida tarde
---   "se salía" de su turno aunque la pareja entrada-salida dijera
---   lo contrario. Ejemplo real (Esther 15/09): entró 09:02 y
---   salió 15:24; con reloj esa salida caía en el turno tarde y
---   quedaba mezclada con la salida 17:36. Y Katy 28/09: entró
---   13:21 (turno mañana por reloj, aunque abrió su turno a las
---   13:21) pero su salida 15:15 se iba a la tarde.
+-- Problema que resuelve (v8): FALTAS en Control de Asistencia.
+--   v7 solo generaba filas donde HABIA marcas: un dia sin
+--   ninguna marca no aparecia (septiembre-2026: 740 filas;
+--   faltaban 646 dias con horario y sin registro), y un turno
+--   vacio se pintaba '-', sin distinguir "aun no paso" de "falto".
 --
--- Regla nueva (la pareja manda, no el reloj):
---   1. La 1a ENTRADA del día abre el turno MAÑANA (aunque sea
---      a las 13:21; no importa la hora).
---   2. Toda SALIDA cierra el turno abierto por su ultima
---      entrada: si abrió a las 09:02, su salida a las 15:24 es
---      del turno MAÑANA (salio tarde, pero es su salida de la
---      mañana). Mismo criterio que el modal "Detalle de
---      Marcaciones del dia".
---   3. La 2a ENTRADA abre el turno TARDE; la 3a en adelante se
---      acumula en el turno tarde (la tabla solo tiene 2 turnos).
---   4. Unico caso donde aun se usa el reloj: una SALIDA sin
---      ninguna ENTRADA previa en el dia (no hay pareja; caso
---      extremo tipo madrugada) => <=14:00 = mañana, despues =
---      tarde. En dias normales no se nota.
---   5. OFICINA/CAMPO: sigue saliendo del tipo_ubicacion de
---      cada marca (no cambia; el registro crudo no se toca).
+-- Regla nueva (aplica por separado a turno 1 y turno 2):
+--   SI el turno no tiene NINGUNA marca (entrada/salida,
+--   oficina/campo):
+--     1. Vacacion APROBADA ese dia         -> 'VACACIONES'
+--     2. Turno inexistente ese dia (sin horario o sin turno 2) -> '-'
+--     3. El turno aun no termina (fecha + hora_salida[2] >= NOW()) -> '-'
+--     4. SI NO                            -> 'FALTÓ'
+--   SI el turno SI tiene marcas:
+--     -> logica ACTUAL intacta (ASISTENCIA / TARDANZA > 5 min /
+--        CAMPO / SIN HORARIO / '-'). La entrada sin salida NO es
+--        falta: se evalua por la entrada (ASISTENCIA/TARDANZA).
+--   Excepciones con registro real en el sistema: solo
+--   TblVacaciones (estado='APROBADO'); no existen tablas de
+--   permisos/licencias. Descanso = dia sin horario (sin fila).
 --
--- Ejemplos esperados:
---   Esther 15/09  09:02, 15:24, 17:34, 17:36
---                 -> mañana 09:02 / 15:24 ; tarde 17:34 / 17:36
---   Katy 28/09    13:21, 13:22, 15:15, 19:34
---                 -> mañana 13:21 / 13:22 ; tarde 15:15 / 19:34
---   Katy 25/09    12:50, 13:09, 15:01 (sin salida tarde)
---                 -> mañana 12:50 / 13:09 ; tarde 15:01 / -
+-- Filas (Opcion B): grilla =
+--   (persona con horario activo ese dia) UNION (persona-dia con
+--   marcas). septiembre-2026: 740 -> 1,386 filas (+646).
 --
--- Que cambia respecto de v5 (solo la regla de asignacion):
---   1. De TblMarcacion se calcula la columna `turno` por
---      SECuencia (ventana COUNT de entradas por persona+dia) y
---      TODA condicion de ventana por reloj (12:00/14:00) pasa a
---      ser `turno = 1` / `turno = 2`: 8 celdas, MINUTOS_T1/T2,
---      DETALLE_* y justificaciones. Asi el tiempo extra de una
---      salida 15:24 se calcula en el turno de la mañana.
---   2. Las 4 subconsultas de JUSTIFICACION_* pasan a
---      GROUP_CONCAT en la consulta principal con la MISMA regla
---      de turno (mismos nombres de columna; sin filtro de
---      ubicacion, igual que antes).
---   Se elimina por completo la regla "a partir de las 12/14 es
---   la tarde". El reloj solo queda en el caso 4 de arriba.
---
--- Sin cambios: columnas y su orden, GROUP BY, joins, filtros,
---   MINUTOS/DETALLE (formulas y practorroga de 5 min), front
---   (control_asistencia.html) y Excel (leen las mismas 8 celdas).
+-- Sin cambios: columnas y su orden, regla de turnos (Opcion A),
+--   MINUTOS_T1/T2, practorroga de 5 min, justificaciones,
+--   filtros, consumidores y front. Tolerancia: SIGUE EN 5 MIN.
 --
 -- Consumidores (sin cambios de esquema):
 --   GET /api/reportes/control-asistencia         -> JSON
 --   GET /api/reportes/control-asistencia/excel   -> Excel
+--
+-- Verificado en BD (01/10/2026):
+--   - 1,386 filas septiembre; regresion v7: 0 filas perdidas,
+--     0 cambios en horas/MINUTOS, 0 cambios de DETALLE en
+--     turnos con marcas.
+--   - Casos: Kelvin 25/09 (manana FALTO, tarde ASISTENCIA),
+--     doc 30 vacacion 21-26/09 -> VACACIONES, 8 personas con
+--     horario y 0 marcas -> FALTO, hoy/futuro sin FALTO.
+--   - Sesion MySQL de la app: time_zone = -05:00 (NOW() =
+--     hora de Peru, se usa para el cierre de turno).
+--   - TblPersona.num_documento unico (54/54); TblUsuario 1:1;
+--     dia_semana limpio; las 54 personas 'Activo' (si alguien
+--     se da de baja: poner su horario es_activo=0).
+--   - CTE recursiva: rango maximo 1,000 dias.
 --
 -- IMPORTANTE: MySQL no permite alterar el cuerpo de un
 --   procedimiento => siempre DROP + CREATE. Antes de ejecutar,
@@ -66,8 +57,8 @@
 --     SHOW CREATE PROCEDURE sp_reporte_asistencia_automatica\G
 --
 -- Reemplaza a:
---   _v5.sql -> base de esta version (ya aplicada)
---   _v4.sql, _v2.sql -> desactualizados
+--   _v7.sql -> base de esta version (turnos, ya aplicada)
+--   _v6.sql, _v5.sql, _v4.sql, _v2.sql -> desactualizados
 --   _v3.sql -> daniNO, NO ejecutar (2 parametros, incompatibles)
 -- ============================================================
 
@@ -81,6 +72,69 @@ CREATE DEFINER=`kallpasystem`@`%` PROCEDURE `sp_reporte_asistencia_automatica`(
     IN p_num_usuario INT
 )
 BEGIN
+    WITH RECURSIVE fechas AS (
+        SELECT p_fecha_inicio AS f WHERE p_fecha_inicio <= p_fecha_fin
+        UNION ALL
+        SELECT f + INTERVAL 1 DAY FROM fechas WHERE f < p_fecha_fin
+    ),
+    grid AS (
+        -- Persona-dia CON horario activo ese dia: genera filas
+        -- aunque no haya marcas (dias sin registro -> FALTÓ).
+        SELECT DISTINCT h.num_documento AS gdoc, fe.f AS gf
+        FROM TblHorarioTrabajo h
+        JOIN fechas fe
+          ON UPPER(h.dia_semana) = CASE DAYOFWEEK(fe.f)
+                 WHEN 1 THEN 'DOMINGO'
+                 WHEN 2 THEN 'LUNES'
+                 WHEN 3 THEN 'MARTES'
+                 WHEN 4 THEN 'MIÉRCOLES'
+                 WHEN 5 THEN 'JUEVES'
+                 WHEN 6 THEN 'VIERNES'
+                 WHEN 7 THEN 'SÁBADO'
+             END
+        WHERE h.es_activo = 1
+        UNION
+        -- Persona-dia CON marcas: conserva EXACTAMENTE las filas
+        -- que existen hoy (incluye dias sin horario).
+        SELECT DISTINCT mm.num_documento, DATE(mm.fecha_marcacion)
+        FROM TblMarcacion mm
+        WHERE DATE(mm.fecha_marcacion) BETWEEN p_fecha_inicio AND p_fecha_fin
+    ),
+    marcas AS (
+        -- Asignacion de cada marca a su turno (Opcion A, IDENTICA
+        -- a v7): la ultima ENTRADA que la precede decide el turno
+        -- segun SU horario de ese dia.
+        SELECT a.*,
+               CASE
+                   WHEN a.ult_ent IS NULL
+                        THEN CASE WHEN TIME(a.fecha_marcacion) <= '14:00:00' THEN 1 ELSE 2 END
+                   WHEN hh.num_documento IS NULL
+                        THEN CASE WHEN TIME(a.ult_ent) <= '14:00:00' THEN 1 ELSE 2 END
+                   WHEN hh.hora_entrada2 IS NULL OR hh.hora_salida IS NULL THEN 1
+                   WHEN TIME(a.ult_ent) <= hh.hora_salida THEN 1
+                   ELSE 2
+               END AS turno
+        FROM (
+            SELECT mm.*,
+                   MAX(CASE WHEN mm.tipo_marcacion = 'ENTRADA' THEN mm.fecha_marcacion END)
+                       OVER (PARTITION BY mm.num_documento, DATE(mm.fecha_marcacion)
+                             ORDER BY mm.fecha_marcacion, mm.id_marcacion
+                             ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS ult_ent
+            FROM TblMarcacion mm
+            WHERE DATE(mm.fecha_marcacion) BETWEEN p_fecha_inicio AND p_fecha_fin
+        ) a
+        LEFT JOIN TblHorarioTrabajo hh ON hh.num_documento = a.num_documento
+            AND UPPER(hh.dia_semana) = CASE DAYOFWEEK(a.fecha_marcacion)
+                WHEN 1 THEN 'DOMINGO'
+                WHEN 2 THEN 'LUNES'
+                WHEN 3 THEN 'MARTES'
+                WHEN 4 THEN 'MIÉRCOLES'
+                WHEN 5 THEN 'JUEVES'
+                WHEN 6 THEN 'VIERNES'
+                WHEN 7 THEN 'SÁBADO'
+            END
+            AND hh.es_activo = 1
+    )
     SELECT 
         -- 1. INFORMACIÓN GENERAL
         IFNULL(e.nombre, 'Sin Empresa') AS EMPRESA,
@@ -99,13 +153,13 @@ BEGIN
             'Sin Sede Asignada'
         ) AS SEDE_TRABAJO,
         
-        -- 3. FECHA
-        DAY(m.fecha_marcacion) AS DIA,
-        MONTH(m.fecha_marcacion) AS MES,
-        YEAR(m.fecha_marcacion) AS ANO,
-        ELT(DAYOFWEEK(MIN(m.fecha_marcacion)), 'Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado') AS DIA_SEMANA,
+        -- 3. FECHA (desde la grilla: la fila existe aunque no haya marcas)
+        DAY(g.gf) AS DIA,
+        MONTH(g.gf) AS MES,
+        YEAR(g.gf) AS ANO,
+        ELT(DAYOFWEEK(g.gf), 'Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado') AS DIA_SEMANA,
         
-        -- 4. OFICINA - TURNO MAÑANA (turno 1 por pareja)
+        -- 4. OFICINA - TURNO MAÑANA (turno 1 por horario)
         GROUP_CONCAT(
             CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 AND m.tipo_ubicacion = 'OFICINA'
                  THEN DATE_FORMAT(TIME(m.fecha_marcacion), '%H:%i') END
@@ -119,7 +173,7 @@ BEGIN
             SEPARATOR ', '
         ) AS H_SALIDA_OFI_T1,
         
-        -- 5. OFICINA - TURNO TARDE (turno 2 por pareja)
+        -- 5. OFICINA - TURNO TARDE (turno 2 por horario)
         GROUP_CONCAT(
             CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 AND m.tipo_ubicacion = 'OFICINA'
                  THEN DATE_FORMAT(TIME(m.fecha_marcacion), '%H:%i') END
@@ -133,7 +187,7 @@ BEGIN
             SEPARATOR ', '
         ) AS H_SALIDA_OFI_T2,
         
-        -- 6. CAMPO - TURNO MAÑANA (turno 1 por pareja)
+        -- 6. CAMPO - TURNO MAÑANA (turno 1 por horario)
         GROUP_CONCAT(
             CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 AND m.tipo_ubicacion = 'CAMPO'
                  THEN DATE_FORMAT(TIME(m.fecha_marcacion), '%H:%i') END
@@ -147,7 +201,7 @@ BEGIN
             SEPARATOR ', '
         ) AS H_SALIDA_CMP_T1,
         
-        -- 7. CAMPO - TURNO TARDE (turno 2 por pareja)
+        -- 7. CAMPO - TURNO TARDE (turno 2 por horario)
         GROUP_CONCAT(
             CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 AND m.tipo_ubicacion = 'CAMPO'
                  THEN DATE_FORMAT(TIME(m.fecha_marcacion), '%H:%i') END
@@ -161,7 +215,7 @@ BEGIN
             SEPARATOR ', '
         ) AS H_SALIDA_CMP_T2,
         
-        -- 8. MINUTOS T1 (reales del turno 1 por pareja - programados)
+        -- 8. MINUTOS T1 (reales del turno 1 por horario - programados)
         CASE 
             WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             WHEN MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
@@ -188,7 +242,7 @@ BEGIN
             )
         END AS MINUTOS_T1,
         
-        -- 9. MINUTOS T2 (reales del turno 2 por pareja - programados)
+        -- 9. MINUTOS T2 (reales del turno 2 por horario - programados)
         CASE 
             WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             WHEN MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
@@ -215,30 +269,74 @@ BEGIN
             )
         END AS MINUTOS_T2,
         
-        -- 10. DETALLE OFICINA MAÑANA (entrada del turno 1 en oficina; practorroga 5 min)
+        -- 10. DETALLE OFICINA MAÑANA (NUEVO: rama de turno vacio)
         CASE 
+            WHEN COUNT(CASE WHEN m.turno = 1 THEN 1 END) = 0 THEN
+                CASE
+                    WHEN EXISTS (SELECT 1 FROM TblVacaciones v
+                                 WHERE v.num_documento = p.num_documento
+                                   AND v.estado = 'APROBADO'
+                                   AND g.gf BETWEEN v.fecha_inicio AND v.fecha_fin)
+                        THEN 'VACACIONES'
+                    WHEN h.hora_entrada IS NULL OR h.hora_salida IS NULL THEN '-'
+                    WHEN TIMESTAMP(g.gf, h.hora_salida) >= NOW() THEN '-'
+                    ELSE 'FALTÓ'
+                END
             WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             WHEN h.hora_entrada IS NULL THEN 'SIN HORARIO'
             WHEN TIMESTAMPDIFF(MINUTE, h.hora_entrada, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) > 5 THEN 'TARDANZA'
             ELSE 'ASISTENCIA'
         END AS DETALLE_OFI_T1,
         
-        -- 11. DETALLE OFICINA TARDE (entrada del turno 2 en oficina; practorroga 5 min)
+        -- 11. DETALLE OFICINA TARDE (NUEVO: rama de turno vacio)
         CASE 
+            WHEN COUNT(CASE WHEN m.turno = 2 THEN 1 END) = 0 THEN
+                CASE
+                    WHEN EXISTS (SELECT 1 FROM TblVacaciones v
+                                 WHERE v.num_documento = p.num_documento
+                                   AND v.estado = 'APROBADO'
+                                   AND g.gf BETWEEN v.fecha_inicio AND v.fecha_fin)
+                        THEN 'VACACIONES'
+                    WHEN h.hora_entrada2 IS NULL OR h.hora_salida2 IS NULL THEN '-'
+                    WHEN TIMESTAMP(g.gf, h.hora_salida2) >= NOW() THEN '-'
+                    ELSE 'FALTÓ'
+                END
             WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             WHEN h.hora_entrada2 IS NULL THEN 'SIN HORARIO'
             WHEN TIMESTAMPDIFF(MINUTE, h.hora_entrada2, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) > 5 THEN 'TARDANZA'
             ELSE 'ASISTENCIA'
         END AS DETALLE_OFI_T2,
         
-        -- 12. DETALLE CAMPO MAÑANA (entrada del turno 1 en campo)
+        -- 12. DETALLE CAMPO MAÑANA (NUEVO: rama de turno vacio)
         CASE 
+            WHEN COUNT(CASE WHEN m.turno = 1 THEN 1 END) = 0 THEN
+                CASE
+                    WHEN EXISTS (SELECT 1 FROM TblVacaciones v
+                                 WHERE v.num_documento = p.num_documento
+                                   AND v.estado = 'APROBADO'
+                                   AND g.gf BETWEEN v.fecha_inicio AND v.fecha_fin)
+                        THEN 'VACACIONES'
+                    WHEN h.hora_entrada IS NULL OR h.hora_salida IS NULL THEN '-'
+                    WHEN TIMESTAMP(g.gf, h.hora_salida) >= NOW() THEN '-'
+                    ELSE 'FALTÓ'
+                END
             WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 AND m.tipo_ubicacion = 'CAMPO' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             ELSE 'CAMPO'
         END AS DETALLE_CMP_T1,
         
-        -- 13. DETALLE CAMPO TARDE (entrada del turno 2 en campo)
+        -- 13. DETALLE CAMPO TARDE (NUEVO: rama de turno vacio)
         CASE 
+            WHEN COUNT(CASE WHEN m.turno = 2 THEN 1 END) = 0 THEN
+                CASE
+                    WHEN EXISTS (SELECT 1 FROM TblVacaciones v
+                                 WHERE v.num_documento = p.num_documento
+                                   AND v.estado = 'APROBADO'
+                                   AND g.gf BETWEEN v.fecha_inicio AND v.fecha_fin)
+                        THEN 'VACACIONES'
+                    WHEN h.hora_entrada2 IS NULL OR h.hora_salida2 IS NULL THEN '-'
+                    WHEN TIMESTAMP(g.gf, h.hora_salida2) >= NOW() THEN '-'
+                    ELSE 'FALTÓ'
+                END
             WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 AND m.tipo_ubicacion = 'CAMPO' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             ELSE 'CAMPO'
         END AS DETALLE_CMP_T2,
@@ -273,36 +371,17 @@ BEGIN
             SEPARATOR ' | '
         ) AS JUSTIFICACION_SAL_T2
 
-    FROM (
-        -- Asignacion de cada marca a su turno por SECuencia:
-        -- idx_entradas = cuantas ENTRADAS lleva esa persona hasta
-        -- esta marca (incluida si es ella misma).
-        --   entrada  -> turno = su posicion (1a = mañana, 2a+ = tarde)
-        --   salida   -> turno del que cierra (las entradas anteriores)
-        --   sin ninguna entrada antes -> reloj (caso extremo)
-        SELECT base.*,
-               CASE WHEN base.idx_entradas = 0
-                         THEN CASE WHEN TIME(base.fecha_marcacion) <= '14:00:00' THEN 1 ELSE 2 END
-                    ELSE LEAST(2, base.idx_entradas)
-               END AS turno
-        FROM (
-            SELECT mm.*,
-                   SUM(CASE WHEN mm.tipo_marcacion = 'ENTRADA' THEN 1 ELSE 0 END)
-                       OVER (PARTITION BY mm.num_documento, DATE(mm.fecha_marcacion)
-                             ORDER BY mm.fecha_marcacion, mm.id_marcacion
-                             ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS idx_entradas
-            FROM TblMarcacion mm
-            WHERE DATE(mm.fecha_marcacion) BETWEEN p_fecha_inicio AND p_fecha_fin
-        ) base
-    ) m
-    INNER JOIN TblPersona p ON m.num_documento = p.num_documento
-    INNER JOIN TblUsuario u ON m.num_usuario = u.num_usuario
+    FROM grid g
+    INNER JOIN TblPersona p ON p.num_documento = g.gdoc
+    LEFT JOIN marcas m ON m.num_documento = g.gdoc 
+        AND DATE(m.fecha_marcacion) = g.gf
+    INNER JOIN TblUsuario u ON u.num_documento = p.num_documento
     LEFT JOIN TblEmpresa e ON u.id_empresa = e.id_empresa
     LEFT JOIN TblCargo c ON u.id_cargo = c.id_cargo
     LEFT JOIN TblArea a ON c.id_area = a.id_area
     
-    LEFT JOIN TblHorarioTrabajo h ON p.num_documento = h.num_documento 
-        AND UPPER(h.dia_semana) = CASE DAYOFWEEK(m.fecha_marcacion)
+    LEFT JOIN TblHorarioTrabajo h ON h.num_documento = p.num_documento 
+        AND UPPER(h.dia_semana) = CASE DAYOFWEEK(g.gf)
             WHEN 1 THEN 'DOMINGO'
             WHEN 2 THEN 'LUNES'
             WHEN 3 THEN 'MARTES'
@@ -313,15 +392,14 @@ BEGIN
         END
         AND h.es_activo = 1
 
-    WHERE DATE(m.fecha_marcacion) BETWEEN p_fecha_inicio AND p_fecha_fin
-      AND (p_num_usuario IS NULL OR u.num_usuario = p_num_usuario)
+    WHERE (p_num_usuario IS NULL OR u.num_usuario = p_num_usuario)
 
     GROUP BY 
-        p.num_documento, DATE(m.fecha_marcacion), e.nombre, p.nombres,
+        p.num_documento, g.gf, e.nombre, p.nombres,
         p.apellido_paterno, p.apellido_materno, p.documento_numero,
         c.nombre, a.nombre
 
-    ORDER BY DATE(m.fecha_marcacion) ASC, p.apellido_paterno ASC;
+    ORDER BY g.gf ASC, p.apellido_paterno ASC;
 END$$
 
 DELIMITER ;
