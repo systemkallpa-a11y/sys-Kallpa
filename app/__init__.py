@@ -72,6 +72,7 @@ def create_app():
     from app.routes.materiales import materiales_bp
     from app.routes.marcacion import marcacion_bp
     from app.routes.memo_pdf import memo_pdf_bp
+    from app.routes.inventario import inventario_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
@@ -81,6 +82,7 @@ def create_app():
     app.register_blueprint(materiales_bp)
     app.register_blueprint(marcacion_bp)
     app.register_blueprint(memo_pdf_bp)
+    app.register_blueprint(inventario_bp)
     
     # Inyectar versin de assets en todos los templates
     @app.context_processor
