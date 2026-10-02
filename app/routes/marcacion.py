@@ -1756,19 +1756,16 @@ def exportar_tardanzas_excel():
 @marcacion_bp.route('/api/reportes/control-asistencia/horas-laboradas-excel', methods=['GET'])
 @login_required
 def exportar_horas_laboradas_excel():
-    """Exportar horas laboradas por empleado a Excel usando sp_horas_laboradas"""
+    """Exportar horas laboradas a Excel - individual o todos los empleados"""
     try:
         fecha_inicio = request.args.get('fecha_inicio')
         fecha_fin = request.args.get('fecha_fin')
-        num_documento = request.args.get('num_documento')
+        num_documento = request.args.get('num_documento')  # OPCIONAL ahora
         
         if not fecha_inicio or not fecha_fin:
             return jsonify({'success': False, 'error': 'Se requieren fecha_inicio y fecha_fin'}), 400
         
-        if not num_documento:
-            return jsonify({'success': False, 'error': 'Se requiere num_documento del empleado'}), 400
-        
-        print(f"[HORAS_LABORADAS] [-] Exportando: {fecha_inicio} al {fecha_fin}, empleado={num_documento}")
+        print(f"[HORAS_LABORADAS] [-] Exportando: {fecha_inicio} al {fecha_fin}, empleado={num_documento or 'TODOS'}")
         
         connection = get_db_connection()
         if not connection:
@@ -1777,28 +1774,22 @@ def exportar_horas_laboradas_excel():
         try:
             cursor = connection.cursor(dictionary=True)
             
-            cursor.callproc('sp_horas_laboradas', [fecha_inicio, fecha_fin, int(num_documento)])
+            # Usar SP optimizado que acepta NULL para todos los empleados
+            # Si num_documento es None (vacío), se pasa como NULL al SP
+            doc_param = int(num_documento) if num_documento else None
+            
+            print(f"[HORAS_LABORADAS] [+] Llamando a sp_horas_laboradas_v2 con num_documento={doc_param}")
+            
+            cursor.callproc('sp_horas_laboradas_v2', [fecha_inicio, fecha_fin, doc_param])
             
             registros = []
             for result in cursor.stored_results():
                 registros = result.fetchall()
             
-            # Dias con al menos una marcacion (mismo criterio que el Dashboard)
-            cursor.execute(
-                "SELECT DISTINCT DATE(fecha_marcacion) AS fecha FROM TblMarcacion "
-                "WHERE num_documento = %s AND DATE(fecha_marcacion) BETWEEN %s AND %s",
-                (int(num_documento), fecha_inicio, fecha_fin)
-            )
-            dias_marcados = {row['fecha'] for row in cursor.fetchall()}
+            print(f"[HORAS_LABORADAS] [OK] {len(registros)} registros obtenidos del SP")
             
             cursor.close()
             connection.close()
-            
-            # sp_horas_laboradas genera una fila por cada dia del rango aunque no haya
-            # marcaciones; el Dashboard (sp_reporte_asistencia_automatica) solo muestra
-            # los dias con marcacion. Se descartan los dias vacios para que el Excel
-            # tenga exactamente los mismos registros que la pantalla.
-            registros = [reg for reg in registros if reg.get('fecha') in dias_marcados]
             
             print(f"[HORAS_LABORADAS] [OK] {len(registros)} registros obtenidos")
             
@@ -1850,16 +1841,23 @@ def exportar_horas_laboradas_excel():
                 ws.cell(row=1, column=col).fill = header_fill
                 ws.cell(row=1, column=col).border = border_style
             
-            # Fila 2: Info del empleado
+            # Fila 2: Info del empleado o rango de empleados
             reg0 = registros[0]
-            nombre_completo = f"{reg0.get('apellido_paterno', '')} {reg0.get('apellido_materno', '')}, {reg0.get('nombres', '')}"
-            horario = reg0.get('horario', 'Sin horario')
-            dni = reg0.get('dni', '')
-            empresa = reg0.get('empresa', '')
-            cargo = reg0.get('cargo', '')
             
             ws.merge_cells('A2:H2')
-            cell_info = ws.cell(row=2, column=1, value=f'Empleado: {nombre_completo}  |  DNI: {dni}  |  Empresa: {empresa}  |  Cargo: {cargo}  |  Horario: {horario}')
+            if num_documento:
+                # Un solo empleado - mostrar sus datos completos
+                nombre_completo = f"{reg0.get('apellido_paterno', '')} {reg0.get('apellido_materno', '')}, {reg0.get('nombres', '')}"
+                horario = reg0.get('horario', 'Sin horario')
+                dni = reg0.get('dni', '')
+                empresa = reg0.get('empresa', '')
+                cargo = reg0.get('cargo', '')
+                cell_info = ws.cell(row=2, column=1, value=f'Empleado: {nombre_completo}  |  DNI: {dni}  |  Empresa: {empresa}  |  Cargo: {cargo}  |  Horario: {horario}')
+            else:
+                # Todos los empleados - mostrar rango de fechas y cantidad
+                empleados_unicos = len(set(reg.get('dni') for reg in registros if reg.get('dni')))
+                cell_info = ws.cell(row=2, column=1, value=f'REPORTE CONSOLIDADO  |  Total Empleados: {empleados_unicos}  |  Período: {fecha_inicio} al {fecha_fin}')
+            
             cell_info.font = subheader_font
             cell_info.fill = subheader_fill
             cell_info.alignment = Alignment(horizontal="left", vertical="center")
@@ -1885,16 +1883,49 @@ def exportar_horas_laboradas_excel():
             # ENCABEZADOS DE LA TABLA (Fila 4)
             # ====================================================================
             
-            headers = [
-                'FECHA',           # 1
-                'DIA',             # 2
-                'ING. T1',         # 3
-                'SAL. T1',         # 4
-                'ING. T2',         # 5
-                'SAL. T2',         # 6
-                'HORAS LABORADAS', # 7
-                'MINUTOS'          # 8
-            ]
+            if num_documento:
+                # Un solo empleado - columnas originales
+                headers = [
+                    'FECHA',           # 1
+                    'DIA',             # 2
+                    'ING. T1',         # 3
+                    'SAL. T1',         # 4
+                    'ING. T2',         # 5
+                    'SAL. T2',         # 6
+                    'HORAS LABORADAS', # 7
+                    'MINUTOS'          # 8
+                ]
+                num_cols = 8
+            else:
+                # Todos los empleados - agregar columnas de identificación
+                headers = [
+                    'DNI',             # 1
+                    'EMPLEADO',        # 2
+                    'FECHA',           # 3
+                    'DIA',             # 4
+                    'ING. T1',         # 5
+                    'SAL. T1',         # 6
+                    'ING. T2',         # 7
+                    'SAL. T2',         # 8
+                    'HORAS LABORADAS', # 9
+                    'MINUTOS'          # 10
+                ]
+                num_cols = 10
+                # Actualizar merge de las filas de título
+                ws.unmerge_cells('A1:H1')
+                ws.merge_cells('A1:J1')
+                ws.unmerge_cells('A2:H2')
+                ws.merge_cells('A2:J2')
+                ws.unmerge_cells('A3:H3')
+                ws.merge_cells('A3:J3')
+                # Aplicar fill y border a todas las columnas
+                for col in range(1, num_cols + 1):
+                    ws.cell(row=1, column=col).fill = header_fill
+                    ws.cell(row=1, column=col).border = border_style
+                    ws.cell(row=2, column=col).fill = subheader_fill
+                    ws.cell(row=2, column=col).border = border_style
+                    ws.cell(row=3, column=col).fill = PatternFill(start_color="F9FAFB", end_color="F9FAFB", fill_type="solid")
+                    ws.cell(row=3, column=col).border = border_style
             
             for col_num, header in enumerate(headers, 1):
                 cell = ws.cell(row=4, column=col_num)
@@ -1927,18 +1958,43 @@ def exportar_horas_laboradas_excel():
                 horas = reg.get('horas_laboradas', '00:00')
                 minutos = reg.get('minutos_totales', 0)
                 
-                ws.cell(row=row_num, column=1, value=fecha_str).alignment = cell_alignment_center
-                ws.cell(row=row_num, column=2, value=dia).alignment = cell_alignment_center
-                ws.cell(row=row_num, column=3, value=entrada_t1).alignment = cell_alignment_center
-                ws.cell(row=row_num, column=4, value=salida_t1).alignment = cell_alignment_center
-                ws.cell(row=row_num, column=5, value=entrada_t2).alignment = cell_alignment_center
-                ws.cell(row=row_num, column=6, value=salida_t2).alignment = cell_alignment_center
-                
-                celda_horas = ws.cell(row=row_num, column=7, value=horas)
-                celda_horas.alignment = cell_alignment_center
-                
-                celda_minutos = ws.cell(row=row_num, column=8, value=minutos)
-                celda_minutos.alignment = cell_alignment_center
+                if num_documento:
+                    # Un solo empleado - columnas originales
+                    ws.cell(row=row_num, column=1, value=fecha_str).alignment = cell_alignment_center
+                    ws.cell(row=row_num, column=2, value=dia).alignment = cell_alignment_center
+                    ws.cell(row=row_num, column=3, value=entrada_t1).alignment = cell_alignment_center
+                    ws.cell(row=row_num, column=4, value=salida_t1).alignment = cell_alignment_center
+                    ws.cell(row=row_num, column=5, value=entrada_t2).alignment = cell_alignment_center
+                    ws.cell(row=row_num, column=6, value=salida_t2).alignment = cell_alignment_center
+                    
+                    celda_horas = ws.cell(row=row_num, column=7, value=horas)
+                    celda_horas.alignment = cell_alignment_center
+                    
+                    celda_minutos = ws.cell(row=row_num, column=8, value=minutos)
+                    celda_minutos.alignment = cell_alignment_center
+                    
+                    cols_range = range(1, 9)
+                else:
+                    # Todos los empleados - incluir DNI y nombre
+                    dni_emp = reg.get('dni', '')
+                    nombre_emp = f"{reg.get('apellido_paterno', '')} {reg.get('apellido_materno', '')}, {reg.get('nombres', '')}"
+                    
+                    ws.cell(row=row_num, column=1, value=dni_emp).alignment = cell_alignment_center
+                    ws.cell(row=row_num, column=2, value=nombre_emp).alignment = cell_alignment
+                    ws.cell(row=row_num, column=3, value=fecha_str).alignment = cell_alignment_center
+                    ws.cell(row=row_num, column=4, value=dia).alignment = cell_alignment_center
+                    ws.cell(row=row_num, column=5, value=entrada_t1).alignment = cell_alignment_center
+                    ws.cell(row=row_num, column=6, value=salida_t1).alignment = cell_alignment_center
+                    ws.cell(row=row_num, column=7, value=entrada_t2).alignment = cell_alignment_center
+                    ws.cell(row=row_num, column=8, value=salida_t2).alignment = cell_alignment_center
+                    
+                    celda_horas = ws.cell(row=row_num, column=9, value=horas)
+                    celda_horas.alignment = cell_alignment_center
+                    
+                    celda_minutos = ws.cell(row=row_num, column=10, value=minutos)
+                    celda_minutos.alignment = cell_alignment_center
+                    
+                    cols_range = range(1, 11)
                 
                 if minutos > 0:
                     celda_horas.fill = verde_fill
@@ -1951,7 +2007,7 @@ def exportar_horas_laboradas_excel():
                     celda_minutos.fill = gris_fill
                     celda_minutos.font = gris_font
                 
-                for col in range(1, 9):
+                for col in cols_range:
                     ws.cell(row=row_num, column=col).border = border_style
                 
                 row_num += 1
@@ -1960,9 +2016,28 @@ def exportar_horas_laboradas_excel():
             # AJUSTAR ANCHO DE COLUMNAS
             # ====================================================================
             
-            ws.column_dimensions['A'].width = 14  # FECHA
-            ws.column_dimensions['B'].width = 14  # DIA
-            ws.column_dimensions['C'].width = 12  # ING. T1
+            if num_documento:
+                # Un solo empleado
+                ws.column_dimensions['A'].width = 14  # FECHA
+                ws.column_dimensions['B'].width = 14  # DIA
+                ws.column_dimensions['C'].width = 12  # ING. T1
+                ws.column_dimensions['D'].width = 12  # SAL. T1
+                ws.column_dimensions['E'].width = 12  # ING. T2
+                ws.column_dimensions['F'].width = 12  # SAL. T2
+                ws.column_dimensions['G'].width = 18  # HORAS LABORADAS
+                ws.column_dimensions['H'].width = 12  # MINUTOS
+            else:
+                # Todos los empleados
+                ws.column_dimensions['A'].width = 12  # DNI
+                ws.column_dimensions['B'].width = 35  # EMPLEADO
+                ws.column_dimensions['C'].width = 14  # FECHA
+                ws.column_dimensions['D'].width = 14  # DIA
+                ws.column_dimensions['E'].width = 12  # ING. T1
+                ws.column_dimensions['F'].width = 12  # SAL. T1
+                ws.column_dimensions['G'].width = 12  # ING. T2
+                ws.column_dimensions['H'].width = 12  # SAL. T2
+                ws.column_dimensions['I'].width = 18  # HORAS LABORADAS
+                ws.column_dimensions['J'].width = 12  # MINUTOS
             ws.column_dimensions['D'].width = 12  # SAL. T1
             ws.column_dimensions['E'].width = 12  # ING. T2
             ws.column_dimensions['F'].width = 12  # SAL. T2
@@ -1981,8 +2056,17 @@ def exportar_horas_laboradas_excel():
             
             from datetime import datetime as dt
             timestamp = dt.now().strftime('%Y%m%d_%H%M%S')
-            nombre_limpio = nombre_completo.replace(' ', '_').replace(',', '')
-            filename = f'Horas_Laboradas_{nombre_limpio}_{fecha_inicio}_a_{fecha_fin}_{timestamp}.xlsx'
+            
+            # Usar nombre_archivo que ya definimos arriba según el caso
+            if num_documento:
+                # Un solo empleado - usar su nombre
+                reg0 = registros[0]
+                nombre_completo = f"{reg0.get('apellido_paterno', '')} {reg0.get('apellido_materno', '')}, {reg0.get('nombres', '')}"
+                nombre_limpio = nombre_completo.replace(' ', '_').replace(',', '')
+                filename = f'Horas_Laboradas_{nombre_limpio}_{fecha_inicio}_a_{fecha_fin}_{timestamp}.xlsx'
+            else:
+                # Todos los empleados
+                filename = f'Horas_Laboradas_TODOS_{fecha_inicio}_a_{fecha_fin}_{timestamp}.xlsx'
             
             print(f"[HORAS_LABORADAS] [OK] Archivo generado: {filename}")
             

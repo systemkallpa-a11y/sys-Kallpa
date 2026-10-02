@@ -127,7 +127,7 @@
 
                     <!-- Empleado -->
                     <div class="w-48">
-                        <input type="text" id="filtro-empleado" placeholder="Buscar empleado..."
+                        <input type="text" id="filtro-empleado" placeholder="Buscar empleado (vacío = todos)..."
                                class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
                     </div>
 
@@ -162,7 +162,7 @@
 
                     <!-- Botón Horas Laboradas -->
                     <button onclick="exportarHorasLaboradas()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-medium transition-colors">
-                        <i class="fas fa-business-time mr-1"></i>Horas Laboradas
+                        <i class="fas fa-business-time mr-1"></i>Exportar Horas Laboradas
                     </button>
                 </div>
             </div>
@@ -1155,11 +1155,47 @@ async function exportarHorasLaboradas() {
         return;
     }
 
+    // Si NO hay texto, exportar TODOS los empleados
     if (!texto) {
-        alert('Escribí el nombre o DNI del empleado en el buscador para exportar sus horas laboradas');
+        const url = `/api/reportes/control-asistencia/horas-laboradas-excel?fecha_inicio=${encodeURIComponent(fechaInicio)}&fecha_fin=${encodeURIComponent(fechaFin)}`;
+
+        console.log(`[HORAS_LABORADAS] Exportando TODOS los empleados: ${fechaInicio} a ${fechaFin}`);
+
+        try {
+            const resp = await fetch(url);
+
+            if (!resp.ok) {
+                let mensaje = 'No hay datos de horas laboradas para exportar';
+                try {
+                    const err = await resp.json();
+                    if (err && err.error) mensaje = err.error;
+                } catch (e) {
+                    // respuesta no JSON
+                }
+                alert(mensaje);
+                return;
+            }
+
+            const blob = await resp.blob();
+            const disposition = resp.headers.get('Content-Disposition') || '';
+            const matchName = disposition.match(/filename="?([^";]+)"?/i);
+            const nombreArchivo = matchName ? matchName[1] : `horas_laboradas_todos_${fechaInicio}_${fechaFin}.xlsx`;
+
+            const enlace = document.createElement('a');
+            enlace.href = URL.createObjectURL(blob);
+            enlace.download = nombreArchivo;
+            document.body.appendChild(enlace);
+            enlace.click();
+            enlace.remove();
+            URL.revokeObjectURL(enlace.href);
+        } catch (error) {
+            console.error('[HORAS_LABORADAS] Error:', error);
+            alert('Error al exportar las horas laboradas');
+        }
         return;
     }
 
+    // Si SÍ hay texto, buscar empleado específico
     const textoLower = texto.toLowerCase();
 
     try {
