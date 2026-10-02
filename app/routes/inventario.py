@@ -306,8 +306,15 @@ def crear_item():
         try:
             cursor = connection.cursor()
             
-            # Obtener usuario actual
-            num_usuario = session.get('user_documento') or session.get('user_email')
+            # Obtener usuario actual (debe ser INT)
+            num_usuario = session.get('user_documento')
+            if num_usuario:
+                try:
+                    num_usuario = int(num_usuario)
+                except:
+                    num_usuario = 0
+            else:
+                num_usuario = 0
             
             # Preparar parámetros para el SP
             args = [
@@ -315,12 +322,12 @@ def crear_item():
                 data.get('descripcion', ''),
                 data['tipo_inventario'],
                 int(data['id_categoria']),
-                data.get('id_subcategoria'),
+                int(data.get('id_subcategoria')) if data.get('id_subcategoria') else None,
                 int(data['id_unidad']),
                 float(data.get('stock_minimo', 0)),
                 float(data.get('stock_maximo', 0)),
                 float(data.get('precio_compra', 0)),
-                data.get('id_almacen'),
+                int(data.get('id_almacen')) if data.get('id_almacen') else None,
                 data.get('ubicacion_fisica', ''),
                 None,  # atributos_json (se procesarán después)
                 num_usuario,
@@ -330,14 +337,20 @@ def crear_item():
                 ''   # @p_codigo OUT
             ]
             
+            print(f"[DEBUG] Llamando a sp_crear_inventario con args: {args[:13]}")
+            
             # Llamar al SP
             result = cursor.callproc('sp_crear_inventario', args)
+            
+            print(f"[DEBUG] Resultado del SP: {result}")
             
             # Obtener valores OUT
             p_success = result[13]  # índice 13 = p_success
             p_message = result[14]  # índice 14 = p_message
             p_id_inventario = result[15]  # índice 15 = p_id_inventario
             p_codigo = result[16]  # índice 16 = p_codigo
+            
+            print(f"[DEBUG] success={p_success}, message={p_message}, id={p_id_inventario}, codigo={p_codigo}")
             
             if p_success:
                 # Insertar atributos dinámicos

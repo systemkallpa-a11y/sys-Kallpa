@@ -222,15 +222,6 @@
                             </select>
                         </div>
 
-                        <!-- Código -->
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                Código <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text" id="codigo" name="codigo" required placeholder="Ej: MAT-001"
-                                   class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
-                        </div>
-
                         <!-- Nombre -->
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -849,12 +840,11 @@ function siguientePaso() {
     // Validar campos del paso actual antes de avanzar
     if (pasoActual === 1) {
         const tipo = document.getElementById('tipo_inventario').value;
-        const codigo = document.getElementById('codigo').value;
         const nombre = document.getElementById('nombre').value;
         const categoria = document.getElementById('id_categoria').value;
         const unidad = document.getElementById('id_unidad').value;
         
-        if (!tipo || !codigo || !nombre || !categoria || !unidad) {
+        if (!tipo || !nombre || !categoria || !unidad) {
             Swal.fire({
                 icon: 'warning',
                 title: 'Campos incompletos',
@@ -881,7 +871,6 @@ function guardarItem() {
     // Validar todo el formulario
     const formData = new FormData(document.getElementById('formNuevoItem'));
     const data = {
-        codigo: formData.get('codigo'),
         nombre: formData.get('nombre'),
         descripcion: formData.get('descripcion'),
         id_categoria: formData.get('id_categoria'),
@@ -895,8 +884,8 @@ function guardarItem() {
         atributos: {}
     };
     
-    // Validar campos requeridos
-    if (!data.codigo || !data.nombre || !data.tipo_inventario || !data.id_categoria || !data.id_unidad) {
+    // Validar campos requeridos (el código se genera automáticamente en el SP)
+    if (!data.nombre || !data.tipo_inventario || !data.id_categoria || !data.id_unidad) {
         Swal.fire({
             icon: 'warning',
             title: 'Campos incompletos',
