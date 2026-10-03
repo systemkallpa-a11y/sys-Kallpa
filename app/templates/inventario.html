@@ -477,6 +477,188 @@
 </div>
 
 <!-- MODAL: Ajustar Stock -->
+<!-- MODAL: Editar Item de Inventario -->
+<div id="modalEditarItem" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+        <!-- Header fijo -->
+        <div class="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 rounded-t-2xl flex items-center justify-between flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-edit text-2xl text-white"></i>
+                <h3 class="text-xl font-bold text-white">Editar Item de Inventario</h3>
+            </div>
+            <button onclick="cerrarModalEditarItem()" class="text-white hover:text-gray-200 transition-colors">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+
+        <!-- Contenido scrolleable -->
+        <div class="flex-1 overflow-y-auto p-6">
+            <form id="formEditarItem" class="space-y-6">
+                <input type="hidden" id="edit_id_inventario" name="id_inventario">
+                <input type="hidden" id="edit_codigo" name="codigo">
+                
+                <!-- Información Básica -->
+                <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-4">
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-info-circle text-blue-500 mr-2"></i>Información Básica
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Tipo -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Tipo <span class="text-red-500">*</span>
+                            </label>
+                            <select id="edit_tipo_inventario" name="tipo_inventario" required onchange="cargarCategoriasEditar()"
+                                    class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
+                                <option value="MATERIAL">🏗️ Material</option>
+                                <option value="HERRAMIENTA">🔧 Herramienta</option>
+                                <option value="EQUIPO">⚙️ Equipo/Maquinaria</option>
+                                <option value="TECNOLOGIA">💻 Tecnología</option>
+                                <option value="ROPA">👕 Ropa/EPP</option>
+                                <option value="CONSUMIBLE">📄 Consumible/Oficina</option>
+                            </select>
+                        </div>
+
+                        <!-- Nombre -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Nombre <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" id="edit_nombre" name="nombre" required placeholder="Nombre del item"
+                                   class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
+                        </div>
+
+                        <!-- Categoría -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Categoría <span class="text-red-500">*</span>
+                            </label>
+                            <select id="edit_id_categoria" name="id_categoria" required
+                                    class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
+                                <option value="">Seleccione...</option>
+                            </select>
+                        </div>
+
+                        <!-- Unidad de Medida -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Unidad de Medida <span class="text-red-500">*</span>
+                            </label>
+                            <select id="edit_id_unidad" name="id_unidad" required
+                                    class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
+                                <option value="">Seleccione...</option>
+                            </select>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Descripción
+                            </label>
+                            <textarea id="edit_descripcion" name="descripcion" rows="2" placeholder="Descripción detallada del item"
+                                      class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stock y Precio -->
+                <div class="bg-gray-50 dark:bg-slate-700 rounded-lg p-4">
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-box text-green-500 mr-2"></i>Control de Stock y Precio
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Stock Mínimo -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Stock Mínimo
+                            </label>
+                            <input type="number" id="edit_stock_minimo" name="stock_minimo" step="0.01" min="0"
+                                   class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
+                        </div>
+
+                        <!-- Stock Máximo -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Stock Máximo
+                            </label>
+                            <input type="number" id="edit_stock_maximo" name="stock_maximo" step="0.01" min="0"
+                                   class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
+                        </div>
+
+                        <!-- Precio de Compra -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Precio de Compra
+                            </label>
+                            <input type="number" id="edit_precio_compra" name="precio_compra" step="0.01" min="0"
+                                   class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
+                        </div>
+
+                        <!-- Almacén -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Almacén
+                            </label>
+                            <select id="edit_id_almacen" name="id_almacen"
+                                    class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
+                                <option value="">Seleccione...</option>
+                            </select>
+                        </div>
+
+                        <!-- Ubicación Física -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Ubicación Física
+                            </label>
+                            <input type="text" id="edit_ubicacion_fisica" name="ubicacion_fisica" placeholder="Ej: Pasillo A, Estante 3, Nivel 2"
+                                   class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
+                        </div>
+
+                        <!-- Estado -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Estado
+                            </label>
+                            <select id="edit_estado" name="estado"
+                                    class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
+                                <option value="ACTIVO">✅ Activo</option>
+                                <option value="INACTIVO">❌ Inactivo</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Atributos Dinámicos -->
+                <div id="edit_atributos_container" class="bg-gray-50 dark:bg-slate-700 rounded-lg p-4">
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-tags text-purple-500 mr-2"></i>Especificaciones Técnicas
+                    </h4>
+                    <div id="edit_atributos_dinamicos" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Se llenarán dinámicamente -->
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Footer fijo -->
+        <div class="flex-shrink-0 border-t border-gray-200 dark:border-slate-700 px-6 py-4 bg-gray-50 dark:bg-slate-700 rounded-b-2xl">
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="cerrarModalEditarItem()"
+                        class="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors font-medium">
+                    <i class="fas fa-times mr-2"></i>Cancelar
+                </button>
+                <button type="button" onclick="guardarEdicion()"
+                        class="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors font-medium">
+                    <i class="fas fa-save mr-2"></i>Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Ajustar Stock -->
 <div id="modalAjustarStock" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full">
         <div class="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 rounded-t-2xl flex items-center justify-between">
@@ -579,9 +761,9 @@ async function cargarCategorias() {
         const response = await fetch('/api/inventario/categorias');
         const data = await response.json();
         
-        if (data.success) {
+        if (data.success && data.categorias) {
             const select = document.getElementById('filtro-categoria');
-            data.data.forEach(cat => {
+            data.categorias.forEach(cat => {
                 const option = document.createElement('option');
                 option.value = cat.nombre;
                 option.textContent = cat.nombre;
@@ -707,11 +889,6 @@ function renderizarTabla() {
                 </td>
                 <td class="px-4 py-3 text-center">
                     <div class="flex items-center justify-center gap-2">
-                        <button onclick="verDetalle(${idInventario})" 
-                                class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                title="Ver detalle">
-                            <i class="fas fa-eye"></i>
-                        </button>
                         <button onclick="entregarMaterial(${idInventario})" 
                                 class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
                                 title="Entregar material">
@@ -961,9 +1138,9 @@ async function cambiarTipoInventario() {
         const response = await fetch(`/api/inventario/categorias?tipo=${tipo}`);
         const data = await response.json();
         
-        if (data.success) {
+        if (data.success && data.categorias) {
             selectCategoria.innerHTML = '<option value="">Seleccione una categoría...</option>';
-            data.data.forEach(cat => {
+            data.categorias.forEach(cat => {
                 const option = document.createElement('option');
                 option.value = cat.id_categoria;
                 option.textContent = cat.nombre;
@@ -1068,10 +1245,10 @@ async function cargarUnidadesMedida() {
         const response = await fetch('/api/inventario/unidades');
         const data = await response.json();
         
-        if (data.success) {
+        if (data.success && data.unidades) {
             const select = document.getElementById('id_unidad');
             select.innerHTML = '<option value="">Seleccione...</option>';
-            data.data.forEach(unidad => {
+            data.unidades.forEach(unidad => {
                 const option = document.createElement('option');
                 option.value = unidad.id_unidad;
                 option.textContent = `${unidad.nombre} (${unidad.abreviatura})`;
@@ -1088,13 +1265,13 @@ async function cargarAlmacenes() {
         const response = await fetch('/api/inventario/almacenes');
         const data = await response.json();
         
-        if (data.success) {
+        if (data.success && data.almacenes) {
             const select = document.getElementById('id_almacen');
             select.innerHTML = '<option value="">Seleccione...</option>';
-            data.data.forEach(almacen => {
+            data.almacenes.forEach(almacen => {
                 const option = document.createElement('option');
                 option.value = almacen.id_almacen;
-                option.textContent = `${almacen.nombre} (${almacen.tipo})`;
+                option.textContent = `${almacen.nombre} (${almacen.codigo})`;
                 select.appendChild(option);
             });
         }
@@ -1396,6 +1573,308 @@ document.getElementById('formAjustarStock').addEventListener('submit', async fun
 });
 
 // ============================================================================
+// FUNCIONES DE EDICIÓN
+// ============================================================================
+async function editarMaterial(idInventario) {
+    try {
+        console.log('[DEBUG] Editando item:', idInventario);
+        
+        // Cerrar cualquier otro modal que esté abierto
+        document.querySelectorAll('[id*="modal"]').forEach(m => {
+            if (m.id !== 'modalEditarItem') {
+                m.classList.add('hidden');
+                m.style.display = 'none';
+            }
+        });
+        
+        // Obtener los detalles del item
+        const response = await fetch(`/api/inventario/detalle/${idInventario}`);
+        const result = await response.json();
+        
+        console.log('[DEBUG] Respuesta del servidor:', result);
+        
+        if (!result.success) {
+            throw new Error(result.message || 'Error al cargar datos del item');
+        }
+        
+        const item = result.data.item;
+        const atributos = result.data.atributos || [];
+        
+        console.log('[DEBUG] Item:', item);
+        console.log('[DEBUG] Atributos:', atributos);
+        
+        // Llenar campos básicos
+        document.getElementById('edit_id_inventario').value = item.id_inventario;
+        document.getElementById('edit_codigo').value = item.codigo;
+        document.getElementById('edit_tipo_inventario').value = item.tipo_inventario;
+        document.getElementById('edit_nombre').value = item.nombre;
+        document.getElementById('edit_descripcion').value = item.descripcion || '';
+        document.getElementById('edit_stock_minimo').value = item.stock_minimo || 0;
+        document.getElementById('edit_stock_maximo').value = item.stock_maximo || 0;
+        document.getElementById('edit_precio_compra').value = item.precio_compra || 0;
+        document.getElementById('edit_id_almacen').value = item.id_almacen || '';
+        document.getElementById('edit_ubicacion_fisica').value = item.ubicacion_fisica || '';
+        document.getElementById('edit_estado').value = item.estado || 'ACTIVO';
+        
+        console.log('[DEBUG] Campos básicos llenados');
+        
+        // Cargar categorías según tipo
+        try {
+            await cargarCategoriasEditar();
+            document.getElementById('edit_id_categoria').value = item.id_categoria;
+            console.log('[DEBUG] Categorías cargadas');
+        } catch (error) {
+            console.error('Error al cargar categorías:', error);
+        }
+        
+        // Cargar unidades de medida
+        try {
+            await cargarUnidadesEditar();
+            document.getElementById('edit_id_unidad').value = item.id_unidad;
+            console.log('[DEBUG] Unidades cargadas');
+        } catch (error) {
+            console.error('Error al cargar unidades:', error);
+        }
+        
+        // Cargar almacenes
+        try {
+            await cargarAlmacenesEditar();
+            document.getElementById('edit_id_almacen').value = item.id_almacen || '';
+            console.log('[DEBUG] Almacenes cargados');
+        } catch (error) {
+            console.error('Error al cargar almacenes:', error);
+        }
+        
+        // Cargar atributos dinámicos
+        const containerAtributos = document.getElementById('edit_atributos_dinamicos');
+        containerAtributos.innerHTML = '';
+        
+        if (atributos.length > 0) {
+            atributos.forEach(attr => {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 capitalize">
+                        ${attr.nombre_atributo}
+                    </label>
+                    <input type="text" name="attr_${attr.nombre_atributo}" value="${attr.valor_atributo || ''}"
+                           class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
+                `;
+                containerAtributos.appendChild(div);
+            });
+        } else {
+            containerAtributos.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-4">No hay especificaciones técnicas registradas</p>';
+        }
+        
+        console.log('[DEBUG] Atributos cargados');
+        
+        // Mostrar modal
+        console.log('[DEBUG] Mostrando modal...');
+        const modal = document.getElementById('modalEditarItem');
+        console.log('[DEBUG] Modal element:', modal);
+        
+        // Mover el modal al final del body para evitar problemas de z-index
+        document.body.appendChild(modal);
+        
+        modal.classList.remove('hidden');
+        
+        // Forzar estilos inline para asegurar visibilidad
+        modal.style.display = 'flex';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.right = '0';
+        modal.style.bottom = '0';
+        modal.style.zIndex = '99999';
+        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+        
+        // Re-asignar event listeners específicos para este modal
+        const btnCerrarHeader = modal.querySelector('.bg-gradient-to-r.from-orange-500 button');
+        const botones = modal.querySelectorAll('button[type="button"]');
+        const btnGuardar = modal.querySelector('button.bg-orange-600');
+        
+        // Botón cerrar (X) en el header
+        if (btnCerrarHeader) {
+            btnCerrarHeader.onclick = function(e) {
+                e.preventDefault();
+                cerrarModalEditarItem();
+            };
+        }
+        
+        // Botón Cancelar (buscar por texto)
+        botones.forEach(btn => {
+            if (btn.textContent.includes('Cancelar')) {
+                btn.onclick = function(e) {
+                    e.preventDefault();
+                    cerrarModalEditarItem();
+                };
+            }
+        });
+        
+        // Botón Guardar Cambios
+        if (btnGuardar) {
+            btnGuardar.onclick = function(e) {
+                e.preventDefault();
+                guardarEdicion();
+            };
+        }
+        
+        console.log('[DEBUG] Event listeners asignados');
+        console.log('[DEBUG] Modal mostrado');
+        
+    } catch (error) {
+        console.error('Error al cargar item:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'No se pudo cargar el item'
+        });
+    }
+}
+
+function cerrarModalEditarItem() {
+    const modal = document.getElementById('modalEditarItem');
+    modal.classList.add('hidden');
+    
+    // Limpiar estilos inline
+    modal.style.display = '';
+    modal.style.position = '';
+    modal.style.top = '';
+    modal.style.left = '';
+    modal.style.right = '';
+    modal.style.bottom = '';
+    modal.style.zIndex = '';
+    modal.style.backgroundColor = '';
+    
+    document.getElementById('formEditarItem').reset();
+}
+
+async function cargarCategoriasEditar() {
+    const tipo = document.getElementById('edit_tipo_inventario').value;
+    const selectCategoria = document.getElementById('edit_id_categoria');
+    
+    if (!tipo) {
+        selectCategoria.innerHTML = '<option value="">Primero seleccione un tipo</option>';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/inventario/categorias?tipo=${tipo}`);
+        const result = await response.json();
+        
+        selectCategoria.innerHTML = '<option value="">Seleccione...</option>';
+        result.categorias.forEach(cat => {
+            selectCategoria.innerHTML += `<option value="${cat.id_categoria}">${cat.nombre}</option>`;
+        });
+    } catch (error) {
+        console.error('Error al cargar categorías:', error);
+    }
+}
+
+async function cargarUnidadesEditar() {
+    const selectUnidad = document.getElementById('edit_id_unidad');
+    
+    try {
+        const response = await fetch('/api/inventario/unidades');
+        const result = await response.json();
+        
+        selectUnidad.innerHTML = '<option value="">Seleccione...</option>';
+        result.unidades.forEach(u => {
+            selectUnidad.innerHTML += `<option value="${u.id_unidad}">${u.nombre} (${u.abreviatura})</option>`;
+        });
+    } catch (error) {
+        console.error('Error al cargar unidades:', error);
+    }
+}
+
+async function cargarAlmacenesEditar() {
+    const selectAlmacen = document.getElementById('edit_id_almacen');
+    
+    try {
+        const response = await fetch('/api/inventario/almacenes');
+        const result = await response.json();
+        
+        selectAlmacen.innerHTML = '<option value="">Seleccione...</option>';
+        result.almacenes.forEach(a => {
+            selectAlmacen.innerHTML += `<option value="${a.id_almacen}">${a.nombre} (${a.codigo})</option>`;
+        });
+    } catch (error) {
+        console.error('Error al cargar almacenes:', error);
+    }
+}
+
+async function guardarEdicion() {
+    const formData = new FormData(document.getElementById('formEditarItem'));
+    const data = {
+        id_inventario: formData.get('id_inventario'),
+        nombre: formData.get('nombre'),
+        descripcion: formData.get('descripcion'),
+        id_categoria: formData.get('id_categoria'),
+        tipo_inventario: formData.get('tipo_inventario'),
+        id_unidad: formData.get('id_unidad'),
+        stock_minimo: formData.get('stock_minimo'),
+        stock_maximo: formData.get('stock_maximo'),
+        precio_compra: formData.get('precio_compra'),
+        id_almacen: formData.get('id_almacen'),
+        ubicacion_fisica: formData.get('ubicacion_fisica'),
+        estado: formData.get('estado'),
+        atributos: {}
+    };
+    
+    // Validar campos requeridos
+    if (!data.nombre || !data.tipo_inventario || !data.id_categoria || !data.id_unidad) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Campos incompletos',
+            text: 'Por favor complete todos los campos obligatorios'
+        });
+        return;
+    }
+    
+    // Recopilar atributos dinámicos
+    for (let [key, value] of formData.entries()) {
+        if (key.startsWith('attr_') && value) {
+            const attrName = key.replace('attr_', '');
+            data.atributos[attrName] = value;
+        }
+    }
+    
+    try {
+        const response = await fetch('/api/inventario/actualizar', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: result.message || 'Item actualizado correctamente',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            cerrarModalEditarItem();
+            cargarInventario();
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: result.message || 'No se pudo actualizar el item'
+            });
+        }
+    } catch (error) {
+        console.error('Error al actualizar item:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al actualizar el item'
+        });
+    }
+}
+
+// ============================================================================
 // FUNCIONES PLACEHOLDER (ACTUALIZAR NOMBRES)
 // ============================================================================
 function abrirModalNuevoMaterial() {
@@ -1404,10 +1883,6 @@ function abrirModalNuevoMaterial() {
 
 function cerrarModalNuevoMaterial() {
     cerrarModalNuevoItem();
-}
-
-function editarMaterial(idInventario) {
-    alert(`Funcionalidad de edición en desarrollo para ID: ${idInventario}`);
 }
 
 function mostrarError(mensaje) {

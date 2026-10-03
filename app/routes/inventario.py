@@ -141,7 +141,7 @@ def obtener_categorias():
             
             return jsonify({
                 'success': True,
-                'data': categorias
+                'categorias': categorias
             }), 200
         
         except Error as e:
@@ -228,7 +228,7 @@ def obtener_unidades():
             
             return jsonify({
                 'success': True,
-                'data': unidades
+                'unidades': unidades
             }), 200
         
         except Error as e:
@@ -270,7 +270,7 @@ def obtener_almacenes():
             
             return jsonify({
                 'success': True,
-                'data': almacenes
+                'almacenes': almacenes
             }), 200
         
         except Error as e:
@@ -400,7 +400,7 @@ def crear_item():
 @inventario_bp.route('/api/inventario/detalle/<int:id_inventario>', methods=['GET'])
 @login_required
 def detalle_item(id_inventario):
-    """Obtener detalle completo de un item con sus atributos (usando SP)"""
+    """Obtener detalle completo de un item con sus atributos"""
     try:
         connection = get_db_connection()
         if not connection:
@@ -409,43 +409,176 @@ def detalle_item(id_inventario):
         try:
             cursor = connection.cursor(dictionary=True)
             
-            # Llamar al stored procedure
-            cursor.callproc('sp_detalle_inventario', [id_inventario])
+            print(f"[DEBUG] Consultando item con id={id_inventario}")
             
-            # Obtener resultados (2 result sets)
-            item = None
-            atributos = []
+            # Consulta directa para obtener el item
+            query_item = """
+                SELECT 
+                    i.*,
+                    c.nombre AS categoria,
+                    u.nombre AS unidad,
+                    u.abreviatura AS unidad_abrev,
+                    a.nombre AS almacen,
+                    a.codigo AS almacen_codigo
+                FROM TblInventario i
+                LEFT JOIN TblCategoriaInventario c ON i.id_categoria = c.id_categoria
+                LEFT JOIN TblUnidadMedida u ON i.id_unidad = u.id_unidad
+                LEFT JOIN TblAlmacen a ON i.id_almacen = a.id_almacen
+                WHERE i.id_inventario = %s
+            """
             
-            for idx, result in enumerate(cursor.stored_results()):
-                if idx == 0:
-                    # Primer result set: datos del item
-                    rows = result.fetchall()
-                    if rows:
-                        item = rows[0]
-                elif idx == 1:
-                    # Segundo result set: atributos
-                    atributos = result.fetchall()
+            cursor.execute(query_item, (id_inventario,))
+            item = cursor.fetchone()
+            
+            if not item:
+                cursor.close()
+                connection.close()
+                print(f"[DEBUG] Item no encontrado con id={id_inventario}")
+                return jsonify({'success': False, 'message': 'Item no encontrado'}), 404
+            
+            print(f"[DEBUG] Item encontrado: {item.get('nombre', 'N/A')}")
+            
+            # Consulta para obtener atributos
+            query_atributos = """
+                SELECT nombre_atributo, valor_atributo, tipo_dato
+                FROM TblInventarioAtributos
+                WHERE id_inventario = %s
+                ORDER BY nombre_atributo
+            """
+            
+            cursor.execute(query_atributos, (id_inventario,))
+            atributos = cursor.fetchall()
+            
+            print(f"[DEBUG] Atributos encontrados: {len(atributos)}")
             
             cursor.close()
             connection.close()
             
-            if not item:
-                return jsonify({'success': False, 'message': 'Item no encontrado'}), 404
-            
-            # Agregar atributos al item
-            item['atributos'] = atributos
-            
+            # Estructura de respuesta que espera el frontend
             return jsonify({
                 'success': True,
-                'data': item
+                'data': {
+                    'item': item,
+                    'atributos': atributos
+                }
             }), 200
         
         except Error as e:
             print(f"[DETALLE ITEM] Error SQL: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
+            import traceback
+            traceback.print_exc()
+            return jsonify({'success': False, 'error': f'Error SQL: {str(e)}'}), 500
     
     except Exception as e:
         print(f"[DETALLE ITEM] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': f'Error del servidor: {str(e)}'}), 500
+
+
+# ============================================================================
+# API: ACTUALIZAR ITEM DE INVENTARIO
+# ============================================================================
+
+@inventario_bp.route('/api/inventario/actualizar', methods=['PUT'])
+@login_required
+def actualizar_item():
+    """Actualizar un item de inventario con sus atributos"""
+    try:
+        data = request.get_json()
+        
+        # Validar campos requeridos
+        required_fields = ['id_inventario', 'nombre', 'tipo_inventario', 'id_categoria', 'id_unidad']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'message': f'Campo requerido: {field}'}), 400
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+        
+        try:
+            cursor = connection.cursor()
+            
+            # Obtener usuario actual
+            num_usuario = session.get('user_documento')
+            if num_usuario:
+                try:
+                    num_usuario = int(num_usuario)
+                except:
+                    num_usuario = 0
+            else:
+                num_usuario = 0
+            
+            # Actualizar TblInventario
+            update_query = """
+                UPDATE TblInventario
+                SET nombre = %s,
+                    descripcion = %s,
+                    tipo_inventario = %s,
+                    id_categoria = %s,
+                    id_unidad = %s,
+                    stock_minimo = %s,
+                    stock_maximo = %s,
+                    precio_compra = %s,
+                    id_almacen = %s,
+                    ubicacion_fisica = %s,
+                    estado = %s,
+                    fecha_modificacion = NOW(),
+                    modificado_por = %s
+                WHERE id_inventario = %s
+            """
+            
+            cursor.execute(update_query, (
+                data['nombre'],
+                data.get('descripcion', ''),
+                data['tipo_inventario'],
+                int(data['id_categoria']),
+                int(data['id_unidad']),
+                float(data.get('stock_minimo', 0)),
+                float(data.get('stock_maximo', 0)),
+                float(data.get('precio_compra', 0)),
+                int(data.get('id_almacen')) if data.get('id_almacen') else None,
+                data.get('ubicacion_fisica', ''),
+                data.get('estado', 'ACTIVO'),
+                num_usuario,
+                int(data['id_inventario'])
+            ))
+            
+            # Actualizar atributos dinámicos
+            atributos = data.get('atributos', {})
+            if atributos:
+                # Primero eliminar atributos existentes
+                cursor.execute(
+                    "DELETE FROM TblInventarioAtributos WHERE id_inventario = %s",
+                    (int(data['id_inventario']),)
+                )
+                
+                # Insertar nuevos atributos
+                for nombre_attr, valor_attr in atributos.items():
+                    if valor_attr:  # Solo insertar si hay valor
+                        cursor.execute("""
+                            INSERT INTO TblInventarioAtributos 
+                            (id_inventario, nombre_atributo, valor_atributo, tipo_dato)
+                            VALUES (%s, %s, %s, 'TEXTO')
+                        """, (int(data['id_inventario']), nombre_attr, valor_attr))
+            
+            connection.commit()
+            cursor.close()
+            connection.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Item actualizado correctamente'
+            }), 200
+        
+        except Error as e:
+            connection.rollback()
+            print(f"[ACTUALIZAR ITEM] Error SQL: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    except Exception as e:
+        print(f"[ACTUALIZAR ITEM] Error: {e}")
         return jsonify({'success': False, 'error': 'Error del servidor'}), 500
 
 
