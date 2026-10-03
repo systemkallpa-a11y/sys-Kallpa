@@ -476,7 +476,51 @@ def estadisticas_vacaciones():
 
 
 # ============================================================================
-# API: OBTENER EMPLEADOS (para el dropdown)
+# API: OBTENER PERSONAL CON ESTADO DE VACACIONES
+# ============================================================================
+
+@main_bp.route('/api/vacaciones/personal', methods=['GET'])
+def obtener_personal_vacaciones():
+    """Obtener todo el personal activo con su estado de vacaciones (sp_ObtenerPersonalVacaciones)"""
+    anio = request.args.get('anio', '').strip()
+    estado = request.args.get('estado', '').strip() or None
+
+    anio = int(anio) if anio else None
+
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'success': False, 'error': 'Error de conexion'}), 500
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+        cursor.callproc('sp_ObtenerPersonalVacaciones', (anio, estado))
+
+        personal = []
+        for result in cursor.stored_results():
+            personal = result.fetchall()
+
+        # Serializar fechas a string
+        for row in personal:
+            for key in ('fecha_inicio', 'fecha_fin', 'fecha_solicitud'):
+                if row.get(key):
+                    row[key] = str(row[key])
+
+        cursor.close()
+        connection.close()
+
+        return jsonify({'success': True, 'data': personal}), 200
+
+    except Error as e:
+        print(f"[VACACIONES] Error al obtener personal: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# API: OBTENER LISTA DE EMPLEADOS ACTIVOS
 # ============================================================================
 
 @main_bp.route('/api/vacaciones/empleados', methods=['GET'])

@@ -124,6 +124,9 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Paginación -->
+            <div id="paginacion-controles" class="px-4 py-3 bg-gray-50 dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700">
+            </div>
         </div>
     </div>
 </div>
@@ -356,6 +359,10 @@
 // VARIABLES GLOBALES
 // ============================================================================
 let solicitudes = [];
+let personalData = [];
+let personalDataCompleta = [];
+let paginaActual = 1;
+const registrosPorPagina = 20;
 
 // ============================================================================
 // INICIALIZACION
@@ -369,8 +376,17 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('fecha_inicio').addEventListener('change', calcularDias);
     document.getElementById('fecha_fin').addEventListener('change', calcularDias);
 
+    document.getElementById('filtro-empleado').addEventListener('input', function() {
+        filtrarPorEmpleado();
+    });
     document.getElementById('filtro-empleado').addEventListener('keyup', function(e) {
         if (e.key === 'Enter') aplicarFiltros();
+    });
+    document.getElementById('filtro-estado').addEventListener('change', function() {
+        aplicarFiltros();
+    });
+    document.getElementById('filtro-anio').addEventListener('change', function() {
+        aplicarFiltros();
     });
 
     // Cerrar modales con Escape
@@ -411,78 +427,153 @@ async function cargarSolicitudes() {
     try {
         const estado = document.getElementById('filtro-estado').value;
         const anio = document.getElementById('filtro-anio').value;
-        const busqueda = document.getElementById('filtro-empleado').value;
 
-        let url = '/api/vacaciones/obtener?';
-        if (estado) url += `estado=${encodeURIComponent(estado)}&`;
+        let url = '/api/vacaciones/personal?';
         if (anio) url += `anio=${encodeURIComponent(anio)}&`;
-        if (busqueda) url += `q=${encodeURIComponent(busqueda)}&`;
+        if (estado) url += `estado=${encodeURIComponent(estado)}&`;
 
         const res = await fetch(url);
         const data = await res.json();
-        const tbody = document.getElementById('vacaciones-lista');
 
-        if (!data.success || !data.data || data.data.length === 0) {
-            tbody.innerHTML = `
+        if (!data.success || !data.data) {
+            personalDataCompleta = [];
+            personalData = [];
+            solicitudes = [];
+            document.getElementById('vacaciones-lista').innerHTML = `
                 <tr>
                     <td colspan="10" class="px-4 py-6 text-center text-xs text-gray-500">
-                        <i class="fas fa-inbox mr-2"></i>No hay solicitudes de vacaciones
+                        <i class="fas fa-inbox mr-2"></i>${data.error ? 'Error: ' + data.error : 'No se encontraron registros'}
                     </td>
                 </tr>
             `;
+            document.getElementById('paginacion-controles').innerHTML = '';
             return;
         }
 
-        solicitudes = data.data;
+        // Guardar datos completos (filtros servidor: estado y año)
+        personalDataCompleta = data.data;
+        solicitudes = personalDataCompleta.filter(p => p.id_vacacion !== null);
 
-        tbody.innerHTML = data.data.map(v => {
-            const estadoColors = {
-                'PENDIENTE': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-                'APROBADO': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-                'RECHAZADO': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-                'EN_CURSO': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-                'FINALIZADO': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-            };
+        // Aplicar filtro de búsqueda de empleado (vacío = todos)
+        filtrarPorEmpleado();
+        cargarEstadisticas();
+    } catch (error) {
+        console.error('Error al cargar solicitudes:', error);
+    }
+}
 
+function filtrarPorEmpleado() {
+    const busqueda = document.getElementById('filtro-empleado').value.trim();
+
+    // Búsqueda vacía => todos los registros
+    if (!busqueda) {
+        personalData = personalDataCompleta;
+    } else {
+        const busqLower = busqueda.toLowerCase();
+        personalData = personalDataCompleta.filter(p =>
+            (p.nombre_completo && p.nombre_completo.toLowerCase().includes(busqLower)) ||
+            (p.num_documento && p.num_documento.toString().includes(busqLower))
+        );
+    }
+
+    paginaActual = 1;
+    renderizarPersonalPaginado();
+}
+
+function renderizarPersonalPaginado() {
+    const tbody = document.getElementById('vacaciones-lista');
+
+    if (!personalData || personalData.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" class="px-4 py-6 text-center text-xs text-gray-500">
+                    <i class="fas fa-inbox mr-2"></i>No se encontraron registros
+                </td>
+            </tr>
+        `;
+        document.getElementById('paginacion-controles').innerHTML = '';
+        return;
+    }
+
+    const totalRegistros = personalData.length;
+    const totalPaginas = Math.ceil(totalRegistros / registrosPorPagina);
+
+    if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+    if (paginaActual < 1) paginaActual = 1;
+
+    const inicio = (paginaActual - 1) * registrosPorPagina;
+    const fin = inicio + registrosPorPagina;
+    const datosPagina = personalData.slice(inicio, fin);
+
+    const estadoColors = {
+        'PENDIENTE': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+        'APROBADO': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+        'RECHAZADO': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+        'EN_CURSO': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+        'FINALIZADO': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+    };
+
+    tbody.innerHTML = datosPagina.map((p, index) => {
+        const numFila = inicio + index + 1;
+        const tieneVacacion = p.id_vacacion !== null;
+
+        if (tieneVacacion) {
             return `
                 <tr class="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
-                    <td class="px-4 py-3 text-xs text-gray-900 dark:text-white font-medium">${v.id_vacacion}</td>
-                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${v.empleado}</td>
-                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${v.area || '-'}</td>
-                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${formatearFecha(v.fecha_inicio)}</td>
-                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${formatearFecha(v.fecha_fin)}</td>
-                    <td class="px-4 py-3 text-xs text-center font-semibold text-blue-600 dark:text-blue-400">${v.dias}</td>
-                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${v.tipo}</td>
+                    <td class="px-4 py-3 text-xs text-gray-900 dark:text-white font-medium">${numFila}</td>
+                    <td class="px-4 py-3 text-xs text-gray-900 dark:text-white font-semibold">${p.nombre_completo}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${p.area || '-'}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${formatearFecha(p.fecha_inicio)}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${formatearFecha(p.fecha_fin)}</td>
+                    <td class="px-4 py-3 text-xs text-center font-semibold text-blue-600 dark:text-blue-400">${p.dias || '-'}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${p.tipo || '-'}</td>
                     <td class="px-4 py-3 text-xs text-center">
-                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${estadoColors[v.estado] || estadoColors['PENDIENTE']}">
-                            ${v.estado}
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${estadoColors[p.estado] || estadoColors['PENDIENTE']}">
+                            ${p.estado}
                         </span>
                     </td>
-                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${v.fecha_solicitud ? formatearFecha(v.fecha_solicitud) : '-'}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${p.fecha_solicitud ? formatearFecha(p.fecha_solicitud) : '-'}</td>
                     <td class="px-4 py-3 text-xs text-center">
                         <div class="flex gap-1 justify-center">
-                            <button onclick="solicitarVacacionEmpleado(${v.num_documento})" class="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs transition" title="Solicitar Vacaciones">
+                            <button onclick="solicitarVacacionEmpleado(${p.num_documento})" class="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs transition" title="Solicitar Vacaciones">
                                 <i class="fas fa-calendar-plus"></i>
                             </button>
-                            <button onclick="verDetalle(${v.id_vacacion})" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition" title="Ver detalle">
+                            <button onclick="verDetalle(${p.id_vacacion})" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition" title="Ver detalle">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button onclick="editarSolicitud(${v.id_vacacion})" class="px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-xs transition" title="Editar">
+                            <button onclick="editarSolicitud(${p.id_vacacion})" class="px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-xs transition" title="Editar">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button onclick="eliminarSolicitud(${v.id_vacacion})" class="px-2 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-xs transition" title="Eliminar">
+                            <button onclick="eliminarSolicitud(${p.id_vacacion})" class="px-2 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-xs transition" title="Eliminar">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
                     </td>
                 </tr>
             `;
-        }).join('');
+        } else {
+            return `
+                <tr class="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors bg-gray-25 dark:bg-slate-900/50">
+                    <td class="px-4 py-3 text-xs text-gray-900 dark:text-white font-medium">${numFila}</td>
+                    <td class="px-4 py-3 text-xs text-gray-900 dark:text-white font-semibold">${p.nombre_completo}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${p.area || '-'}</td>
+                    <td class="px-4 py-3 text-xs text-center text-gray-400 dark:text-gray-500">-</td>
+                    <td class="px-4 py-3 text-xs text-center text-gray-400 dark:text-gray-500">-</td>
+                    <td class="px-4 py-3 text-xs text-center text-gray-400 dark:text-gray-500">-</td>
+                    <td class="px-4 py-3 text-xs text-center text-gray-400 dark:text-gray-500">-</td>
+                    <td class="px-4 py-3 text-xs text-center text-gray-400 dark:text-gray-500">-</td>
+                    <td class="px-4 py-3 text-xs text-center text-gray-400 dark:text-gray-500">-</td>
+                    <td class="px-4 py-3 text-xs text-center">
+                        <button onclick="solicitarVacacionEmpleado(${p.num_documento})" class="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs transition" title="Solicitar Vacaciones">
+                            <i class="fas fa-calendar-plus"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+    }).join('');
 
-        cargarEstadisticas();
-    } catch (error) {
-        console.error('Error al cargar solicitudes:', error);
-    }
+    renderizarPaginacion(totalRegistros, totalPaginas);
 }
 
 async function cargarEstadisticas() {
@@ -691,8 +782,87 @@ function aplicarFiltros() {
 function limpiarFiltros() {
     document.getElementById('filtro-empleado').value = '';
     document.getElementById('filtro-estado').value = '';
-    document.getElementById('filtro-anio').value = '2026';
+    document.getElementById('filtro-anio').value = '';
     cargarSolicitudes();
+}
+
+// ============================================================================
+// PAGINACIÓN
+// ============================================================================
+function renderizarPaginacion(totalRegistros, totalPaginas) {
+    const contenedor = document.getElementById('paginacion-controles');
+
+    if (totalPaginas <= 1) {
+        contenedor.innerHTML = `
+            <div class="text-xs text-gray-500 dark:text-gray-400">
+                Mostrando ${totalRegistros} registro${totalRegistros !== 1 ? 's' : ''}
+            </div>
+        `;
+        return;
+    }
+
+    const inicio = (paginaActual - 1) * registrosPorPagina + 1;
+    const fin = Math.min(paginaActual * registrosPorPagina, totalRegistros);
+
+    let botonesPagina = '';
+
+    botonesPagina += `
+        <button onclick="irAPagina(1)" ${paginaActual === 1 ? 'disabled' : ''}
+            class="px-2 py-1 rounded text-xs font-medium ${paginaActual === 1 ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600'}">
+            <i class="fas fa-angle-double-left"></i>
+        </button>
+    `;
+
+    botonesPagina += `
+        <button onclick="irAPagina(${paginaActual - 1})" ${paginaActual === 1 ? 'disabled' : ''}
+            class="px-2 py-1 rounded text-xs font-medium ${paginaActual === 1 ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600'}">
+            <i class="fas fa-angle-left"></i>
+        </button>
+    `;
+
+    let startPage = Math.max(1, paginaActual - 2);
+    let endPage = Math.min(totalPaginas, startPage + 4);
+    if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+    for (let i = startPage; i <= endPage; i++) {
+        botonesPagina += `
+            <button onclick="irAPagina(${i})"
+                class="px-3 py-1 rounded text-xs font-medium ${i === paginaActual ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600'}">
+                ${i}
+            </button>
+        `;
+    }
+
+    botonesPagina += `
+        <button onclick="irAPagina(${paginaActual + 1})" ${paginaActual === totalPaginas ? 'disabled' : ''}
+            class="px-2 py-1 rounded text-xs font-medium ${paginaActual === totalPaginas ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600'}">
+            <i class="fas fa-angle-right"></i>
+        </button>
+    `;
+
+    botonesPagina += `
+        <button onclick="irAPagina(${totalPaginas})" ${paginaActual === totalPaginas ? 'disabled' : ''}
+            class="px-2 py-1 rounded text-xs font-medium ${paginaActual === totalPaginas ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600'}">
+            <i class="fas fa-angle-double-right"></i>
+        </button>
+    `;
+
+    contenedor.innerHTML = `
+        <div class="flex items-center justify-between">
+            <div class="text-xs text-gray-500 dark:text-gray-400">
+                Mostrando <span class="font-semibold text-gray-700 dark:text-gray-300">${inicio}-${fin}</span> de <span class="font-semibold text-gray-700 dark:text-gray-300">${totalRegistros}</span> registros
+            </div>
+            <div class="flex items-center gap-1">
+                ${botonesPagina}
+            </div>
+        </div>
+    `;
+}
+
+function irAPagina(pagina) {
+    paginaActual = pagina;
+    renderizarPersonalPaginado();
+    document.getElementById('tabla-vacaciones').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ============================================================================

@@ -1184,26 +1184,27 @@ def exportar_control_asistencia_excel():
                 'Cargo',             # 4
                 'Sede',              # 5
                 'Dia',               # 6
-                'Mes',               # 7
-                'Ano',               # 8
-                'OFI T1 Entrada',    # 9
-                'OFI T1 Salida',     # 10
-                'CMP T1 Entrada',    # 11
-                'CMP T1 Salida',     # 12
-                'OFI T2 Entrada',    # 13
-                'OFI T2 Salida',     # 14
-                'CMP T2 Entrada',    # 15
-                'CMP T2 Salida',     # 16
-                'Min T1',            # 17
-                'Min T2',            # 18
-                'Detalle OFI T1',    # 19
-                'Detalle OFI T2',    # 20
-                'Detalle CMP T1',    # 21
-                'Detalle CMP T2',    # 22
-                'Justificacion ENT T1',  # 23
-                'Justificacion SAL T1',  # 24
-                'Justificacion ENT T2',  # 25
-                'Justificacion SAL T2'   # 26
+                'Dia Sem.',           # 7
+                'Mes',               # 8
+                'Ano',               # 9
+                'OFI T1 Entrada',    # 10
+                'OFI T1 Salida',     # 11
+                'CMP T1 Entrada',    # 12
+                'CMP T1 Salida',     # 13
+                'OFI T2 Entrada',    # 14
+                'OFI T2 Salida',     # 15
+                'CMP T2 Entrada',    # 16
+                'CMP T2 Salida',     # 17
+                'Min T1',            # 18
+                'Min T2',            # 19
+                'Detalle OFI T1',    # 20
+                'Detalle OFI T2',    # 21
+                'Detalle CMP T1',    # 22
+                'Detalle CMP T2',    # 23
+                'Justificacion ENT T1',  # 24
+                'Justificacion SAL T1',  # 25
+                'Justificacion ENT T2',  # 26
+                'Justificacion SAL T2'   # 27
             ]
             
             for col_num, header in enumerate(headers, 1):
@@ -1236,42 +1237,43 @@ def exportar_control_asistencia_excel():
             
             row_num = 2
             for reg in registros:
-                # Datos del empleado (columnas 1-8)
+                # Datos del empleado (columnas 1-9)
                 ws.cell(row=row_num, column=1, value=reg.get('EMPRESA', '')).alignment = cell_alignment_center
                 ws.cell(row=row_num, column=2, value=reg.get('NOMBRES', '')).alignment = cell_alignment
                 ws.cell(row=row_num, column=3, value=reg.get('DNI_CE', '')).alignment = cell_alignment_center
                 ws.cell(row=row_num, column=4, value=reg.get('CARGO', '')).alignment = cell_alignment
                 ws.cell(row=row_num, column=5, value=reg.get('SEDE_TRABAJO', '')).alignment = cell_alignment
-                ws.cell(row=row_num, column=6, value='{} {}'.format(reg.get('DIA', ''), reg.get('DIA_SEMANA', '')).strip()).alignment = cell_alignment_center
-                ws.cell(row=row_num, column=7, value=reg.get('MES', '')).alignment = cell_alignment_center
-                ws.cell(row=row_num, column=8, value=reg.get('ANO', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=6, value=reg.get('DIA', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=7, value=(reg.get('DIA_SEMANA', '') or '')[:3]).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=8, value=reg.get('MES', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=9, value=reg.get('ANO', '')).alignment = cell_alignment_center
                 
-                # OFICINA T1 (columnas 9-10)
-                ws.cell(row=row_num, column=9, value=reg.get('H_ENTRADA_OFI_T1', '')).alignment = cell_alignment_center
-                ws.cell(row=row_num, column=10, value=reg.get('H_SALIDA_OFI_T1', '')).alignment = cell_alignment_center
+                # OFICINA T1 (columnas 10-11)
+                ws.cell(row=row_num, column=10, value=reg.get('H_ENTRADA_OFI_T1', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=11, value=reg.get('H_SALIDA_OFI_T1', '')).alignment = cell_alignment_center
                 
-                # CAMPO T1 (columnas 11-12)
-                ws.cell(row=row_num, column=11, value=reg.get('H_ENTRADA_CMP_T1', '')).alignment = cell_alignment_center
-                ws.cell(row=row_num, column=12, value=reg.get('H_SALIDA_CMP_T1', '')).alignment = cell_alignment_center
+                # CAMPO T1 (columnas 12-13)
+                ws.cell(row=row_num, column=12, value=reg.get('H_ENTRADA_CMP_T1', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=13, value=reg.get('H_SALIDA_CMP_T1', '')).alignment = cell_alignment_center
                 
-                # OFICINA T2 (columnas 13-14)
-                ws.cell(row=row_num, column=13, value=reg.get('H_ENTRADA_OFI_T2', '')).alignment = cell_alignment_center
-                ws.cell(row=row_num, column=14, value=reg.get('H_SALIDA_OFI_T2', '')).alignment = cell_alignment_center
+                # OFICINA T2 (columnas 14-15)
+                ws.cell(row=row_num, column=14, value=reg.get('H_ENTRADA_OFI_T2', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=15, value=reg.get('H_SALIDA_OFI_T2', '')).alignment = cell_alignment_center
                 
-                # CAMPO T2 (columnas 15-16)
-                ws.cell(row=row_num, column=15, value=reg.get('H_ENTRADA_CMP_T2', '')).alignment = cell_alignment_center
-                ws.cell(row=row_num, column=16, value=reg.get('H_SALIDA_CMP_T2', '')).alignment = cell_alignment_center
+                # CAMPO T2 (columnas 16-17)
+                ws.cell(row=row_num, column=16, value=reg.get('H_ENTRADA_CMP_T2', '')).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=17, value=reg.get('H_SALIDA_CMP_T2', '')).alignment = cell_alignment_center
                 
-                # Minutos T1 (columna 17)
+                # Minutos T1 (columna 18)
                 min_t1 = reg.get('MINUTOS_T1', '-')
-                ws.cell(row=row_num, column=17, value=min_t1).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=18, value=min_t1).alignment = cell_alignment_center
                 
-                # Minutos T2 (columna 18)
+                # Minutos T2 (columna 19)
                 min_t2 = reg.get('MINUTOS_T2', '-')
-                ws.cell(row=row_num, column=18, value=min_t2).alignment = cell_alignment_center
+                ws.cell(row=row_num, column=19, value=min_t2).alignment = cell_alignment_center
                 
-                # Detalle OFI T1 (columna 19)
-                cell_detalle_ofi_t1 = ws.cell(row=row_num, column=19, value=reg.get('DETALLE_OFI_T1', ''))
+                # Detalle OFI T1 (columna 20)
+                cell_detalle_ofi_t1 = ws.cell(row=row_num, column=20, value=reg.get('DETALLE_OFI_T1', ''))
                 cell_detalle_ofi_t1.alignment = cell_alignment_center
                 if reg.get('DETALLE_OFI_T1') == 'ASISTENCIA':
                     cell_detalle_ofi_t1.fill = verde_fill
@@ -1286,8 +1288,8 @@ def exportar_control_asistencia_excel():
                     cell_detalle_ofi_t1.fill = morado_fill
                     cell_detalle_ofi_t1.font = morado_font
                 
-                # Detalle OFI T2 (columna 20)
-                cell_detalle_ofi_t2 = ws.cell(row=row_num, column=20, value=reg.get('DETALLE_OFI_T2', ''))
+                # Detalle OFI T2 (columna 21)
+                cell_detalle_ofi_t2 = ws.cell(row=row_num, column=21, value=reg.get('DETALLE_OFI_T2', ''))
                 cell_detalle_ofi_t2.alignment = cell_alignment_center
                 if reg.get('DETALLE_OFI_T2') == 'ASISTENCIA':
                     cell_detalle_ofi_t2.fill = verde_fill
@@ -1302,8 +1304,8 @@ def exportar_control_asistencia_excel():
                     cell_detalle_ofi_t2.fill = morado_fill
                     cell_detalle_ofi_t2.font = morado_font
                 
-                # Detalle CMP T1 (columna 21)
-                cell_detalle_cmp_t1 = ws.cell(row=row_num, column=21, value=reg.get('DETALLE_CMP_T1', ''))
+                # Detalle CMP T1 (columna 22)
+                cell_detalle_cmp_t1 = ws.cell(row=row_num, column=22, value=reg.get('DETALLE_CMP_T1', ''))
                 cell_detalle_cmp_t1.alignment = cell_alignment_center
                 if reg.get('DETALLE_CMP_T1') == 'CAMPO':
                     cell_detalle_cmp_t1.fill = campo_fill
@@ -1315,8 +1317,8 @@ def exportar_control_asistencia_excel():
                     cell_detalle_cmp_t1.fill = morado_fill
                     cell_detalle_cmp_t1.font = morado_font
                 
-                # Detalle CMP T2 (columna 22)
-                cell_detalle_cmp_t2 = ws.cell(row=row_num, column=22, value=reg.get('DETALLE_CMP_T2', ''))
+                # Detalle CMP T2 (columna 23)
+                cell_detalle_cmp_t2 = ws.cell(row=row_num, column=23, value=reg.get('DETALLE_CMP_T2', ''))
                 cell_detalle_cmp_t2.alignment = cell_alignment_center
                 if reg.get('DETALLE_CMP_T2') == 'CAMPO':
                     cell_detalle_cmp_t2.fill = campo_fill
@@ -1328,14 +1330,14 @@ def exportar_control_asistencia_excel():
                     cell_detalle_cmp_t2.fill = morado_fill
                     cell_detalle_cmp_t2.font = morado_font
                 
-                # Justificaciones (columnas 23-26)
-                ws.cell(row=row_num, column=23, value=reg.get('JUSTIFICACION_ENT_T1', '')).alignment = cell_alignment
-                ws.cell(row=row_num, column=24, value=reg.get('JUSTIFICACION_SAL_T1', '')).alignment = cell_alignment
-                ws.cell(row=row_num, column=25, value=reg.get('JUSTIFICACION_ENT_T2', '')).alignment = cell_alignment
-                ws.cell(row=row_num, column=26, value=reg.get('JUSTIFICACION_SAL_T2', '')).alignment = cell_alignment
+                # Justificaciones (columnas 24-27)
+                ws.cell(row=row_num, column=24, value=reg.get('JUSTIFICACION_ENT_T1', '')).alignment = cell_alignment
+                ws.cell(row=row_num, column=25, value=reg.get('JUSTIFICACION_SAL_T1', '')).alignment = cell_alignment
+                ws.cell(row=row_num, column=26, value=reg.get('JUSTIFICACION_ENT_T2', '')).alignment = cell_alignment
+                ws.cell(row=row_num, column=27, value=reg.get('JUSTIFICACION_SAL_T2', '')).alignment = cell_alignment
                 
                 # Aplicar bordes a toda la fila
-                for col in range(1, 27):
+                for col in range(1, 28):
                     ws.cell(row=row_num, column=col).border = border_style
                 
                 row_num += 1
@@ -1350,26 +1352,27 @@ def exportar_control_asistencia_excel():
             ws.column_dimensions['D'].width = 20  # Cargo
             ws.column_dimensions['E'].width = 15  # Sede
             ws.column_dimensions['F'].width = 6   # Dia
-            ws.column_dimensions['G'].width = 6   # Mes
-            ws.column_dimensions['H'].width = 6   # Ano
-            ws.column_dimensions['I'].width = 12  # OFI T1 Entrada
-            ws.column_dimensions['J'].width = 12  # OFI T1 Salida
-            ws.column_dimensions['K'].width = 12  # CMP T1 Entrada
-            ws.column_dimensions['L'].width = 12  # CMP T1 Salida
-            ws.column_dimensions['M'].width = 12  # OFI T2 Entrada
-            ws.column_dimensions['N'].width = 12  # OFI T2 Salida
-            ws.column_dimensions['O'].width = 12  # CMP T2 Entrada
-            ws.column_dimensions['P'].width = 12  # CMP T2 Salida
-            ws.column_dimensions['Q'].width = 8   # Min T1
-            ws.column_dimensions['R'].width = 8   # Min T2
-            ws.column_dimensions['S'].width = 15  # Detalle OFI T1
-            ws.column_dimensions['T'].width = 15  # Detalle OFI T2
-            ws.column_dimensions['U'].width = 15  # Detalle CMP T1
-            ws.column_dimensions['V'].width = 15  # Detalle CMP T2
-            ws.column_dimensions['W'].width = 25  # Justificacion ENT T1
-            ws.column_dimensions['X'].width = 25  # Justificacion SAL T1
-            ws.column_dimensions['Y'].width = 25  # Justificacion ENT T2
-            ws.column_dimensions['Z'].width = 25  # Justificacion SAL T2
+            ws.column_dimensions['G'].width = 8   # Dia Sem.
+            ws.column_dimensions['H'].width = 6   # Mes
+            ws.column_dimensions['I'].width = 6   # Ano
+            ws.column_dimensions['J'].width = 12  # OFI T1 Entrada
+            ws.column_dimensions['K'].width = 12  # OFI T1 Salida
+            ws.column_dimensions['L'].width = 12  # CMP T1 Entrada
+            ws.column_dimensions['M'].width = 12  # CMP T1 Salida
+            ws.column_dimensions['N'].width = 12  # OFI T2 Entrada
+            ws.column_dimensions['O'].width = 12  # OFI T2 Salida
+            ws.column_dimensions['P'].width = 12  # CMP T2 Entrada
+            ws.column_dimensions['Q'].width = 12  # CMP T2 Salida
+            ws.column_dimensions['R'].width = 8   # Min T1
+            ws.column_dimensions['S'].width = 8   # Min T2
+            ws.column_dimensions['T'].width = 15  # Detalle OFI T1
+            ws.column_dimensions['U'].width = 15  # Detalle OFI T2
+            ws.column_dimensions['V'].width = 15  # Detalle CMP T1
+            ws.column_dimensions['W'].width = 15  # Detalle CMP T2
+            ws.column_dimensions['X'].width = 25  # Justificacion ENT T1
+            ws.column_dimensions['Y'].width = 25  # Justificacion SAL T1
+            ws.column_dimensions['Z'].width = 25  # Justificacion ENT T2
+            ws.column_dimensions['AA'].width = 25 # Justificacion SAL T2
             
             # Fijar primera fila (encabezado)
             ws.freeze_panes = 'A2'
@@ -1866,9 +1869,11 @@ def exportar_horas_laboradas_excel():
                 ws.cell(row=2, column=col).border = border_style
             
             # Fila 3: Resumen
-            total_minutos = sum(reg.get('minutos_totales', 0) for reg in registros)
+            minutos_validos = [int(reg.get('minutos_totales')) for reg in registros
+                               if reg.get('minutos_totales') is not None]
+            total_minutos = sum(minutos_validos)
             total_horas = f"{total_minutos // 60}:{total_minutos % 60:02d}"
-            dias_con_asistencia = len(registros)
+            dias_con_asistencia = len(minutos_validos)
             
             ws.merge_cells('A3:H3')
             cell_resumen = ws.cell(row=3, column=1, value=f'Total Horas: {total_horas}  |  Dias con Asistencia: {dias_con_asistencia}  |  Total Minutos: {total_minutos}')
@@ -1955,8 +1960,13 @@ def exportar_horas_laboradas_excel():
                 salida_t1 = reg.get('salida_t1', '-') or '-'
                 entrada_t2 = reg.get('entrada_t2', '-') or '-'
                 salida_t2 = reg.get('salida_t2', '-') or '-'
-                horas = reg.get('horas_laboradas', '00:00')
-                minutos = reg.get('minutos_totales', 0)
+                horas = reg.get('horas_laboradas', '-') or '-'
+                minutos = reg.get('minutos_totales')
+                if horas == '-' or minutos is None:
+                    horas = '-'
+                    minutos = '-'
+                else:
+                    minutos = int(minutos)
                 
                 if num_documento:
                     # Un solo empleado - columnas originales
@@ -1996,7 +2006,7 @@ def exportar_horas_laboradas_excel():
                     
                     cols_range = range(1, 11)
                 
-                if minutos > 0:
+                if isinstance(minutos, int) and minutos > 0:
                     celda_horas.fill = verde_fill
                     celda_horas.font = verde_font
                     celda_minutos.fill = verde_fill
