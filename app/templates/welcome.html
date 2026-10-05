@@ -10,10 +10,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Tipografias del diseno: EB Garamond (display) + Manrope (UI) -->
+    <!-- Tipografia unica del diseno: Manrope (texto y display) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
 
     <!-- Tokens de color/tipografia/espaciado del diseno Kallpa -->
     <script id="tailwind-config">
@@ -91,17 +91,17 @@ tailwind.config = {
           "title-md": ["Manrope"],
           "body-md": ["Manrope"],
           "label-lg": ["Manrope"],
-          "headline-lg-mobile": ["EB Garamond"],
+          "headline-lg-mobile": ["Manrope"],
           "body-lg": ["Manrope"],
           "body-sm": ["Manrope"],
-          "display-hero-mobile": ["EB Garamond"],
-          "display-hero": ["EB Garamond"],
+          "display-hero-mobile": ["Manrope"],
+          "display-hero": ["Manrope"],
           "label-md": ["Manrope"],
-          "headline-md": ["EB Garamond"],
+          "headline-md": ["Manrope"],
           "label-sm": ["Manrope"],
           "title-lg": ["Manrope"],
-          "headline-sm": ["EB Garamond"],
-          "headline-lg": ["EB Garamond"]
+          "headline-sm": ["Manrope"],
+          "headline-lg": ["Manrope"]
         },
         "fontSize": {
           "title-md": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
@@ -218,7 +218,7 @@ tailwind.config = {
 <!-- Hero Headline -->
 <h1 class="font-headline-lg text-headline-lg text-surface tracking-tight mb-6">
           ¡Bienvenidos a Kallpa Inmobiliaria! <br>
-<span class="font-display-hero text-display-hero text-surface-container-lowest block font-normal italic">Tu aliado inmobiliario</span>
+<span class="font-display-hero text-display-hero text-surface-container-lowest block font-normal">Tu aliado inmobiliario</span>
 </h1>
 <p class="font-body-lg text-body-lg text-surface-container-low max-w-2xl leading-relaxed mb-10">
           Somos una empresa comprometida con el desarrollo urbano sostenible y la seguridad de la inversión inmobiliaria. Nos especializamos en la venta de terrenos en ubicaciones estratégicas del Valle del Mantaro, la Selva Central y próximamente en diversas regiones del Perú.
@@ -305,7 +305,7 @@ tailwind.config = {
             </p>
 </div>
 <!-- Card MISIÓN (Ref: Image 4 card) in Vibrant Violet with soft rounded corners -->
-<div class="p-8 rounded-2xl text-on-secondary shadow-xl relative overflow-hidden border border-secondary/20" style="background: radial-gradient(circle at 85% 20%, rgba(150, 37, 173, 0.55) 0%, rgba(146, 37, 172, 0.35) 35%, rgba(45, 8, 55, 0.98) 75%), linear-gradient(135deg, rgb(146, 37, 172) 0%, rgb(69, 10, 85) 100%); border-color: rgba(150, 37, 173, 0.35);"><div class="absolute inset-0 pointer-events-none" style="background-image: radial-gradient(rgba(255, 255, 255, 0.28) 1.5px, transparent 1.5px); background-size: 16px 16px; mask-image: radial-gradient(circle at 100% 0%, black 0%, black 25%, transparent 60%);"></div><div class="absolute inset-0 bg-cover bg-center pointer-events-none opacity-15 mix-blend-overlay" style="background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuDxqMw8i27nBj81x7GYWCuXKkw58rk6xIgmBfOhKMZ3qwNzhf-O3hR5akePh72PHj7qRofQGP99MMJG8JTSWFXKO1f5amcEhdshkqXjnUrVUlp3n_JegUQgooFRKkDqgKJ1fVnlG1v8e5Yc_njEf4qdzNPOAR2IYfgICn56gFEd_bFtYfXlc7wnulk6xX8mmt7dAopqKO3OzdFCc2EoTGb-Io7eJvVhseIlx4khegqcM2lwMaGNndYdIjeuUgOAyOEnEiI&quot;);"></div><div class="absolute -right-16 -top-16 w-56 h-56 rounded-full bg-secondary-container/20 blur-2xl pointer-events-none"></div><i class="fa-solid fa-bullseye absolute -right-6 -bottom-6 text-[140px] text-on-secondary/10 pointer-events-none select-none"></i><div class="relative z-10 flex flex-col gap-4"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-surface/15 backdrop-blur-md flex items-center justify-center border border-surface/20"><i class="fa-solid fa-arrow-pointer text-[24px] text-tertiary-fixed"></i></div><h3 class="font-title-lg text-title-lg uppercase tracking-wider font-bold text-surface">Misión</h3></div><p class="font-body-lg text-body-lg text-surface-container-low leading-relaxed italic">“Hacer realidad el sueño del lote propio para las familias de la región Junín, ofreciendo terrenos accesibles, ubicaciones estratégicas y un servicio confiable que impulse el desarrollo comunitario.”</p></div></div>
+<div class="p-8 rounded-2xl text-on-secondary shadow-xl relative overflow-hidden border border-secondary/20" style="background: radial-gradient(circle at 85% 20%, rgba(150, 37, 173, 0.55) 0%, rgba(146, 37, 172, 0.35) 35%, rgba(45, 8, 55, 0.98) 75%), linear-gradient(135deg, rgb(146, 37, 172) 0%, rgb(69, 10, 85) 100%); border-color: rgba(150, 37, 173, 0.35);"><div class="absolute inset-0 pointer-events-none" style="background-image: radial-gradient(rgba(255, 255, 255, 0.28) 1.5px, transparent 1.5px); background-size: 16px 16px; mask-image: radial-gradient(circle at 100% 0%, black 0%, black 25%, transparent 60%);"></div><div class="absolute inset-0 bg-cover bg-center pointer-events-none opacity-15 mix-blend-overlay" style="background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuDxqMw8i27nBj81x7GYWCuXKkw58rk6xIgmBfOhKMZ3qwNzhf-O3hR5akePh72PHj7qRofQGP99MMJG8JTSWFXKO1f5amcEhdshkqXjnUrVUlp3n_JegUQgooFRKkDqgKJ1fVnlG1v8e5Yc_njEf4qdzNPOAR2IYfgICn56gFEd_bFtYfXlc7wnulk6xX8mmt7dAopqKO3OzdFCc2EoTGb-Io7eJvVhseIlx4khegqcM2lwMaGNndYdIjeuUgOAyOEnEiI&quot;);"></div><div class="absolute -right-16 -top-16 w-56 h-56 rounded-full bg-secondary-container/20 blur-2xl pointer-events-none"></div><i class="fa-solid fa-bullseye absolute -right-6 -bottom-6 text-[140px] text-on-secondary/10 pointer-events-none select-none"></i><div class="relative z-10 flex flex-col gap-4"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-surface/15 backdrop-blur-md flex items-center justify-center border border-surface/20"><i class="fa-solid fa-arrow-pointer text-[24px] text-tertiary-fixed"></i></div><h3 class="font-title-lg text-title-lg uppercase tracking-wider font-bold text-surface">Misión</h3></div><p class="font-body-lg text-body-lg text-surface-container-low leading-relaxed">“Hacer realidad el sueño del lote propio para las familias de la región Junín, ofreciendo terrenos accesibles, ubicaciones estratégicas y un servicio confiable que impulse el desarrollo comunitario.”</p></div></div>
 </div>
 </div>
 </div>
@@ -316,7 +316,7 @@ tailwind.config = {
 <!-- VISIÓN Card Layout (Image 3) -->
 <div class="mb-20 flex flex-col lg:flex-row items-center gap-12 bg-surface rounded-3xl p-6 sm:p-10 shadow-lg">
 <div class="w-full lg:w-1/2 flex flex-col gap-4 order-2 lg:order-1">
-<div class="p-8 rounded-2xl text-on-secondary shadow-xl relative overflow-hidden border border-secondary/20" style="background: radial-gradient(circle at 85% 20%, rgba(150, 37, 173, 0.55) 0%, rgba(146, 37, 172, 0.35) 35%, rgba(45, 8, 55, 0.98) 75%), linear-gradient(135deg, rgb(146, 37, 172) 0%, rgb(69, 10, 85) 100%); border-color: rgba(150, 37, 173, 0.35);"><div class="absolute inset-0 pointer-events-none" style="background-image: radial-gradient(rgba(255, 255, 255, 0.28) 1.5px, transparent 1.5px); background-size: 16px 16px; mask-image: radial-gradient(circle at 100% 0%, black 0%, black 25%, transparent 60%);"></div><div class="absolute inset-0 bg-cover bg-center pointer-events-none opacity-15 mix-blend-overlay" style="background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuBpnAT3GMnjUfpSVVeRdW_-Z22lpwuV1N1NfxtOuC-5LlrYnrA_R3_E0vZnBHvwTWRwb1w_PE_u1vFUCwVO7lxTTwxBZA778rlXjyepQKFqHp8s05fe5fYexcduOONuXOvoOH1nZbmPYXA9Gi7Kd-WTDzoTTpcvUoVq0wKE0S7WKAOG-lmOwWwgRSCu5GPiwRYLKHvFom8GcU7u7dtaSq4S5XK18DCb4dQERKX65uoIb6tz_AWAc0B_ymhRkJ0kgNuosp4&quot;);"></div><div class="absolute -right-16 -top-16 w-56 h-56 rounded-full bg-secondary-container/20 blur-2xl pointer-events-none"></div><i class="fa-solid fa-eye absolute -right-4 -bottom-4 text-[120px] text-on-secondary/10 pointer-events-none select-none"></i><div class="relative z-10 flex flex-col gap-4"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-surface/15 backdrop-blur-md flex items-center justify-center border border-surface/20"><i class="fa-solid fa-lightbulb text-[24px] text-tertiary-fixed"></i></div><h3 class="font-title-lg text-title-lg uppercase tracking-wider font-bold text-surface">Visión</h3></div><p class="font-body-lg text-body-lg text-surface-container-low leading-relaxed italic">“Ser reconocidos como la empresa inmobiliaria líder en la Macro Región Centro, destacándonos por nuestra excelencia en el servicio, impacto social positivo y compromiso con el crecimiento sostenible de nuestras comunidades.”</p></div></div>
+<div class="p-8 rounded-2xl text-on-secondary shadow-xl relative overflow-hidden border border-secondary/20" style="background: radial-gradient(circle at 85% 20%, rgba(150, 37, 173, 0.55) 0%, rgba(146, 37, 172, 0.35) 35%, rgba(45, 8, 55, 0.98) 75%), linear-gradient(135deg, rgb(146, 37, 172) 0%, rgb(69, 10, 85) 100%); border-color: rgba(150, 37, 173, 0.35);"><div class="absolute inset-0 pointer-events-none" style="background-image: radial-gradient(rgba(255, 255, 255, 0.28) 1.5px, transparent 1.5px); background-size: 16px 16px; mask-image: radial-gradient(circle at 100% 0%, black 0%, black 25%, transparent 60%);"></div><div class="absolute inset-0 bg-cover bg-center pointer-events-none opacity-15 mix-blend-overlay" style="background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuBpnAT3GMnjUfpSVVeRdW_-Z22lpwuV1N1NfxtOuC-5LlrYnrA_R3_E0vZnBHvwTWRwb1w_PE_u1vFUCwVO7lxTTwxBZA778rlXjyepQKFqHp8s05fe5fYexcduOONuXOvoOH1nZbmPYXA9Gi7Kd-WTDzoTTpcvUoVq0wKE0S7WKAOG-lmOwWwgRSCu5GPiwRYLKHvFom8GcU7u7dtaSq4S5XK18DCb4dQERKX65uoIb6tz_AWAc0B_ymhRkJ0kgNuosp4&quot;);"></div><div class="absolute -right-16 -top-16 w-56 h-56 rounded-full bg-secondary-container/20 blur-2xl pointer-events-none"></div><i class="fa-solid fa-eye absolute -right-4 -bottom-4 text-[120px] text-on-secondary/10 pointer-events-none select-none"></i><div class="relative z-10 flex flex-col gap-4"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-surface/15 backdrop-blur-md flex items-center justify-center border border-surface/20"><i class="fa-solid fa-lightbulb text-[24px] text-tertiary-fixed"></i></div><h3 class="font-title-lg text-title-lg uppercase tracking-wider font-bold text-surface">Visión</h3></div><p class="font-body-lg text-body-lg text-surface-container-low leading-relaxed">“Ser reconocidos como la empresa inmobiliaria líder en la Macro Región Centro, destacándonos por nuestra excelencia en el servicio, impacto social positivo y compromiso con el crecimiento sostenible de nuestras comunidades.”</p></div></div>
 </div>
 <!-- Vision Project Gateway Photo (Urb. La Floresta Kallpa) -->
 <div class="w-full lg:w-1/2 order-1 lg:order-2">
