@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro de Control de Asistencia y de Salida</title>
+  <style>
+    /* Reset básico y configuración global */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      background-color: #ffffff;
+      padding: 0;
+    }
+
+    /* Hoja/Contenedor simulando la hoja física A4 Horizontal */
+    .sheet {
+      background: #ffffff;
+      width: 100%; /* Ocupa el ancho util de la hoja A4 horizontal */
+      min-height: 210mm; /* Alto A4 horizontal */
+      padding: 12mm 15mm;
+      border: 1px solid #000000;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+      margin: 0 auto;
+      page-break-after: always;
+    }
+
+    /* La última hoja no fuerza una página en blanco al final */
+    .sheet:last-of-type {
+      page-break-after: auto;
+    }
+
+    /* Encabezado Principal: logo de la empresa + titulo */
+    .header-top {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 8px;
+      table-layout: fixed;
+    }
+
+    .header-top td {
+      vertical-align: middle;
+      border-bottom: 1.5px solid #000000;
+      padding-bottom: 6px;
+    }
+
+    .logo-empresa {
+      width: 85mm;
+      text-align: left;
+      padding-right: 5mm;
+    }
+
+    .logo-empresa img {
+      height: 3cm;
+      width: auto;
+    }
+
+    .logo-espaciador {
+      width: 85mm;
+    }
+
+    .header-title {
+      text-align: center;
+      font-weight: bold;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding-bottom: 6px;
+    }
+
+    /* Secciones de Datos de Empresa y Fecha */
+    .section-info {
+      font-size: 11px;
+      border-bottom: 1.5px solid #000000;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+    }
+
+    .section-info table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .section-info td {
+      padding: 2px 0;
+      vertical-align: middle;
+    }
+
+    .label-title {
+      font-weight: bold;
+      width: 170px;
+    }
+
+    .line-field {
+      border-bottom: 1px solid #000000;
+      display: inline-block;
+      min-width: 280px;
+      padding-left: 8px;
+      font-weight: normal;
+    }
+
+    .date-row {
+      text-align: center;
+      font-weight: bold;
+      font-size: 12px;
+      padding: 6px 0;
+      border-bottom: 1.5px solid #000000;
+      margin-bottom: 0;
+    }
+
+    /* Tabla de Registros */
+    .attendance-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed; /* Mantiene proporciones exactas de columnas */
+    }
+
+    .attendance-table th, 
+    .attendance-table td {
+      border: 1px solid #000000;
+      padding: 3px 4px;
+      font-size: 9.5px;
+      text-align: center;
+      vertical-align: middle;
+      height: 22px; /* Altura de fila compacta como la plantilla */
+      word-wrap: break-word;
+    }
+
+    .attendance-table th {
+      background-color: #ffffff;
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: 8.5px;
+      line-height: 1.1;
+    }
+
+    /* Alineación de datos según columna */
+    .attendance-table td.col-text {
+      text-align: left;
+      padding-left: 6px;
+      text-transform: uppercase;
+    }
+
+    /* Definición estricta de anchos por porcentaje */
+    .c-num { width: 3%; }
+    .c-dni { width: 9%; }
+    .c-name { width: 23%; }
+    .c-role { width: 15%; }
+    .c-time { width: 8%; }
+    .c-lunch-in { width: 9%; }
+    .c-lunch-out { width: 9%; }
+    .c-out { width: 8%; }
+    .c-extra { width: 7%; }
+    .c-sign { width: 9%; }
+
+    /* Estilos de Impresión / Generación de PDF */
+    @media print {
+      body {
+        background: none;
+        padding: 0;
+      }
+
+      .sheet {
+        border: none;
+        box-shadow: none;
+        width: 100%;
+        height: auto;
+        min-height: 0;
+        padding: 0;
+        margin: 0;
+      }
+
+      @page {
+        size: A4 landscape;
+        margin: 8mm 10mm;
+      }
+    }
+  </style>
+</head>
+<body>
+
+{% for pagina in paginas %}
+  <div class="sheet">
+
+    <!-- Título Principal + logo de la empresa -->
+    <table class="header-top">
+      <tr>
+        <td class="logo-empresa">
+          {% if EMPRESA_LOGO %}<img src="{{ EMPRESA_LOGO }}" alt="Logo">{% endif %}
+        </td>
+        <td class="header-title">REGISTRO DE CONTROL DE ASISTENCIA Y DE SALIDA</td>
+        <td class="logo-espaciador"></td>
+      </tr>
+    </table>
+
+    <!-- Datos de la Empresa -->
+    <div class="section-info">
+      <table>
+        <tr>
+          <td colspan="2" class="label-title">DATOS DE LA EMPRESA:</td>
+        </tr>
+        <tr>
+          <td class="label-title" style="width: 140px;">Nombre o Razón Social :</td>
+          <td><span class="line-field">{{ EMPRESA_RAZON_SOCIAL }}</span></td>
+        </tr>
+        <tr>
+          <td class="label-title">RUC :</td>
+          <td><span class="line-field">{{ EMPRESA_RUC }}</span></td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Encabezado de Fecha -->
+    <div class="date-row">
+      {{ FECHA_REGISTRO }}
+    </div>
+
+    <!-- Tabla Principal de Asistencia -->
+    <table class="attendance-table">
+      <thead>
+        <tr>
+          <th class="c-num">Nº</th>
+          <th class="c-dni">DNI</th>
+          <th class="c-name">NOMBRES Y APELLIDOS</th>
+          <th class="c-role">CARGO</th>
+          <th class="c-time">HORA INGRESO</th>
+          <th class="c-lunch-in">HORA INICIO REFRIGERIO</th>
+          <th class="c-lunch-out">HORA TERMINO REFRIGERIO</th>
+          <th class="c-out">HORA SALIDA</th>
+          <th class="c-extra">TOTAL HORAS EXTRAS</th>
+          <th class="c-sign">FIRMA DEL TRABAJADOR</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Filas generadas por el backend: 1 fila por persona-dia -->
+        {% for item in pagina %}
+        <tr>
+          <td>{{ item.nro }}</td>
+          <td>{{ item.dni }}</td>
+          <td class="col-text">{{ item.nombre }}</td>
+          <td class="col-text">{{ item.cargo }}</td>
+          <td>{{ item.ingreso }}</td>
+          <td>{{ item.ref_inicio }}</td>
+          <td>{{ item.ref_fin }}</td>
+          <td>{{ item.salida }}</td>
+          <td>{{ item.extras }}</td>
+          <td></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  </div>
+{% endfor %}
+
+</body>
+</html>

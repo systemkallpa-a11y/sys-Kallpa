@@ -1,45 +1,28 @@
 -- ============================================================
--- SP: sp_reporte_asistencia_automatica   (v9 - OBSOLETO, ver v10)
+-- SP: sp_reporte_asistencia_automatica   (v10 - columnas TARDANZA)
 -- ============================================================
--- NOTA: v9 quedo DESINCRONIZADA del cuerpo real de la BD (en BD
---   HORAS_LABORADAS usa GREATEST/LEAST). La fuente de verdad es
---   sp_reporte_asistencia_automatica_v10.sql (generada desde el
---   SHOW CREATE real + columnas TARDANZA_T1/T2).
--- Base: v8 (faltas y vacaciones)
+-- Alimenta la tabla "Control de Asistencia" del dashboard
+-- (GET /api/reportes/control-asistencia) y su export Excel
+-- (ambos consumidores leen por nombre de columna => el Excel no cambia).
 --
--- Problema que resuelve (v9): PRECISIÓN EN MARCACIONES Y HORAS LABORADAS
---   - v8 mostraba horas sin segundos (%H:%i), generando imprecisión visual
---   - El campo MINUTOS causaba confusión y duplicación entre oficina/campo
---   - No se mostraban las horas reales trabajadas por turno
+-- v10 agrega 2 columnas de SALIDA al final del grupo HORAS LABORADAS:
+--   TARDANZA_T1 : retraso del turno mañana (OFICINA, > 300 seg)
+--                 formato HH:MM:SS, '-' si no hay tardanza
+--   TARDANZA_T2 : lo mismo para el turno tarde
+-- Solo se muestra tiempo cuando DETALLE_OFI_T1/T2 = 'TARDANZA'
+-- (mismas condiciones: COUNT(turno)=0 / sin ENTRADA OFICINA /
+--  sin horario / <= 300 seg => '-').
 --
--- Cambios v9:
---   1. MOSTRAR SEGUNDOS: Todas las horas ahora usan formato %H:%i:%s
---   2. ELIMINAR MINUTOS: Se removieron las columnas MINUTOS_T1/T2 por
---      generar confusión. Las horas con segundos son suficientes para
---      verificar cumplimiento de horarios.
---   3. HORAS LABORADAS: Se agregaron 2 nuevas columnas que calculan el
---      tiempo real trabajado por turno (considerando que una persona puede
---      entrar en oficina y salir en campo, o viceversa):
---      - HORAS_LABORADAS_T1: Primera entrada a última salida turno mañana
---      - HORAS_LABORADAS_T2: Primera entrada a última salida turno tarde
---   4. Tolerancia sigue en 5 minutos (300 segundos) para ASISTENCIA/TARDANZA
+-- BASE: esta version se genero desde el SHOW CREATE REAL de la BD
+-- (la v9 del repo estaba desincronizada: el cuerpo de BD usa
+--  GREATEST/LEAST en HORAS_LABORADAS). v10 deja el repo alineado.
 --
--- Ejemplo mejorado:
---   Entrada Oficina: 08:30:55, Salida Campo: 13:02:14
---   HORAS_LABORADAS_T1: 04:31:19 (tiempo real trabajado)
---   
--- Caso Jhedelinda (01/10/2026):
---   H_ENTRADA_OFI_T1: 08:30:55 ✅ (clara, precisa)
---   H_SALIDA_OFI_T1:  13:02:14 ✅ (clara, precisa)
---   HORAS_LABORADAS_T1: 04:31:19 ✅ (tiempo real trabajado)
---   DETALLE_OFI_T1:   ASISTENCIA ✅
+-- Total de columnas de salida: 25 (23 + 2 nuevas).
 --
--- Sin cambios: lógica de turnos, FALTAS, VACACIONES, filtros, estructura
---
--- IMPORTANTE: Ejecutar en BD de producción para actualizar reportes
+-- IMPORTANTE: MySQL no permite alterar el cuerpo => DROP + CREATE.
+--   Para revertir, guarda antes el estado actual:
+--     SHOW CREATE PROCEDURE sp_reporte_asistencia_automatica\G
 -- ============================================================
-
--- USE kallpasystem$kallgwkn_kallpa_bd;
 
 DROP PROCEDURE IF EXISTS sp_reporte_asistencia_automatica;
 
@@ -194,51 +177,174 @@ BEGIN
             SEPARATOR ', '
         ) AS H_SALIDA_CMP_T2,
         
-        -- 8. HORAS LABORADAS TURNO MAÑANA (tiempo real trabajado)
+        -- 8. HORAS LABORADAS TURNO MAÑANA (tiempo real trabajado, limitado por horario)
+        -- Si marca antes de su hora de entrada, usa hora de entrada del horario
+        -- Si marca después de su hora de salida, usa hora de salida del horario
         CASE 
             WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             WHEN MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             ELSE 
                 CONCAT(
                     LPAD(TIMESTAMPDIFF(SECOND, 
-                        MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END),
-                        MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END)
+                        -- Entrada efectiva: si marca antes del horario, usa horario
+                        CASE 
+                            WHEN h.hora_entrada IS NOT NULL THEN
+                                GREATEST(
+                                    MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END),
+                                    h.hora_entrada
+                                )
+                            ELSE MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END)
+                        END,
+                        -- Salida efectiva: si marca después del horario, usa horario
+                        CASE 
+                            WHEN h.hora_salida IS NOT NULL THEN
+                                LEAST(
+                                    MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END),
+                                    h.hora_salida
+                                )
+                            ELSE MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END)
+                        END
                     ) DIV 3600, 2, '0'),
                     ':',
                     LPAD((TIMESTAMPDIFF(SECOND, 
-                        MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END),
-                        MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END)
+                        CASE 
+                            WHEN h.hora_entrada IS NOT NULL THEN
+                                GREATEST(
+                                    MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END),
+                                    h.hora_entrada
+                                )
+                            ELSE MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END)
+                        END,
+                        CASE 
+                            WHEN h.hora_salida IS NOT NULL THEN
+                                LEAST(
+                                    MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END),
+                                    h.hora_salida
+                                )
+                            ELSE MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END)
+                        END
                     ) MOD 3600) DIV 60, 2, '0'),
                     ':',
                     LPAD(TIMESTAMPDIFF(SECOND, 
-                        MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END),
-                        MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END)
+                        CASE 
+                            WHEN h.hora_entrada IS NOT NULL THEN
+                                GREATEST(
+                                    MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END),
+                                    h.hora_entrada
+                                )
+                            ELSE MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END)
+                        END,
+                        CASE 
+                            WHEN h.hora_salida IS NOT NULL THEN
+                                LEAST(
+                                    MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END),
+                                    h.hora_salida
+                                )
+                            ELSE MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END)
+                        END
                     ) MOD 60, 2, '0')
                 )
         END AS HORAS_LABORADAS_T1,
         
-        -- 9. HORAS LABORADAS TURNO TARDE (tiempo real trabajado)
+        -- 9. HORAS LABORADAS TURNO TARDE (tiempo real trabajado, limitado por horario)
+        -- Si marca antes de su hora de entrada, usa hora de entrada del horario
+        -- Si marca después de su hora de salida, usa hora de salida del horario
         CASE 
             WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             WHEN MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             ELSE 
                 CONCAT(
                     LPAD(TIMESTAMPDIFF(SECOND, 
-                        MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END),
-                        MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END)
+                        -- Entrada efectiva: si marca antes del horario, usa horario
+                        CASE 
+                            WHEN h.hora_entrada2 IS NOT NULL THEN
+                                GREATEST(
+                                    MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END),
+                                    h.hora_entrada2
+                                )
+                            ELSE MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END)
+                        END,
+                        -- Salida efectiva: si marca después del horario, usa horario
+                        CASE 
+                            WHEN h.hora_salida2 IS NOT NULL THEN
+                                LEAST(
+                                    MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END),
+                                    h.hora_salida2
+                                )
+                            ELSE MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END)
+                        END
                     ) DIV 3600, 2, '0'),
                     ':',
                     LPAD((TIMESTAMPDIFF(SECOND, 
-                        MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END),
-                        MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END)
+                        CASE 
+                            WHEN h.hora_entrada2 IS NOT NULL THEN
+                                GREATEST(
+                                    MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END),
+                                    h.hora_entrada2
+                                )
+                            ELSE MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END)
+                        END,
+                        CASE 
+                            WHEN h.hora_salida2 IS NOT NULL THEN
+                                LEAST(
+                                    MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END),
+                                    h.hora_salida2
+                                )
+                            ELSE MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END)
+                        END
                     ) MOD 3600) DIV 60, 2, '0'),
                     ':',
                     LPAD(TIMESTAMPDIFF(SECOND, 
-                        MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END),
-                        MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END)
+                        CASE 
+                            WHEN h.hora_entrada2 IS NOT NULL THEN
+                                GREATEST(
+                                    MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END),
+                                    h.hora_entrada2
+                                )
+                            ELSE MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END)
+                        END,
+                        CASE 
+                            WHEN h.hora_salida2 IS NOT NULL THEN
+                                LEAST(
+                                    MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END),
+                                    h.hora_salida2
+                                )
+                            ELSE MAX(CASE WHEN m.tipo_marcacion = 'SALIDA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END)
+                        END
                     ) MOD 60, 2, '0')
                 )
         END AS HORAS_LABORADAS_T2,
+
+        -- TARDANZA OFICINA MAÑANA (retraso en la 1a ENTRADA; '-' si no hay tardanza)
+        -- Misma regla que DETALLE_OFI_T1: solo OFICINA, > 300 seg
+        CASE 
+            WHEN COUNT(CASE WHEN m.turno = 1 THEN 1 END) = 0 THEN '-'
+            WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
+            WHEN h.hora_entrada IS NULL THEN '-'
+            WHEN TIMESTAMPDIFF(SECOND, h.hora_entrada, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) <= 300 THEN '-'
+            ELSE CONCAT(
+                LPAD(TIMESTAMPDIFF(SECOND, h.hora_entrada, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) DIV 3600, 2, '0'),
+                ':',
+                LPAD((TIMESTAMPDIFF(SECOND, h.hora_entrada, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) MOD 3600) DIV 60, 2, '0'),
+                ':',
+                LPAD(TIMESTAMPDIFF(SECOND, h.hora_entrada, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) MOD 60, 2, '0')
+            )
+        END AS TARDANZA_T1,
+
+        -- TARDANZA OFICINA TARDE (misma regla, turno 2)
+        CASE 
+            WHEN COUNT(CASE WHEN m.turno = 2 THEN 1 END) = 0 THEN '-'
+            WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
+            WHEN h.hora_entrada2 IS NULL THEN '-'
+            WHEN TIMESTAMPDIFF(SECOND, h.hora_entrada2, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) <= 300 THEN '-'
+            ELSE CONCAT(
+                LPAD(TIMESTAMPDIFF(SECOND, h.hora_entrada2, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) DIV 3600, 2, '0'),
+                ':',
+                LPAD((TIMESTAMPDIFF(SECOND, h.hora_entrada2, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) MOD 3600) DIV 60, 2, '0'),
+                ':',
+                LPAD(TIMESTAMPDIFF(SECOND, h.hora_entrada2, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) MOD 60, 2, '0')
+            )
+        END AS TARDANZA_T2,
         
         -- 10. DETALLE OFICINA MAÑANA (Tolerancia 300 segundos = 5 minutos)
         CASE 
@@ -371,6 +477,5 @@ BEGIN
         c.nombre, a.nombre
 
     ORDER BY g.gf ASC, p.apellido_paterno ASC;
-END$$
-
+END $$
 DELIMITER ;

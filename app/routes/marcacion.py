@@ -659,6 +659,103 @@ def obtener_detalle_dia():
                         seconds = total_seconds % 60
                         marcacion[key] = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
             
+            # Horario del empleado ese dia (para clasificar turno como el SP v9)
+            cursor.execute("""
+                SELECT hora_entrada, hora_salida, hora_entrada2
+                  FROM TblHorarioTrabajo
+                 WHERE num_documento = %s
+                   AND es_activo = 1
+                   AND UPPER(dia_semana) = CASE DAYOFWEEK(%s)
+                        WHEN 1 THEN 'DOMINGO'
+                        WHEN 2 THEN 'LUNES'
+                        WHEN 3 THEN 'MARTES'
+                        WHEN 4 THEN 'MIÉRCOLES'
+                        WHEN 5 THEN 'JUEVES'
+                        WHEN 6 THEN 'VIERNES'
+                        WHEN 7 THEN 'SÁBADO'
+                   END
+                 LIMIT 1
+            """, (num_documento, fecha))
+            horario = cursor.fetchone()
+
+            def hora_segundos(valor):
+                partes = str(valor).split(':')
+                try:
+                    return int(partes[0]) * 3600 + int(partes[1]) * 60 + (int(partes[2]) if len(partes) > 2 else 0)
+                except (ValueError, IndexError):
+                    return -1
+
+            def turno_de(marcacion, ultima_entrada):
+                """Misma regla que sp_reporte_asistencia_automatica (v9, lineas 87-95):
+                la ultima ENTRADA que precede decide el turno segun SU horario.
+                En v9 el MAX() usa ROWS UNBOUNDED PRECEDING AND CURRENT ROW, o sea
+                que incluye la fila actual: una ENTRADA se clasifica con SU propia
+                hora (por eso la ENTRADA de la tarde cae en el turno 2)."""
+                hora = marcacion.get('hora') or '00:00:00'
+                base = hora if marcacion.get('tipo_marcacion') == 'ENTRADA' else ultima_entrada
+                if base is None:
+                    return 1 if hora_segundos(hora) <= 14 * 3600 else 2
+                if not horario:
+                    return 1 if hora_segundos(base) <= 14 * 3600 else 2
+                if horario.get('hora_entrada2') is None or horario.get('hora_salida') is None:
+                    return 1
+                return 1 if hora_segundos(base) <= hora_segundos(horario['hora_salida']) else 2
+
+            # 4 slots fijos: Entrada/Salida de cada turno (1=mañana, 2=tarde)
+            claves_slots = [(1, 'ENTRADA'), (1, 'SALIDA'), (2, 'ENTRADA'), (2, 'SALIDA')]
+            slots = {clave: None for clave in claves_slots}
+            ultima_entrada = None
+
+            for marcacion in marcaciones:
+                hora = marcacion.get('hora') or ''
+                tipo = marcacion.get('tipo_marcacion')
+                turno = turno_de(marcacion, ultima_entrada)
+                clave = (turno, tipo)
+                usar = clave
+                if clave in slots:
+                    # Si el hueco del turno ya esta ocupado y el del otro turno
+                    # esta libre, la marca va al otro turno (asi nunca se omite
+                    # un registro cuando aun hay lugar en las 4 filas).
+                    if slots[clave] is not None:
+                        otro = (2 if clave[0] == 1 else 1, clave[1])
+                        if slots[otro] is None:
+                            usar = otro
+                    actual = slots[usar]
+                    if actual is None or (
+                        tipo == 'ENTRADA'
+                        and hora_segundos(hora) < hora_segundos(actual.get('hora') or '')
+                    ) or (
+                        tipo == 'SALIDA'
+                        and hora_segundos(hora) > hora_segundos(actual.get('hora') or '')
+                    ):
+                        slots[usar] = marcacion
+                marcacion['turno'] = usar[0]
+                if tipo == 'ENTRADA':
+                    ultima_entrada = hora
+
+            slots_detalle = []
+            for clave in claves_slots:
+                marcacion = slots[clave]
+                turno_texto = 'Turno mañana' if clave[0] == 1 else 'Turno tarde'
+                if marcacion:
+                    marcacion['turno_texto'] = turno_texto
+                    slots_detalle.append(marcacion)
+                else:
+                    slots_detalle.append({
+                        'id_marcacion': None,
+                        'tipo_marcacion': clave[1],
+                        'turno': clave[0],
+                        'turno_texto': turno_texto,
+                        'hora': '',
+                        'latitud': None,
+                        'longitud': None,
+                        'precision': None,
+                        'foto_base64': None,
+                        'dispositivo': None,
+                        'observacion': None,
+                        'justificacion': None,
+                    })
+
             cursor.close()
             connection.close()
             
@@ -667,6 +764,7 @@ def obtener_detalle_dia():
                 'usuario': usuario,
                 'fecha': fecha,
                 'marcaciones': marcaciones,
+                'slots': slots_detalle,
                 'total_marcaciones': len(marcaciones)
             }), 200
         
@@ -1604,11 +1702,15 @@ def exportar_tardanzas_excel():
     try:
         fecha_inicio = request.args.get('fecha_inicio')
         fecha_fin = request.args.get('fecha_fin')
+        empleado = (request.args.get('empleado') or '').strip()
+        empresa = (request.args.get('empresa') or '').strip()
+        area = (request.args.get('area') or '').strip()
         
         if not fecha_inicio or not fecha_fin:
             return jsonify({'success': False, 'error': 'Se requieren fecha_inicio y fecha_fin'}), 400
         
-        print(f"[TARDANZAS_EXCEL] [-] Exportando: {fecha_inicio} al {fecha_fin}")
+        print(f"[TARDANZAS_EXCEL] [-] Exportando: {fecha_inicio} al {fecha_fin} "
+              f"(empleado={empleado!r}, empresa={empresa!r}, area={area!r})")
         
         connection = get_db_connection()
         if not connection:
@@ -1627,6 +1729,29 @@ def exportar_tardanzas_excel():
             connection.close()
             
             print(f"[TARDANZAS_EXCEL] [OK] {len(registros)} registros obtenidos")
+            
+            # ==========================================================
+            # APLICAR FILTROS DE LA PANTALLA
+            # (iguales a filtrarYRenderizar de control_asistencia.html:
+            #  empresa/area por igualdad exacta; empleado por
+            #  contains ignore-case en NOMBRES o DNI_CE. El filtro de
+            #  dias no aplica: es codigo muerto en la plantilla.)
+            # ==========================================================
+            if empresa:
+                registros = [r for r in registros
+                             if str(r.get('empresa') or '') == empresa]
+            if area:
+                registros = [r for r in registros
+                             if str(r.get('area') or '') == area]
+            if empleado:
+                q = empleado.lower()
+                registros = [r for r in registros
+                             if q in str(r.get('nombres_dash') or '').lower()
+                             or q in str(r.get('dni_ce') or '')]
+            
+            if empresa or area or empleado:
+                print(f"[TARDANZAS_EXCEL] [OK] Tras filtros de pantalla: "
+                      f"{len(registros)} registros")
             
             if not registros:
                 return jsonify({'success': False, 'error': 'No hay datos de tardanzas para exportar'}), 404
@@ -1685,8 +1810,8 @@ def exportar_tardanzas_excel():
             rojo_claro_font = Font(color="991B1B", bold=True, size=10)
             
             row_num = 2
-            for reg in registros:
-                ws.cell(row=row_num, column=1, value=reg.get('N', row_num - 1)).alignment = cell_alignment_center
+            for indice, reg in enumerate(registros, 1):
+                ws.cell(row=row_num, column=1, value=indice).alignment = cell_alignment_center
                 ws.cell(row=row_num, column=2, value=reg.get('empresa', '')).alignment = cell_alignment
                 ws.cell(row=row_num, column=3, value=reg.get('dni_ce', '')).alignment = cell_alignment_center
                 ws.cell(row=row_num, column=4, value=reg.get('nombres', '')).alignment = cell_alignment

@@ -98,6 +98,13 @@
                     <button onclick="exportarExcel()" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
                         <i class="fas fa-file-excel mr-1"></i>Exportar
                     </button>
+                    <div class="relative" id="contenedor-sunafil">
+                        <button type="button" onclick="toggleMenuSunafil()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium transition-colors">
+                            <i class="fas fa-file-pdf mr-1"></i>SUNAFIL <i class="fas fa-caret-down ml-1"></i>
+                        </button>
+                        <div id="menu-sunafil" class="hidden absolute right-0 mt-1 w-72 max-h-64 overflow-y-auto bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-xl z-50 py-1">
+                        </div>
+                    </div>
                     <button onclick="aplicarFiltrosControl()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
                         <i class="fas fa-sync-alt mr-1"></i>Actualizar
                     </button>
@@ -219,7 +226,8 @@
                             <th colspan="6" class="px-2 py-2 text-center text-white font-bold border-r border-green-600" style="background:#1E40AF">OFICINA</th>
                             <th colspan="6" class="px-2 py-2 text-center text-white font-bold border-r border-green-600" style="background:#065F46">CAMPO</th>
                             <th colspan="2" class="px-2 py-2 text-center text-white font-bold border-r border-green-600" style="background:#7C3AED">HORAS LABORADAS</th>
-                            <!-- COLUMNA ACCIÓN COMENTADA (reservada a futuro). Para reactivar: quitar comentarios de los 3 th y del td del render, y volver colspan a 25 en los 4 mensajes ("Cargando datos" estatico, "Cargando datos" JS, "Error", "No se encontraron registros"). -->
+                            <th colspan="2" class="px-2 py-2 text-center text-white font-bold border-r border-green-600" style="background:#DC2626">TARDANZAS</th>
+                            <!-- COLUMNA ACCIÓN COMENTADA (reservada a futuro). Para reactivar: quitar comentarios de los 3 th y del td del render, y volver colspan a 26 en los 4 mensajes ("Cargando datos" estatico, "Cargando datos" JS, "Error", "No se encontraron registros"). -->
                             <!--
                             <th colspan="1" class="px-2 py-2 text-center text-white font-bold">ACCIÓN</th>
                             -->
@@ -233,6 +241,8 @@
                             <th colspan="3" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#047857">Turno Tarde</th>
                             <th class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#9333EA">T. Mañana</th>
                             <th class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#7C3AED">T. Tarde</th>
+                            <th class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#EF4444">T. Mañana</th>
+                            <th class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#DC2626">T. Tarde</th>
                             <!-- <th class="px-2 py-1"></th> -->
                         </tr>
                         <tr class="bg-gradient-to-r from-green-600 to-green-700">
@@ -258,12 +268,14 @@
                             <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#059669">Det</th>
                             <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#9333EA">HH:MM:SS</th>
                             <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#7C3AED">HH:MM:SS</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#EF4444">HH:MM:SS</th>
+                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#DC2626">HH:MM:SS</th>
                             <!-- <th class="px-2 py-2 text-center text-white font-semibold">ACCIÓN</th> -->
                         </tr>
                     </thead>
                     <tbody id="tabla-control-asistencia" class="divide-y divide-gray-200 dark:divide-slate-700">
                         <tr>
-                            <td colspan="23" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                            <td colspan="25" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                                 <i class="fas fa-spinner fa-spin mr-2"></i>Cargando datos...
                             </td>
                         </tr>
@@ -586,7 +598,7 @@ async function cargarControlAsistencia(fechaInicio, fechaFin, empleado) {
     
     tbody.innerHTML = `
         <tr>
-            <td colspan="23" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+            <td colspan="25" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                 <i class="fas fa-spinner fa-spin mr-2"></i>Cargando datos...
             </td>
         </tr>
@@ -613,7 +625,7 @@ async function cargarControlAsistencia(fechaInicio, fechaFin, empleado) {
         console.error('[CONTROL] Error:', error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="23" class="px-4 py-8 text-center text-red-500">
+                <td colspan="25" class="px-4 py-8 text-center text-red-500">
                     <i class="fas fa-exclamation-triangle mr-2"></i>Error al cargar datos: ${error.message}
                 </td>
             </tr>
@@ -630,7 +642,7 @@ function renderizarTabla(data) {
     if (!data || data.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="23" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                <td colspan="25" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     <i class="fas fa-inbox mr-2"></i>No se encontraron registros
                 </td>
             </tr>
@@ -693,6 +705,14 @@ function renderizarTabla(data) {
             return `<td class="px-2 py-2 text-center text-purple-600 dark:text-purple-400 font-bold border-r border-gray-200 dark:border-slate-700">${escapeHtml(valor)}</td>`;
         }
         
+        // Función para renderizar tardanza por turno (rojo)
+        function celdaTardanza(valor) {
+            if (!valor || valor === '-' || valor === 'NULL') {
+                return '<td class="px-2 py-2 text-center text-gray-400 dark:text-gray-500 border-r border-gray-200 dark:border-slate-700">-</td>';
+            }
+            return `<td class="px-2 py-2 text-center text-red-600 dark:text-red-400 font-bold border-r border-gray-200 dark:border-slate-700">${escapeHtml(valor)}</td>`;
+        }
+        
         // Función para renderizar minutos con color
         function celdaMinutos(valor) {
             if (!valor || valor === '-' || valor === 'NULL') {
@@ -732,6 +752,8 @@ function renderizarTabla(data) {
                 ${celdaDetalle(fila.DETALLE_CMP_T2)}
                 ${celdaHorasLaboradas(fila.HORAS_LABORADAS_T1)}
                 ${celdaHorasLaboradas(fila.HORAS_LABORADAS_T2)}
+                ${celdaTardanza(fila.TARDANZA_T1)}
+                ${celdaTardanza(fila.TARDANZA_T2)}
                 <!-- COLUMNA ACCIÓN COMENTADA (reservada a futuro)
                 <td class="px-2 py-2 text-center">
                     ${hayMarcas ? `<div class="flex items-center justify-center gap-1">
@@ -985,6 +1007,74 @@ function exportarExcel() {
 }
 
 // ============================================================================
+// EXPORTAR PDF SUNAFIL (dropdown con la empresa a exportar)
+// ============================================================================
+function toggleMenuSunafil() {
+    const menu = document.getElementById('menu-sunafil');
+    menu.classList.toggle('hidden');
+    if (!menu.classList.contains('hidden')) {
+        poblarMenuSunafil();
+    }
+}
+
+function poblarMenuSunafil() {
+    const menu = document.getElementById('menu-sunafil');
+    const selectEmpresas = document.getElementById('filtro-empresa');
+    const opciones = Array.from(selectEmpresas.options).filter(op => op.value !== '');
+
+    menu.innerHTML = '';
+
+    if (!opciones.length) {
+        menu.innerHTML = '<div class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">No hay empresas disponibles</div>';
+        return;
+    }
+
+    opciones.forEach(op => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'block w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-amber-50 dark:hover:bg-slate-700';
+        item.textContent = op.value;
+        item.onclick = () => exportarSunafil(op.value);
+        menu.appendChild(item);
+    });
+}
+
+function exportarSunafil(empresa) {
+    const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
+    const fechaFin = document.getElementById('filtro-fecha-fin').value;
+
+    if (!fechaInicio || !fechaFin) {
+        alert('Seleccioná ambas fechas para exportar el PDF SUNAFIL');
+        return;
+    }
+
+    if (!empresa) {
+        alert('Seleccioná una empresa para exportar el PDF SUNAFIL');
+        return;
+    }
+
+    console.log(`[SUNAFIL] Exportando PDF: empresa=${empresa}, ${fechaInicio} a ${fechaFin}`);
+
+    document.getElementById('menu-sunafil').classList.add('hidden');
+
+    const params = new URLSearchParams({
+        empresa: empresa,
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin
+    });
+
+    window.location.href = `/api/reportes/sunafil-pdf?${params}`;
+}
+
+document.addEventListener('click', (evento) => {
+    const contenedor = document.getElementById('contenedor-sunafil');
+    const menu = document.getElementById('menu-sunafil');
+    if (contenedor && menu && !contenedor.contains(evento.target)) {
+        menu.classList.add('hidden');
+    }
+});
+
+// ============================================================================
 // EXPORTAR TARDANZAS A EXCEL
 // ============================================================================
 function exportarTardanzas() {
@@ -996,9 +1086,19 @@ function exportarTardanzas() {
         return;
     }
     
-    console.log(`[TARDANZAS] Exportando tardanzas: ${fechaInicio} a ${fechaFin}`);
+    // Enviar los mismos filtros de la pantalla (empleado/empresa/área)
+    // para que el Excel respete lo que se está viendo en la tabla
+    const params = new URLSearchParams({
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+        empleado: document.getElementById('filtro-empleado').value.trim(),
+        empresa: document.getElementById('filtro-empresa').value,
+        area: document.getElementById('filtro-area').value
+    });
     
-    window.location.href = `/api/reportes/control-asistencia/tardanzas-excel?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;
+    console.log(`[TARDANZAS] Exportando tardanzas: ${params.toString()}`);
+    
+    window.location.href = `/api/reportes/control-asistencia/tardanzas-excel?${params}`;
 }
 
 // ============================================================================
