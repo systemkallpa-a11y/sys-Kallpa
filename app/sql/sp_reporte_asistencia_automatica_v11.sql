@@ -1,23 +1,27 @@
 -- ============================================================
--- SP: sp_reporte_asistencia_automatica   (v10 - OBSOLETO, ver v11)
+-- SP: sp_reporte_asistencia_automatica   (v11 - TARDANZA neta)
 -- ============================================================
 -- Alimenta la tabla "Control de Asistencia" del dashboard
 -- (GET /api/reportes/control-asistencia) y su export Excel
 -- (ambos consumidores leen por nombre de columna => el Excel no cambia).
 --
--- v10 agrega 2 columnas de SALIDA al final del grupo HORAS LABORADAS:
---   TARDANZA_T1 : retraso del turno mañana (OFICINA, > 300 seg)
---                 formato HH:MM:SS, '-' si no hay tardanza
---   TARDANZA_T2 : lo mismo para el turno tarde
--- Solo se muestra tiempo cuando DETALLE_OFI_T1/T2 = 'TARDANZA'
--- (mismas condiciones: COUNT(turno)=0 / sin ENTRADA OFICINA /
---  sin horario / <= 300 seg => '-').
+-- v11 (cambio de regla SOLO en TARDANZA_T1/T2, estructura igual):
+--   * Ubicacion: cuenta la 1a ENTRADA del turno de CUALQUIER
+--     ubicacion (OFICINA o CAMPO; gana la mas temprana).
+--   * Valor: retraso NETO de la prorroga de 5 minutos (300 s):
+--       diff = 1a ENTRADA - hora_entrada del horario
+--       diff <= 300 s  -> '-' (a tiempo, en el margen o antes de hora)
+--       diff >  300 s  -> HH:MM:SS de (diff - 300)
+--     Ej: horario 08:00 y entrada 08:20 => 00:15:00 (20 - 5 min)
+--   * Solo se consideran marcaciones ENTRADA (las salidas no cuentan).
+--   * DETALLE_OFI_T1/T2 SIN CAMBIOS (siguen solo OFICINA, umbral 300 s).
 --
--- BASE: esta version se genero desde el SHOW CREATE REAL de la BD
--- (la v9 del repo estaba desincronizada: el cuerpo de BD usa
---  GREATEST/LEAST en HORAS_LABORADAS). v10 deja el repo alineado.
+-- BASE: v11 = v10 con los dos bloques TARDANZA_* modificados; el
+--   cuerpo coincide con el SHOW CREATE real de la BD (aplicado y
+--   verificado el 2026-10-07: recalc independiente sept-2026 sin
+--   diferencias, anclas 00:05:24 -> 00:00:24 y 00:05:59 -> 00:00:59).
 --
--- Total de columnas de salida: 25 (23 + 2 nuevas).
+-- Total de columnas de salida: 25 (sin cambios de estructura).
 --
 -- IMPORTANTE: MySQL no permite alterar el cuerpo => DROP + CREATE.
 --   Para revertir, guarda antes el estado actual:
@@ -315,34 +319,34 @@ BEGIN
                 )
         END AS HORAS_LABORADAS_T2,
 
-        -- TARDANZA OFICINA MAÑANA (retraso en la 1a ENTRADA; '-' si no hay tardanza)
-        -- Misma regla que DETALLE_OFI_T1: solo OFICINA, > 300 seg
+        -- TARDANZA MAÑANA (v11): 1a ENTRADA de cualquier ubicacion (OFICINA o CAMPO)
+        -- Retraso neto: descuenta la prorroga de 300 seg; '-' si no hay tardanza
         CASE 
             WHEN COUNT(CASE WHEN m.turno = 1 THEN 1 END) = 0 THEN '-'
-            WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
+            WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             WHEN h.hora_entrada IS NULL THEN '-'
-            WHEN TIMESTAMPDIFF(SECOND, h.hora_entrada, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) <= 300 THEN '-'
+            WHEN TIMESTAMPDIFF(SECOND, h.hora_entrada, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END)) <= 300 THEN '-'
             ELSE CONCAT(
-                LPAD(TIMESTAMPDIFF(SECOND, h.hora_entrada, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) DIV 3600, 2, '0'),
+                LPAD((TIMESTAMPDIFF(SECOND, h.hora_entrada, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END)) - 300) DIV 3600, 2, '0'),
                 ':',
-                LPAD((TIMESTAMPDIFF(SECOND, h.hora_entrada, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) MOD 3600) DIV 60, 2, '0'),
+                LPAD(((TIMESTAMPDIFF(SECOND, h.hora_entrada, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END)) - 300) MOD 3600) DIV 60, 2, '0'),
                 ':',
-                LPAD(TIMESTAMPDIFF(SECOND, h.hora_entrada, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) MOD 60, 2, '0')
+                LPAD((TIMESTAMPDIFF(SECOND, h.hora_entrada, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 1 THEN TIME(m.fecha_marcacion) END)) - 300) MOD 60, 2, '0')
             )
         END AS TARDANZA_T1,
 
-        -- TARDANZA OFICINA TARDE (misma regla, turno 2)
+        -- TARDANZA TARDE (v11): misma regla, turno 2
         CASE 
             WHEN COUNT(CASE WHEN m.turno = 2 THEN 1 END) = 0 THEN '-'
-            WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
+            WHEN MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END) IS NULL THEN '-'
             WHEN h.hora_entrada2 IS NULL THEN '-'
-            WHEN TIMESTAMPDIFF(SECOND, h.hora_entrada2, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) <= 300 THEN '-'
+            WHEN TIMESTAMPDIFF(SECOND, h.hora_entrada2, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END)) <= 300 THEN '-'
             ELSE CONCAT(
-                LPAD(TIMESTAMPDIFF(SECOND, h.hora_entrada2, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) DIV 3600, 2, '0'),
+                LPAD((TIMESTAMPDIFF(SECOND, h.hora_entrada2, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END)) - 300) DIV 3600, 2, '0'),
                 ':',
-                LPAD((TIMESTAMPDIFF(SECOND, h.hora_entrada2, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) MOD 3600) DIV 60, 2, '0'),
+                LPAD(((TIMESTAMPDIFF(SECOND, h.hora_entrada2, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END)) - 300) MOD 3600) DIV 60, 2, '0'),
                 ':',
-                LPAD(TIMESTAMPDIFF(SECOND, h.hora_entrada2, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 AND m.tipo_ubicacion = 'OFICINA' THEN TIME(m.fecha_marcacion) END)) MOD 60, 2, '0')
+                LPAD((TIMESTAMPDIFF(SECOND, h.hora_entrada2, MIN(CASE WHEN m.tipo_marcacion = 'ENTRADA' AND m.turno = 2 THEN TIME(m.fecha_marcacion) END)) - 300) MOD 60, 2, '0')
             )
         END AS TARDANZA_T2,
         
@@ -478,4 +482,5 @@ BEGIN
 
     ORDER BY g.gf ASC, p.apellido_paterno ASC;
 END $$
+
 DELIMITER ;
