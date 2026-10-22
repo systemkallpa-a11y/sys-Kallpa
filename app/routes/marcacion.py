@@ -34,6 +34,62 @@ def get_db_connection():
         return None
 
 
+def _hms_a_segundos(valor):
+    if not valor or valor == '-':
+        return 0
+    try:
+        partes = str(valor).split(':')
+        if len(partes) != 3:
+            return 0
+        return int(partes[0]) * 3600 + int(partes[1]) * 60 + int(partes[2])
+    except (TypeError, ValueError):
+        return 0
+
+
+def _segundos_a_hhmm(segundos):
+    segundos = max(0, int(segundos or 0))
+    return f"{segundos // 3600:02d}:{(segundos % 3600) // 60:02d}"
+
+
+def _segundos_a_hhmmss(segundos):
+    segundos = max(0, int(segundos or 0))
+    return f"{segundos // 3600:02d}:{(segundos % 3600) // 60:02d}:{segundos % 60:02d}"
+
+
+def _time_a_segundos(valor):
+    if valor is None:
+        return None
+    if hasattr(valor, 'total_seconds'):
+        return int(valor.total_seconds())
+    if hasattr(valor, 'hour'):
+        return valor.hour * 3600 + valor.minute * 60 + valor.second
+    try:
+        partes = str(valor).split(':')
+        if len(partes) < 2:
+            return None
+        segundos = int(partes[0]) * 3600 + int(partes[1]) * 60
+        if len(partes) > 2:
+            segundos += int(partes[2])
+        return segundos
+    except (TypeError, ValueError):
+        return None
+
+
+def _balance_turno(entrada, salida, hora_entrada, hora_salida):
+    e = _time_a_segundos(entrada)
+    s = _time_a_segundos(salida)
+    he = _time_a_segundos(hora_entrada)
+    hs = _time_a_segundos(hora_salida)
+    if None in (e, s, he, hs):
+        return '-'
+    real_min = int((s - e) / 60)
+    prog_min = int((hs - he) / 60)
+    diff = real_min - prog_min
+    signo = '+' if diff >= 0 else '-'
+    diff = abs(diff)
+    return f"{signo}{diff // 60:02d}:{diff % 60:02d}"
+
+
 def login_required(f):
     """Decorador para proteger rutas que requieren autenticacin"""
     @wraps(f)
@@ -1240,6 +1296,23 @@ def exportar_control_asistencia_excel():
             for result in cursor.stored_results():
                 registros = result.fetchall()
             
+            cursor.execute("""
+                SELECT p.documento_numero AS dni,
+                       UPPER(h.dia_semana) AS dia,
+                       h.hora_entrada, h.hora_salida,
+                       h.hora_entrada2, h.hora_salida2
+                FROM TblHorarioTrabajo h
+                INNER JOIN TblPersona p ON p.num_documento = h.num_documento
+                WHERE h.es_activo = 1
+            """)
+            horarios_dia = {}
+            for r in cursor.fetchall():
+                clave = (str(r['dni']), (r['dia'] or '').upper())
+                horarios_dia.setdefault(clave, (
+                    r['hora_entrada'], r['hora_salida'],
+                    r['hora_entrada2'], r['hora_salida2']
+                ))
+            
             cursor.close()
             connection.close()
             
@@ -1363,11 +1436,20 @@ def exportar_control_asistencia_excel():
                 ws.cell(row=row_num, column=17, value=reg.get('H_SALIDA_CMP_T2', '')).alignment = cell_alignment_center
                 
                 # Minutos T1 (columna 18)
-                min_t1 = reg.get('MINUTOS_T1', '-')
+                clave_horario = (
+                    str(reg.get('DNI_CE') or ''),
+                    (reg.get('DIA_SEMANA') or '').upper()
+                )
+                horario = horarios_dia.get(clave_horario, (None, None, None, None))
+                entrada_t1 = reg.get('H_ENTRADA_OFI_T1') or reg.get('H_ENTRADA_CMP_T1')
+                salida_t1 = reg.get('H_SALIDA_OFI_T1') or reg.get('H_SALIDA_CMP_T1')
+                entrada_t2 = reg.get('H_ENTRADA_OFI_T2') or reg.get('H_ENTRADA_CMP_T2')
+                salida_t2 = reg.get('H_SALIDA_OFI_T2') or reg.get('H_SALIDA_CMP_T2')
+                min_t1 = _balance_turno(entrada_t1, salida_t1, horario[0], horario[1])
                 ws.cell(row=row_num, column=18, value=min_t1).alignment = cell_alignment_center
                 
                 # Minutos T2 (columna 19)
-                min_t2 = reg.get('MINUTOS_T2', '-')
+                min_t2 = _balance_turno(entrada_t2, salida_t2, horario[2], horario[3])
                 ws.cell(row=row_num, column=19, value=min_t2).alignment = cell_alignment_center
                 
                 # Detalle OFI T1 (columna 20)
@@ -1698,7 +1780,7 @@ def editar_marcacion_legacy():
 @marcacion_bp.route('/api/reportes/control-asistencia/tardanzas-excel', methods=['GET'])
 @login_required
 def exportar_tardanzas_excel():
-    """Exportar tardanzas por empleado a Excel usando sp_tardanzas_por_empleado"""
+    """Exportar tardanzas por empleado a Excel desde el SP de la tabla de control"""
     try:
         fecha_inicio = request.args.get('fecha_inicio')
         fecha_fin = request.args.get('fecha_fin')
@@ -1719,39 +1801,87 @@ def exportar_tardanzas_excel():
         try:
             cursor = connection.cursor(dictionary=True)
             
-            cursor.callproc('sp_tardanzas_por_empleado', [fecha_inicio, fecha_fin])
+            cursor.callproc('sp_reporte_asistencia_automatica', [
+                fecha_inicio, fecha_fin, None
+            ])
             
-            registros = []
+            filas = []
             for result in cursor.stored_results():
-                registros = result.fetchall()
+                filas = result.fetchall()
+            
+            cursor.execute("""
+                SELECT p.documento_numero AS dni, t.horario,
+                       CONCAT(p.apellido_paterno, ' ', p.apellido_materno, ', ', p.nombres) AS nombre_completo
+                FROM (
+                    SELECT g.num_documento, g.horario,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY g.num_documento
+                               ORDER BY g.total DESC
+                           ) AS rn
+                    FROM (
+                        SELECT h.num_documento,
+                               CONCAT(h.hora_entrada, '-', h.hora_salida,
+                                      IF(h.hora_entrada2 IS NOT NULL,
+                                         CONCAT(' / ', h.hora_entrada2, '-', h.hora_salida2), '')) AS horario,
+                               COUNT(*) AS total
+                        FROM TblHorarioTrabajo h
+                        WHERE h.es_activo = 1
+                        GROUP BY h.num_documento, h.hora_entrada, h.hora_salida,
+                                 h.hora_entrada2, h.hora_salida2
+                    ) g
+                ) t
+                INNER JOIN TblPersona p ON p.num_documento = t.num_documento
+                WHERE t.rn = 1
+            """)
+            datos_persona = {str(r['dni']): r for r in cursor.fetchall()}
             
             cursor.close()
             connection.close()
             
-            print(f"[TARDANZAS_EXCEL] [OK] {len(registros)} registros obtenidos")
+            por_dni = {}
+            for r in filas:
+                dni = str(r.get('DNI_CE') or '')
+                if not dni:
+                    continue
+                if dni not in por_dni:
+                    persona = datos_persona.get(dni) or {}
+                    por_dni[dni] = {
+                        'empresa': r.get('EMPRESA') or '',
+                        'nombres': persona.get('nombre_completo') or r.get('NOMBRES') or '',
+                        'cargo': r.get('CARGO') or '',
+                        'area': r.get('AREA') or '',
+                        'segundos': 0,
+                    }
+                por_dni[dni]['segundos'] += (
+                    _hms_a_segundos(r.get('TARDANZA_T1'))
+                    + _hms_a_segundos(r.get('TARDANZA_T2'))
+                )
             
-            # ==========================================================
-            # APLICAR FILTROS DE LA PANTALLA
-            # (iguales a filtrarYRenderizar de control_asistencia.html:
-            #  empresa/area por igualdad exacta; empleado por
-            #  contains ignore-case en NOMBRES o DNI_CE. El filtro de
-            #  dias no aplica: es codigo muerto en la plantilla.)
-            # ==========================================================
-            if empresa:
-                registros = [r for r in registros
-                             if str(r.get('empresa') or '') == empresa]
-            if area:
-                registros = [r for r in registros
-                             if str(r.get('area') or '') == area]
-            if empleado:
-                q = empleado.lower()
-                registros = [r for r in registros
-                             if q in str(r.get('nombres_dash') or '').lower()
-                             or q in str(r.get('dni_ce') or '')]
+            registros = []
+            for dni, reg in por_dni.items():
+                if reg['segundos'] <= 0:
+                    continue
+                if empresa and reg['empresa'] != empresa:
+                    continue
+                if area and reg['area'] != area:
+                    continue
+                if empleado:
+                    q = empleado.lower()
+                    if q not in reg['nombres'].lower() and q not in dni:
+                        continue
+                registros.append({
+                    'empresa': reg['empresa'],
+                    'dni_ce': dni,
+                    'nombres': reg['nombres'],
+                    'cargo': reg['cargo'],
+                    'horario': (datos_persona.get(dni) or {}).get('horario') or '',
+                    'total_minutos_tarde': reg['segundos'] // 60,
+                    'total_horas_tarde': _segundos_a_hhmm(reg['segundos']),
+                })
             
-            if empresa or area or empleado:
-                print(f"[TARDANZAS_EXCEL] [OK] Tras filtros de pantalla: "
-                      f"{len(registros)} registros")
+            registros.sort(key=lambda r: r['total_minutos_tarde'], reverse=True)
+            
+            print(f"[TARDANZAS_EXCEL] [OK] {len(registros)} empleados con tardanza")
             
             if not registros:
                 return jsonify({'success': False, 'error': 'No hay datos de tardanzas para exportar'}), 404
@@ -1889,6 +2019,8 @@ def exportar_horas_laboradas_excel():
         fecha_inicio = request.args.get('fecha_inicio')
         fecha_fin = request.args.get('fecha_fin')
         num_documento = request.args.get('num_documento')  # OPCIONAL ahora
+        empresa = (request.args.get('empresa') or '').strip()
+        area = (request.args.get('area') or '').strip()
         
         if not fecha_inicio or not fecha_fin:
             return jsonify({'success': False, 'error': 'Se requieren fecha_inicio y fecha_fin'}), 400
@@ -1902,24 +2034,90 @@ def exportar_horas_laboradas_excel():
         try:
             cursor = connection.cursor(dictionary=True)
             
-            # Usar SP optimizado que acepta NULL para todos los empleados
-            # Si num_documento es None (vacío), se pasa como NULL al SP
-            doc_param = int(num_documento) if num_documento else None
+            # Mismo SP que alimenta la tabla de control.
+            # El empleado se filtra por DNI para conservar el contrato.
+            cursor.callproc('sp_reporte_asistencia_automatica', [
+                fecha_inicio, fecha_fin, None
+            ])
             
-            print(f"[HORAS_LABORADAS] [+] Llamando a sp_horas_laboradas_v2 con num_documento={doc_param}")
-            
-            cursor.callproc('sp_horas_laboradas_v2', [fecha_inicio, fecha_fin, doc_param])
-            
-            registros = []
+            filas = []
             for result in cursor.stored_results():
-                registros = result.fetchall()
+                filas = result.fetchall()
             
-            print(f"[HORAS_LABORADAS] [OK] {len(registros)} registros obtenidos del SP")
+            cursor.execute("""
+                SELECT p.documento_numero AS dni,
+                       CONCAT(p.apellido_paterno, ' ', p.apellido_materno, ', ', p.nombres) AS nombre_completo
+                FROM TblPersona p
+            """)
+            nombres_por_dni = {str(r['dni']): r['nombre_completo'] for r in cursor.fetchall()}
+            
+            dni_filtro = None
+            horario_empleado = ''
+            if num_documento:
+                dni_filtro = ''
+                cursor.execute(
+                    "SELECT documento_numero FROM TblPersona WHERE num_documento = %s",
+                    (int(num_documento),)
+                )
+                persona = cursor.fetchone()
+                if persona:
+                    dni_filtro = str(persona['documento_numero'])
+                
+                cursor.execute("""
+                    SELECT g.horario
+                    FROM (
+                        SELECT h.num_documento,
+                               CONCAT(h.hora_entrada, '-', h.hora_salida,
+                                      IF(h.hora_entrada2 IS NOT NULL,
+                                         CONCAT(' / ', h.hora_entrada2, '-', h.hora_salida2), '')) AS horario,
+                               COUNT(*) AS total
+                        FROM TblHorarioTrabajo h
+                        WHERE h.es_activo = 1 AND h.num_documento = %s
+                        GROUP BY h.hora_entrada, h.hora_salida,
+                                 h.hora_entrada2, h.hora_salida2
+                    ) g
+                    ORDER BY g.total DESC
+                    LIMIT 1
+                """, (int(num_documento),))
+                horario_reg = cursor.fetchone()
+                if horario_reg:
+                    horario_empleado = horario_reg['horario']
             
             cursor.close()
             connection.close()
             
-            print(f"[HORAS_LABORADAS] [OK] {len(registros)} registros obtenidos")
+            registros = []
+            for r in filas:
+                dni = str(r.get('DNI_CE') or '')
+                if dni_filtro is not None and dni != dni_filtro:
+                    continue
+                segundos = (
+                    _hms_a_segundos(r.get('HORAS_LABORADAS_T1'))
+                    + _hms_a_segundos(r.get('HORAS_LABORADAS_T2'))
+                )
+                if empresa and (r.get('EMPRESA') or '') != empresa:
+                    continue
+                if area and (r.get('AREA') or '') != area:
+                    continue
+                registros.append({
+                    'dni': dni,
+                    'nombres': nombres_por_dni.get(dni) or r.get('NOMBRES') or '',
+                    'empresa': r.get('EMPRESA') or '',
+                    'area': r.get('AREA') or '',
+                    'cargo': r.get('CARGO') or '',
+                    'fecha': date(int(r['ANO']), int(r['MES']), int(r['DIA'])),
+                    'dia': r.get('DIA_SEMANA') or '',
+                    'entrada_t1': r.get('H_ENTRADA_OFI_T1') or r.get('H_ENTRADA_CMP_T1') or '-',
+                    'salida_t1': r.get('H_SALIDA_OFI_T1') or r.get('H_SALIDA_CMP_T1') or '-',
+                    'entrada_t2': r.get('H_ENTRADA_OFI_T2') or r.get('H_ENTRADA_CMP_T2') or '-',
+                    'salida_t2': r.get('H_SALIDA_OFI_T2') or r.get('H_SALIDA_CMP_T2') or '-',
+                    'horas_laboradas': _segundos_a_hhmmss(segundos) if segundos > 0 else '-',
+                    'minutos_totales': segundos // 60 if segundos > 0 else None,
+                })
+            
+            registros.sort(key=lambda r: (r['nombres'], r['fecha']))
+            
+            print(f"[HORAS_LABORADAS] [OK] {len(registros)} filas desde v12")
             
             if not registros:
                 return jsonify({'success': False, 'error': 'No hay datos de horas laboradas para exportar'}), 404
@@ -1975,8 +2173,8 @@ def exportar_horas_laboradas_excel():
             ws.merge_cells('A2:H2')
             if num_documento:
                 # Un solo empleado - mostrar sus datos completos
-                nombre_completo = f"{reg0.get('apellido_paterno', '')} {reg0.get('apellido_materno', '')}, {reg0.get('nombres', '')}"
-                horario = reg0.get('horario', 'Sin horario')
+                nombre_completo = reg0.get('nombres', '')
+                horario = horario_empleado or 'Sin horario'
                 dni = reg0.get('dni', '')
                 empresa = reg0.get('empresa', '')
                 cargo = reg0.get('cargo', '')
@@ -2112,7 +2310,7 @@ def exportar_horas_laboradas_excel():
                 else:
                     # Todos los empleados - incluir DNI y nombre
                     dni_emp = reg.get('dni', '')
-                    nombre_emp = f"{reg.get('apellido_paterno', '')} {reg.get('apellido_materno', '')}, {reg.get('nombres', '')}"
+                    nombre_emp = reg.get('nombres', '')
                     
                     ws.cell(row=row_num, column=1, value=dni_emp).alignment = cell_alignment_center
                     ws.cell(row=row_num, column=2, value=nombre_emp).alignment = cell_alignment
@@ -2196,7 +2394,7 @@ def exportar_horas_laboradas_excel():
             if num_documento:
                 # Un solo empleado - usar su nombre
                 reg0 = registros[0]
-                nombre_completo = f"{reg0.get('apellido_paterno', '')} {reg0.get('apellido_materno', '')}, {reg0.get('nombres', '')}"
+                nombre_completo = reg0.get('nombres', '')
                 nombre_limpio = nombre_completo.replace(' ', '_').replace(',', '')
                 filename = f'Horas_Laboradas_{nombre_limpio}_{fecha_inicio}_a_{fecha_fin}_{timestamp}.xlsx'
             else:

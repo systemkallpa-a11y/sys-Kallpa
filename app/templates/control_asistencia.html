@@ -194,7 +194,7 @@
             </span>
             <span class="flex items-center gap-1">
                 <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-                <span class="text-gray-700 dark:text-gray-300">Permiso</span>
+                <span class="text-gray-700 dark:text-gray-300">Incompleto</span>
             </span>
             <span class="flex items-center gap-1">
                 <span class="w-3 h-3 rounded-full bg-purple-500"></span>
@@ -665,7 +665,8 @@ function renderizarTabla(data) {
     let html = '';
     
     datosPagina.forEach((fila, index) => {
-        const colorFila = determinarColorFila(fila.DETALLE_OFI_T1, fila.DETALLE_OFI_T2);
+        const colorFila = determinarColorFila(fila.DETALLE_OFI_T1, fila.DETALLE_OFI_T2,
+                                              fila.DETALLE_CMP_T1, fila.DETALLE_CMP_T2);
         
         // Dia sin ninguna marca (FALTÓ/VACACIONES/futuro): sin botón de edición
         const tieneHora = v => v && v !== '-' && v !== 'NULL';
@@ -888,6 +889,12 @@ function obtenerColoresDetalle(detalle) {
             colorDetalle: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 font-semibold'
         };
     }
+    if (detalleUpper === 'INCOMPLETO') {
+        return {
+            colorMinutos: 'text-blue-600 dark:text-blue-400 font-bold',
+            colorDetalle: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 font-semibold'
+        };
+    }
     if (detalleUpper === 'SALIDA TEMPRANA') {
         return {
             colorMinutos: 'text-orange-600 dark:text-orange-400 font-bold',
@@ -958,16 +965,16 @@ function formatearMinutos(minutos) {
 // ============================================================================
 // DETERMINAR COLOR DE FILA
 // ============================================================================
-function determinarColorFila(detalleT1, detalleT2) {
-    const t1 = (detalleT1 || '').toUpperCase();
-    const t2 = (detalleT2 || '').toUpperCase();
-    
-    if (t1 === 'VACACIONES' || t2 === 'VACACIONES') return 'bg-purple-900/30';
-    if (t1 === 'FALTÓ' || t2 === 'FALTÓ') return 'bg-red-900/30';
-    if (t1 === 'TARDANZA') return 'bg-yellow-900/30';
-    if (t2 === 'SALIDA TEMPRANA') return 'bg-orange-900/30';
-    if (t1 === 'ASISTENCIA' && t2 === 'CUMPLIÓ HORARIO') return 'bg-green-900/30';
-    if (t1 === 'SIN MARCACIÓN') return 'bg-gray-700/50';
+function determinarColorFila(detalleT1, detalleT2, detalleCmpT1, detalleCmpT2) {
+    const estados = [detalleT1, detalleT2, detalleCmpT1, detalleCmpT2]
+        .map(valor => (valor || '').toUpperCase());
+
+    if (estados.includes('VACACIONES')) return 'bg-purple-900/30';
+    if (estados.includes('FALTÓ')) return 'bg-red-900/30';
+    if (estados.includes('TARDANZA')) return 'bg-yellow-900/30';
+    if (estados.includes('INCOMPLETO')) return 'bg-blue-900/30';
+    if (estados.includes('SALIDA TEMPRANA')) return 'bg-orange-900/30';
+    if (estados.includes('SIN MARCACIÓN')) return 'bg-gray-700/50';
     return 'bg-slate-800';
 }
 
@@ -1108,6 +1115,8 @@ async function exportarHorasLaboradas() {
     const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
     const fechaFin = document.getElementById('filtro-fecha-fin').value;
     const texto = document.getElementById('filtro-empleado').value.trim();
+    const empresa = document.getElementById('filtro-empresa').value;
+    const area = document.getElementById('filtro-area').value;
 
     if (!fechaInicio || !fechaFin) {
         alert('Seleccioná ambas fechas para exportar');
@@ -1116,7 +1125,7 @@ async function exportarHorasLaboradas() {
 
     // Si NO hay texto, exportar TODOS los empleados
     if (!texto) {
-        const url = `/api/reportes/control-asistencia/horas-laboradas-excel?fecha_inicio=${encodeURIComponent(fechaInicio)}&fecha_fin=${encodeURIComponent(fechaFin)}`;
+        const url = `/api/reportes/control-asistencia/horas-laboradas-excel?fecha_inicio=${encodeURIComponent(fechaInicio)}&fecha_fin=${encodeURIComponent(fechaFin)}&empresa=${encodeURIComponent(empresa)}&area=${encodeURIComponent(area)}`;
 
         console.log(`[HORAS_LABORADAS] Exportando TODOS los empleados: ${fechaInicio} a ${fechaFin}`);
 
@@ -1184,7 +1193,7 @@ async function exportarHorasLaboradas() {
         }
 
         const empleado = coincidencias[0];
-        const url = `/api/reportes/control-asistencia/horas-laboradas-excel?fecha_inicio=${encodeURIComponent(fechaInicio)}&fecha_fin=${encodeURIComponent(fechaFin)}&num_documento=${empleado.num_documento}`;
+        const url = `/api/reportes/control-asistencia/horas-laboradas-excel?fecha_inicio=${encodeURIComponent(fechaInicio)}&fecha_fin=${encodeURIComponent(fechaFin)}&num_documento=${empleado.num_documento}&empresa=${encodeURIComponent(empresa)}&area=${encodeURIComponent(area)}`;
 
         console.log(`[HORAS_LABORADAS] Exportando: empleado=${empleado.num_documento}, ${fechaInicio} a ${fechaFin}`);
 
