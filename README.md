@@ -98,14 +98,14 @@ python verificar_conexion.py
 1. **Conectar:**
    - Host: `162.213.251.186`
    - Usuario: `kallgwkn`
-   - Password: `#215292159xD`
+   - Password: `[Usar gestor de contraseñas]`
 
 2. **Subir archivos desde `namecheap_deploy/`:**
    - Todos los archivos → `/home/kallugwo/kallpa/`
 
 3. **Editar `.env` en servidor:**
    ```env
-   SECRET_KEY=7c705c25adc799bf3444babc43da4bb48fe11dfee5dd826a242ad7f5b71533cd
+   SECRET_KEY=CAMBIAR_POR_CLAVE_SEGURA
    DEBUG=False
    
    DB_HOST=localhost
