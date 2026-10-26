@@ -502,7 +502,7 @@ function abrirAsignacion(idPersonal, btn) {
     document.getElementById('asign-resultados').innerHTML = '';
     document.getElementById('asign-obs').value = '';
     document.getElementById('modalAsignacion').classList.remove('hidden');
-    cargarAsignadosPrevios(idPersonal);
+    renderCarrito();   
 }
 
 // Stub — se implementará en la siguiente fase
@@ -727,7 +727,15 @@ async function guardarAsignacion() {
 
 function cerrarAsignacion() {
     document.getElementById('modalAsignacion').classList.add('hidden');
-    _asignacion.carrito = [];
+    _asignacion.idPersonal = null;
+    _asignacion.nombre     = '';
+    _asignacion.carrito    = [];
+
+    document.getElementById('asign-busqueda').value      = '';
+    document.getElementById('asign-resultados').innerHTML = '';
+    document.getElementById('asign-obs').value            = '';
+    document.getElementById('asign-carrito').innerHTML    =
+        '<tr><td colspan="5" class="px-3 py-6 text-center text-gray-400 dark:text-gray-500 text-sm">Sin materiales agregados</td></tr>';
 }
 
 // ============================================================================
