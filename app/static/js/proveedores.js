@@ -137,6 +137,11 @@ function renderizarTabla() {
                                 title="Eliminar">
                             <i class="fas fa-trash"></i>
                         </button>
+                        <button onclick="abrirFichaMateriales('${escapeHtml(prov.ruc)}', '${escapeHtml(prov.razon_social)}')" 
+                                class="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                                title="Ficha de materiales">
+                            <i class="fas fa-boxes"></i>
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -612,4 +617,109 @@ function mostrarNotificacion(mensaje, tipo = 'info') {
     setTimeout(() => {
         toast.remove();
     }, 3000);
+}
+
+
+// ============================================================================
+// FICHA DE MATERIALES DEL PROVEEDOR
+// ============================================================================
+
+async function abrirFichaMateriales(ruc, razonSocial) {
+    // Crear modal dinámicamente si no existe
+    let modal = document.getElementById('modal-ficha-materiales');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'modal-ficha-materiales';
+        modal.innerHTML = `
+            <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col">
+                <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 p-6 rounded-t-2xl flex items-center justify-between flex-shrink-0">
+                    <div>
+                        <h2 class="text-xl font-bold text-white"><i class="fas fa-boxes mr-2"></i>Materiales del proveedor</h2>
+                        <p id="ficha-subtitulo" class="text-indigo-200 text-sm mt-0.5 font-medium"></p>
+                    </div>
+                    <button onclick="cerrarFichaMateriales()" class="text-white hover:text-gray-200 p-2 hover:bg-white/10 rounded-lg">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-6">
+                    <div id="ficha-contenido"></div>
+                </div>
+                <div class="flex-shrink-0 p-6 pt-0 flex justify-end">
+                    <button onclick="cerrarFichaMateriales()"
+                            class="px-6 py-2.5 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-300 transition-colors">
+                        Cerrar
+                    </button>
+                </div>
+            </div>`;
+        modal.className = 'hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4';
+        document.body.appendChild(modal);
+    }
+
+    document.getElementById('ficha-subtitulo').textContent = razonSocial;
+    modal.classList.remove('hidden');
+
+    const contenido = document.getElementById('ficha-contenido');
+    contenido.innerHTML = '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-3xl text-indigo-500 mb-3"></i><p class="text-gray-500">Cargando materiales...</p></div>';
+
+    try {
+        const r = await fetch(`/api/proveedores/${encodeURIComponent(ruc)}/materiales`);
+        const data = await r.json();
+
+        if (!data.success) {
+            contenido.innerHTML = '<p class="text-center text-red-500 py-8">Error al cargar los materiales.</p>';
+            return;
+        }
+
+        if (data.materiales.length === 0) {
+            contenido.innerHTML = `
+                <div class="text-center py-12 text-gray-400 dark:text-gray-500">
+                    <i class="fas fa-boxes text-5xl mb-3 opacity-40"></i>
+                    <p class="font-medium">Sin materiales asociados</p>
+                    <p class="text-sm mt-1">Los materiales se vincularán desde el módulo de Inventario.</p>
+                </div>`;
+            return;
+        }
+
+        contenido.innerHTML = `
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-slate-700/50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Código</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Material</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Categoría</th>
+                        <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Stock</th>
+                        <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Precio</th>
+                        <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Tipo</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-slate-700">
+                    ${data.materiales.map(m => `
+                        <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/40 transition-colors">
+                            <td class="px-4 py-3 font-mono text-xs text-gray-500 dark:text-gray-400">${m.codigo || '—'}</td>
+                            <td class="px-4 py-3">
+                                <p class="font-semibold text-gray-900 dark:text-white">${escapeHtml(m.nombre)}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">${m.tipo_inventario}</p>
+                            </td>
+                            <td class="px-4 py-3 text-gray-700 dark:text-gray-300">${escapeHtml(m.categoria || '—')}</td>
+                            <td class="px-4 py-3 text-center text-gray-700 dark:text-gray-300">
+                                ${parseFloat(m.stock_actual || 0).toFixed(2)} ${m.unidad_abrev || ''}
+                            </td>
+                            <td class="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
+                                ${m.precio_compra ? `${m.moneda === 'DOLARES' ? '$' : 'S/'} ${parseFloat(m.precio_compra).toFixed(2)}` : '—'}
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                ${(m.es_principal == 1) ? '<span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 rounded-full text-xs font-semibold">Principal</span>' : '<span class="px-2 py-0.5 bg-gray-100 text-gray-600 dark:bg-slate-600 dark:text-gray-300 rounded-full text-xs font-semibold">Secundario</span>'}
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>`;
+    } catch (e) {
+        contenido.innerHTML = '<p class="text-center text-red-500 py-8">Error de conexión.</p>';
+    }
+}
+
+function cerrarFichaMateriales() {
+    const modal = document.getElementById('modal-ficha-materiales');
+    if (modal) modal.classList.add('hidden');
 }

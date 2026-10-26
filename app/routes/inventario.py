@@ -661,3 +661,181 @@ def registrar_movimiento():
     except Exception as e:
         print(f"[MOVIMIENTO] Error: {e}")
         return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+
+
+# ============================================================================
+# API: PROVEEDORES DE UN ÍTEM DE INVENTARIO
+# Orden importante: rutas estáticas primero, dinámicas después
+# ============================================================================
+
+@inventario_bp.route('/api/inventario/proveedores/selector', methods=['GET'])
+@login_required
+def listar_proveedores_selector():
+    """Lista proveedores activos para el <select> del modal de asociar"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+
+        cursor = connection.cursor(dictionary=True)
+        cursor.callproc('sp_listar_proveedores_selector')
+
+        proveedores = []
+        for result in cursor.stored_results():
+            proveedores = result.fetchall()
+
+        cursor.close()
+        connection.close()
+
+        return jsonify({'success': True, 'proveedores': proveedores}), 200
+
+    except Error as e:
+        print(f"[INV-PROVEEDORES] Error SQL: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@inventario_bp.route('/api/inventario/proveedores/desasociar/<int:id_relacion>', methods=['DELETE'])
+@login_required
+def desasociar_proveedor_inventario(id_relacion):
+    """Desasocia (soft-delete) un proveedor de un ítem usando SP con OUT"""
+    try:
+        user_doc = session.get('user_documento', '')
+
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+
+        cursor = connection.cursor()
+
+        args = [
+            id_relacion,
+            str(user_doc),
+            0,   # OUT p_success
+            ''   # OUT p_message
+        ]
+
+        result = cursor.callproc('sp_desasociar_proveedor_inventario', args)
+
+        p_success = result[2]
+        p_message = result[3]
+
+        if p_success:
+            connection.commit()
+            cursor.close()
+            connection.close()
+            return jsonify({'success': True, 'message': p_message}), 200
+        else:
+            connection.rollback()
+            cursor.close()
+            connection.close()
+            return jsonify({'success': False, 'error': p_message}), 400
+
+    except Error as e:
+        print(f"[INV-PROVEEDORES] Error SQL: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@inventario_bp.route('/api/inventario/<int:id_inventario>/proveedores', methods=['GET'])
+@login_required
+def listar_proveedores_de_inventario(id_inventario):
+    """Lista los proveedores vinculados a un ítem usando SP"""
+    try:
+        print(f"[INV-PROVEEDORES] GET /api/inventario/{id_inventario}/proveedores")
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+
+        cursor = connection.cursor(dictionary=True)
+        cursor.callproc('sp_listar_proveedores_de_inventario', [id_inventario])
+
+        proveedores = []
+        for result in cursor.stored_results():
+            proveedores = result.fetchall()
+
+        cursor.close()
+        connection.close()
+
+        # Serializar tipos no-JSON (Decimal, datetime, date)
+        from decimal import Decimal
+        import datetime
+        def serializar(obj):
+            if isinstance(obj, Decimal):
+                return float(obj)
+            if isinstance(obj, (datetime.datetime, datetime.date)):
+                return obj.isoformat()
+            return obj
+
+        proveedores_serializados = [
+            {k: serializar(v) for k, v in row.items()}
+            for row in proveedores
+        ]
+
+        print(f"[INV-PROVEEDORES] Devolviendo {len(proveedores_serializados)} proveedores")
+        return jsonify({'success': True, 'proveedores': proveedores_serializados}), 200
+
+    except Error as e:
+        print(f"[INV-PROVEEDORES] Error SQL: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    except Exception as e:
+        print(f"[INV-PROVEEDORES] Error general: {e}")
+        import traceback; traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@inventario_bp.route('/api/inventario/<int:id_inventario>/proveedores/asociar', methods=['POST'])
+@login_required
+def asociar_proveedor_inventario(id_inventario):
+    """Asocia un proveedor a un ítem usando SP con parámetros OUT"""
+    try:
+        data = request.get_json()
+        if not data or not data.get('ruc_proveedor'):
+            return jsonify({'success': False, 'error': 'ruc_proveedor es requerido'}), 400
+
+        user_doc = session.get('user_documento', '')
+        print(f"[ASOCIAR] es_principal recibido: {data.get('es_principal')} tipo: {type(data.get('es_principal'))}")
+
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+
+        cursor = connection.cursor()
+
+        args = [
+            id_inventario,
+            data['ruc_proveedor'],
+            data.get('codigo_proveedor') or None,
+            float(data['precio_compra']) if data.get('precio_compra') else None,
+            data.get('moneda', 'SOLES'),
+            int(data['plazo_entrega_dias']) if data.get('plazo_entrega_dias') else None,
+            1 if data.get('es_principal') in (True, 1, '1', 'true') else 0,
+            data.get('observaciones') or None,
+            str(user_doc),
+            0,    # OUT p_success
+            '',   # OUT p_message
+            0     # OUT p_id_relacion
+        ]
+
+        result = cursor.callproc('sp_asociar_proveedor_inventario', args)
+
+        p_success     = result[9]
+        p_message     = result[10]
+        p_id_relacion = result[11]
+
+        if p_success:
+            connection.commit()
+            cursor.close()
+            connection.close()
+            return jsonify({
+                'success': True,
+                'message': p_message,
+                'id_relacion': int(p_id_relacion)
+            }), 200
+        else:
+            connection.rollback()
+            cursor.close()
+            connection.close()
+            return jsonify({'success': False, 'error': p_message}), 400
+
+    except Error as e:
+        print(f"[INV-PROVEEDORES] Error SQL: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500

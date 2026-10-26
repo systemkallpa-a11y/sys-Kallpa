@@ -211,6 +211,125 @@
     </div>
 </div>
 
+<!-- MODAL: Kardex del Trabajador -->
+<div id="modalKardex" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+
+        <!-- Header con ficha -->
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-2xl flex-shrink-0">
+            <div class="flex items-start justify-between mb-3">
+                <div>
+                    <h3 class="text-xl font-bold text-white"><i class="fas fa-history mr-2"></i><span id="kardex-titulo">Kardex</span></h3>
+                </div>
+                <button onclick="cerrarKardex()" class="text-white hover:text-gray-200 mt-0.5">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="kardex-ficha"></div>
+        </div>
+
+        <!-- Tabla historial -->
+        <div class="flex-1 overflow-y-auto p-6">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-slate-700 sticky top-0">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Fecha</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Vale</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Material</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Serie / IMEI</th>
+                        <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Cantidad</th>
+                        <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Estado bien</th>
+                        <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Asignación</th>
+                    </tr>
+                </thead>
+                <tbody id="kardex-tabla" class="divide-y divide-gray-100 dark:divide-slate-700"></tbody>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex-shrink-0 border-t border-gray-200 dark:border-slate-700 px-6 py-4 flex justify-end">
+            <button onclick="cerrarKardex()"
+                    class="px-6 py-2.5 bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-300 transition-colors">
+                <i class="fas fa-times mr-2"></i>Cerrar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Asignación de Materiales -->
+<div id="modalAsignacion" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 rounded-t-2xl flex-shrink-0 flex items-center justify-between">
+            <div>
+                <h3 class="text-xl font-bold text-white"><i class="fas fa-clipboard-list mr-2"></i>Asignar Materiales</h3>
+                <p id="asign-titulo" class="text-green-100 text-sm mt-0.5"></p>
+            </div>
+            <button onclick="cerrarAsignacion()" class="text-white hover:text-gray-200">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto flex flex-col">
+
+            <!-- Sección superior: Buscador -->
+            <div class="px-6 pt-4 pb-3 border-b border-gray-200 dark:border-slate-700 flex-shrink-0">
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Buscar material</p>
+                <div class="flex gap-2">
+                    <input type="text" id="asign-busqueda" placeholder="Código o nombre del material..."
+                           onkeyup="debouncarBusqueda()"
+                           class="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500">
+                    <button onclick="buscarMaterialesAsign()"
+                            class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
+                        <i class="fas fa-search mr-1"></i>Buscar
+                    </button>
+                </div>
+                <!-- Resultados de búsqueda -->
+                <div id="asign-resultados" class="mt-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700/50 empty:hidden"></div>
+            </div>
+
+            <!-- Sección inferior: Carrito -->
+            <div class="px-6 py-4 flex-1">
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Materiales asignados</p>
+                <div class="border border-gray-200 dark:border-slate-600 rounded-lg overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 dark:bg-slate-700">
+                            <tr>
+                                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Código</th>
+                                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Material</th>
+                                <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Cantidad</th>
+                                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">N° Serie</th>
+                                <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Quitar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="asign-carrito" class="divide-y divide-gray-100 dark:divide-slate-700"></tbody>
+                    </table>
+                </div>
+
+                <!-- Observaciones -->
+                <div class="mt-3">
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Observaciones</label>
+                    <textarea id="asign-obs" rows="2" placeholder="Observaciones del vale (opcional)"
+                              class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 resize-none"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex-shrink-0 border-t border-gray-200 dark:border-slate-700 px-6 py-4 flex justify-end gap-3">
+            <button onclick="cerrarAsignacion()"
+                    class="px-6 py-2.5 bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-300 transition-colors">
+                <i class="fas fa-times mr-2"></i>Cancelar
+            </button>
+            <button id="asign-btn-guardar" onclick="guardarAsignacion()"
+                    class="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
+                <i class="fas fa-save mr-2"></i>Guardar cambios
+            </button>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -262,26 +381,39 @@ async function cargarPersonal() {
         
         let html = '';
         personalData.forEach(p => {
-            const ultimaEntrega = p.ultima_entrega ? new Date(p.ultima_entrega).toLocaleDateString('es-PE') : 'Ninguna';
-            
+            const ultimaEntrega = p.ULTIMA_ENTREGA
+                ? new Date(p.ULTIMA_ENTREGA).toLocaleDateString('es-PE')
+                : '—';
+            const totalEntregas = p.TOTAL_ENTREGAS || 0;
+            const totalItems    = parseFloat(p.TOTAL_ITEMS || 0).toFixed(0);
+
             html += `
                 <tr class="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                    <td class="px-4 py-3 text-gray-900 dark:text-white font-medium">${p.num_documento}</td>
-                    <td class="px-4 py-3 text-gray-900 dark:text-white">${p.nombre_completo}</td>
-                    <td class="px-4 py-3 text-gray-600 dark:text-gray-300">${p.area || 'Sin área'}</td>
+                    <td class="px-4 py-3 font-mono text-sm text-gray-900 dark:text-white">${p.DOCUMENTO}</td>
+                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">${p.NOMBRE_COMPLETO}</td>
+                    <td class="px-4 py-3 text-gray-600 dark:text-gray-300">${p.AREA}</td>
                     <td class="px-4 py-3 text-center">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                            ${p.total_entregas || 0}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
+                            ${totalEntregas}
                         </span>
                     </td>
-                    <td class="px-4 py-3 text-center text-gray-900 dark:text-white font-medium">${p.total_items || 0}</td>
-                    <td class="px-4 py-3 text-center text-gray-600 dark:text-gray-300 text-sm">${ultimaEntrega}</td>
+                    <td class="px-4 py-3 text-center text-gray-900 dark:text-white font-medium">${totalItems}</td>
+                    <td class="px-4 py-3 text-center text-gray-500 dark:text-gray-400 text-sm">${ultimaEntrega}</td>
                     <td class="px-4 py-3 text-center">
-                        <button onclick="verHistorial('${p.num_documento}')" 
-                                class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                title="Ver historial">
-                            <i class="fas fa-history"></i>
-                        </button>
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="abrirAsignacion('${p.id_personal}', this)"
+                                    data-nombre="${p.NOMBRE_COMPLETO}"
+                                    class="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                                    title="Asignar materiales">
+                                <i class="fas fa-clipboard-list"></i>
+                            </button>
+                            <button onclick="verKardex('${p.id_personal}', this)"
+                                    data-nombre="${p.NOMBRE_COMPLETO}"
+                                    class="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                    title="Ver Kardex">
+                                <i class="fas fa-history"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -304,7 +436,7 @@ async function cargarPersonal() {
 
 async function cargarPersonalSelect() {
     try {
-        const response = await fetch('/api/entregas-personal/buscar-personal?q=');
+        const response = await fetch('/api/entregas-personal/listar?busqueda=');
         const result = await response.json();
         
         if (result.success) {
@@ -312,11 +444,11 @@ async function cargarPersonalSelect() {
             select.innerHTML = '<option value="">Seleccione personal...</option>';
             
             result.data.forEach(p => {
-                select.innerHTML += `<option value="${p.num_documento}">${p.nombre_completo} - ${p.area || 'Sin área'}</option>`;
+                select.innerHTML += `<option value="${p.id_personal}">${p.NOMBRE_COMPLETO} - ${p.AREA || 'Sin área'}</option>`;
             });
         }
     } catch (error) {
-        console.error('Error al cargar personal:', error);
+        console.error('Error al cargar personal select:', error);
     }
 }
 
@@ -357,6 +489,245 @@ function actualizarStockDisponible() {
 
 function aplicarFiltros() {
     cargarPersonal();
+}
+
+// Stub — se implementará en la siguiente fase
+function abrirAsignacion(idPersonal, btn) {
+    const nombre = btn ? btn.dataset.nombre : idPersonal;
+    _asignacion.idPersonal = idPersonal;
+    _asignacion.nombre     = nombre;
+    _asignacion.carrito    = [];
+    document.getElementById('asign-titulo').textContent = 'Asignar Materiales a: ' + nombre;
+    document.getElementById('asign-busqueda').value = '';
+    document.getElementById('asign-resultados').innerHTML = '';
+    document.getElementById('asign-obs').value = '';
+    document.getElementById('modalAsignacion').classList.remove('hidden');
+    cargarAsignadosPrevios(idPersonal);
+}
+
+// Stub — se implementará en la siguiente fase
+function verKardex(idPersonal, btn) {
+    const nombre = btn ? btn.dataset.nombre : idPersonal;
+    document.getElementById('kardex-titulo').textContent = 'Kardex de: ' + nombre;
+    document.getElementById('kardex-ficha').innerHTML = '';
+    document.getElementById('kardex-tabla').innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i>Cargando...</td></tr>';
+    document.getElementById('modalKardex').classList.remove('hidden');
+    cargarKardex(idPersonal);
+}
+
+async function cargarKardex(idPersonal) {
+    try {
+        const r = await fetch(`/api/entregas-personal/kardex/${idPersonal}`);
+        const data = await r.json();
+
+        if (!data.success) {
+            document.getElementById('kardex-tabla').innerHTML = `<tr><td colspan="7" class="px-4 py-6 text-center text-red-500">${data.error || 'Error al cargar'}</td></tr>`;
+            return;
+        }
+
+        // Ficha del trabajador
+        const f = data.ficha;
+        document.getElementById('kardex-ficha').innerHTML = `
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div><p class="text-xs text-blue-200 uppercase">Documento</p><p class="font-semibold text-white">${f.documento || '—'}</p></div>
+                <div><p class="text-xs text-blue-200 uppercase">Nombre</p><p class="font-semibold text-white">${f.nombre_completo || '—'}</p></div>
+                <div><p class="text-xs text-blue-200 uppercase">Área</p><p class="font-semibold text-white">${f.area || '—'}</p></div>
+                <div><p class="text-xs text-blue-200 uppercase">Correo</p><p class="font-semibold text-white truncate">${f.email || '—'}</p></div>
+            </div>`;
+
+        // Historial
+        if (!data.historial || data.historial.length === 0) {
+            document.getElementById('kardex-tabla').innerHTML = '<tr><td colspan="7" class="px-4 py-10 text-center text-gray-400 dark:text-gray-500">Sin entregas registradas</td></tr>';
+            return;
+        }
+
+        const badgeEstado = (estado) => {
+            if (estado === 'ACTIVO')    return '<span class="px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 rounded-full text-xs font-semibold">Activo</span>';
+            if (estado === 'DEVUELTO')  return '<span class="px-2 py-0.5 bg-gray-100 text-gray-600 dark:bg-slate-600 dark:text-gray-300 rounded-full text-xs font-semibold">Devuelto</span>';
+            if (estado === 'ANULADO')   return '<span class="px-2 py-0.5 bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300 rounded-full text-xs font-semibold">Anulado</span>';
+            return estado;
+        };
+
+        const badgeBien = (estado) => {
+            const map = { NUEVO: 'bg-blue-100 text-blue-700', BUENO: 'bg-green-100 text-green-700', REGULAR: 'bg-yellow-100 text-yellow-700', MALO: 'bg-red-100 text-red-700' };
+            const cls = map[estado] || 'bg-gray-100 text-gray-600';
+            return `<span class="px-2 py-0.5 ${cls} rounded-full text-xs font-semibold">${estado || '—'}</span>`;
+        };
+
+        document.getElementById('kardex-tabla').innerHTML = data.historial.map(h => {
+            const fecha = h.fecha_entrega ? new Date(h.fecha_entrega).toLocaleString('es-PE', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+            return `<tr class="hover:bg-gray-50 dark:hover:bg-slate-700/40 transition-colors border-b border-gray-100 dark:border-slate-700">
+                <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">${fecha}</td>
+                <td class="px-4 py-3 font-mono text-xs text-gray-600 dark:text-gray-300">${h.codigo_entrega}</td>
+                <td class="px-4 py-3">
+                    <p class="font-medium text-sm text-gray-900 dark:text-white">${h.material}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">${h.codigo_material}</p>
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">${h.serie || '—'}</td>
+                <td class="px-4 py-3 text-center text-sm font-medium text-gray-900 dark:text-white">${h.cantidad} ${h.unidad || ''}</td>
+                <td class="px-4 py-3 text-center">${badgeBien(h.estado_bien)}</td>
+                <td class="px-4 py-3 text-center">${badgeEstado(h.estado_asignacion)}</td>
+            </tr>`;
+        }).join('');
+
+    } catch(e) {
+        document.getElementById('kardex-tabla').innerHTML = '<tr><td colspan="7" class="px-4 py-6 text-center text-red-500">Error de conexión</td></tr>';
+    }
+}
+
+function cerrarKardex() {
+    document.getElementById('modalKardex').classList.add('hidden');
+}
+
+// ============================================================================
+// MODAL ASIGNACIÓN DE MATERIALES
+// ============================================================================
+const _asignacion = { idPersonal: null, nombre: '', carrito: [] };
+
+async function cargarAsignadosPrevios(idPersonal) {
+    const tbody = document.getElementById('asign-carrito');
+    tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-gray-400 text-sm"><i class="fas fa-spinner fa-spin mr-1"></i>Cargando...</td></tr>';
+    try {
+        const r = await fetch(`/api/entregas-personal/asignados/${idPersonal}`);
+        const data = await r.json();
+        if (data.success && data.data.length > 0) {
+            data.data.forEach(item => {
+                _asignacion.carrito.push({
+                    id_inventario: item.id_inventario,
+                    codigo:        item.codigo,
+                    nombre:        item.nombre,
+                    cantidad:      item.cantidad,
+                    serie:         item.serie || '',
+                    unidad:        item.unidad || '',
+                    estado_bien:   item.estado_bien || 'BUENO'
+                });
+            });
+        }
+        renderCarrito();
+    } catch(e) {
+        renderCarrito();
+    }
+}
+
+let _debounceTimer = null;
+function debouncarBusqueda() {
+    clearTimeout(_debounceTimer);
+    _debounceTimer = setTimeout(() => buscarMaterialesAsign(), 350);
+}
+
+async function buscarMaterialesAsign() {
+    const q = document.getElementById('asign-busqueda').value.trim();
+    const contenedor = document.getElementById('asign-resultados');
+    if (!q) { contenedor.innerHTML = ''; return; }
+
+    contenedor.innerHTML = '<p class="text-xs text-gray-400 py-2 text-center"><i class="fas fa-spinner fa-spin mr-1"></i>Buscando...</p>';
+    try {
+        const r = await fetch(`/api/inventario/listar?busqueda=${encodeURIComponent(q)}&estado=ACTIVO`);
+        const data = await r.json();
+        if (!data.success || data.data.length === 0) {
+            contenedor.innerHTML = '<p class="text-xs text-gray-400 py-2 text-center">Sin resultados</p>';
+            return;
+        }
+        contenedor.innerHTML = data.data.map(m => `
+            <div class="flex items-center justify-between px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-lg">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white truncate">${m.nombre}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">${m.codigo} · Stock: ${parseFloat(m.stock_actual||0).toFixed(2)} ${m.unidad_abrev||''}</p>
+                </div>
+                <button onclick="agregarAlCarrito(${m.id_inventario}, '${m.codigo}', '${m.nombre.replace(/'/g,"\\'")}', ${parseFloat(m.stock_actual||0)}, '${m.unidad_abrev||''}')"
+                        class="ml-3 w-7 h-7 flex items-center justify-center bg-green-600 hover:bg-green-700 text-white rounded-full text-sm font-bold transition-colors flex-shrink-0"
+                        title="Agregar">
+                    <i class="fas fa-plus text-xs"></i>
+                </button>
+            </div>
+        `).join('');
+    } catch(e) {
+        contenedor.innerHTML = '<p class="text-xs text-red-400 py-2 text-center">Error al buscar</p>';
+    }
+}
+
+function agregarAlCarrito(idInv, codigo, nombre, stock, unidad) {
+    const idx = _asignacion.carrito.findIndex(i => i.id_inventario === idInv);
+    if (idx >= 0) {
+        _asignacion.carrito[idx].cantidad = parseFloat(_asignacion.carrito[idx].cantidad) + 1;
+    } else {
+        _asignacion.carrito.push({ id_inventario: idInv, codigo, nombre, cantidad: 1, serie: '', unidad, estado_bien: 'BUENO' });
+    }
+    renderCarrito();
+}
+
+function quitarDelCarrito(idInv) {
+    _asignacion.carrito = _asignacion.carrito.filter(i => i.id_inventario !== idInv);
+    renderCarrito();
+}
+
+function renderCarrito() {
+    const tbody = document.getElementById('asign-carrito');
+    if (_asignacion.carrito.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-6 text-center text-gray-400 dark:text-gray-500 text-sm">Sin materiales agregados</td></tr>';
+        return;
+    }
+    tbody.innerHTML = _asignacion.carrito.map((item, idx) => `
+        <tr class="border-b border-gray-100 dark:border-slate-700">
+            <td class="px-3 py-2 text-xs font-mono text-gray-500 dark:text-gray-400">${item.codigo}</td>
+            <td class="px-3 py-2 text-sm text-gray-900 dark:text-white">${item.nombre}</td>
+            <td class="px-3 py-2">
+                <input type="number" value="${item.cantidad}" min="0.01" step="0.01"
+                       onchange="_asignacion.carrito[${idx}].cantidad = parseFloat(this.value) || 1"
+                       class="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-center">
+            </td>
+            <td class="px-3 py-2">
+                <input type="text" value="${item.serie}" placeholder="N/A"
+                       onchange="_asignacion.carrito[${idx}].serie = this.value"
+                       class="w-28 px-2 py-1 text-sm border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white">
+            </td>
+            <td class="px-3 py-2 text-center">
+                <button onclick="quitarDelCarrito(${item.id_inventario})"
+                        class="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors">
+                    <i class="fas fa-trash text-xs"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function guardarAsignacion() {
+    if (_asignacion.carrito.length === 0) {
+        alert('Agrega al menos un material antes de guardar.');
+        return;
+    }
+    const btn = document.getElementById('asign-btn-guardar');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Guardando...';
+
+    try {
+        const r = await fetch('/api/entregas-personal/guardar', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                id_personal:   _asignacion.idPersonal,
+                materiales:    _asignacion.carrito,
+                observaciones: document.getElementById('asign-obs').value
+            })
+        });
+        const data = await r.json();
+        if (data.success) {
+            cerrarAsignacion();
+            cargarPersonal(); // refrescar tabla principal
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo guardar'));
+        }
+    } catch(e) {
+        alert('Error de conexión');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save mr-2"></i>Guardar cambios';
+    }
+}
+
+function cerrarAsignacion() {
+    document.getElementById('modalAsignacion').classList.add('hidden');
+    _asignacion.carrito = [];
 }
 
 // ============================================================================

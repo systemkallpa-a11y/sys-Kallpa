@@ -658,6 +658,111 @@
     </div>
 </div>
 
+<!-- MODAL: Proveedores del Ítem -->
+<div id="modalProveedores" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 rounded-t-2xl flex items-center justify-between flex-shrink-0">
+            <div>
+                <h3 class="text-xl font-bold text-white"><i class="fas fa-truck mr-2"></i>Proveedores del material</h3>
+                <p id="prov-modal-titulo" class="text-indigo-200 text-sm mt-0.5 truncate max-w-md font-medium"></p>
+            </div>
+            <button onclick="cerrarModalProveedores()" class="text-white hover:text-gray-200">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Botón asociar -->
+        <div class="px-6 pt-4 flex-shrink-0">
+            <button onclick="toggleFormAsociar()"
+                    class="w-full px-4 py-2.5 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-xl font-medium transition-colors flex items-center justify-center gap-2">
+                <i class="fas fa-plus-circle"></i> Asociar proveedor
+            </button>
+        </div>
+
+        <!-- Formulario de asociar (oculto por defecto) -->
+        <div id="prov-form-asociar" class="hidden px-6 pt-4 flex-shrink-0">
+            <form id="formAsociarProveedor" class="bg-indigo-50 dark:bg-slate-700 rounded-xl p-4 space-y-3">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Proveedor <span class="text-red-500">*</span></label>
+                        <select id="prov-select-ruc"
+                                class="w-full px-3 py-2 bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white">
+                            <option value="">Seleccione...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Cód. del proveedor</label>
+                        <input type="text" id="prov-codigo" placeholder="Código interno"
+                               class="w-full px-3 py-2 bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Precio de compra</label>
+                        <input type="number" id="prov-precio" step="0.01" min="0" placeholder="0.00"
+                               class="w-full px-3 py-2 bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Moneda</label>
+                        <select id="prov-moneda"
+                                class="w-full px-3 py-2 bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white">
+                            <option value="SOLES">Soles (S/)</option>
+                            <option value="DOLARES">Dólares ($)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Plazo entrega (días)</label>
+                        <input type="number" id="prov-plazo" min="0" placeholder="0"
+                               class="w-full px-3 py-2 bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Observaciones</label>
+                        <input type="text" id="prov-obs" placeholder="Opcional"
+                               class="w-full px-3 py-2 bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white">
+                    </div>
+                    <div class="md:col-span-2 flex items-center gap-2">
+                        <input type="checkbox" id="prov-principal" class="w-4 h-4 accent-indigo-600">
+                        <label for="prov-principal" class="text-sm text-gray-700 dark:text-gray-300">Marcar como proveedor principal</label>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-1">
+                    <button type="button" onclick="toggleFormAsociar()"
+                            class="px-4 py-2 bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="button" onclick="guardarAsociacion()"
+                            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors">
+                        <i class="fas fa-save mr-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Lista de proveedores vinculados -->
+        <div class="flex-1 overflow-y-auto px-6 py-4">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-slate-700">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Proveedor</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Teléfono</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Precio</th>
+                        <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Tipo</th>
+                        <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="prov-lista" class="divide-y divide-gray-200 dark:divide-slate-700"></tbody>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex-shrink-0 px-6 py-4 border-t border-gray-200 dark:border-slate-700 flex justify-end">
+            <button onclick="cerrarModalProveedores()"
+                    class="px-6 py-2 bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-300 transition-colors">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL: Ajustar Stock -->
 <div id="modalAjustarStock" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full">
@@ -903,6 +1008,12 @@ function renderizarTabla() {
                                 class="text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300"
                                 title="Editar">
                             <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="abrirModalProveedores(${idInventario}, this)" 
+                                data-nombre="${material.nombre.replace(/"/g, '&quot;')}"
+                                class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                title="Proveedores">
+                            <i class="fas fa-truck"></i>
                         </button>
                     </div>
                 </td>
@@ -1896,5 +2007,163 @@ function mostrarError(mensaje) {
         </tr>
     `;
 }
+// ============================================================================
+// MODAL: PROVEEDORES DEL ÍTEM
+// ============================================================================
+let _provModalIdInv = null;
+
+function abrirModalProveedores(idInventario, btn) {
+    _provModalIdInv = idInventario;
+    const nombreItem = btn ? btn.dataset.nombre : 'Material';
+    document.getElementById('prov-modal-titulo').textContent = nombreItem;
+    document.getElementById('modalProveedores').classList.remove('hidden');
+    cargarProveedoresDelItem(idInventario);
+}
+
+function cerrarModalProveedores() {
+    document.getElementById('modalProveedores').classList.add('hidden');
+    document.getElementById('prov-form-asociar').classList.add('hidden');
+    _provModalIdInv = null;
+}
+
+async function cargarProveedoresDelItem(idInventario) {
+    const cuerpo = document.getElementById('prov-lista');
+    cuerpo.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i>Cargando...</td></tr>';
+
+    try {
+        console.log('[PROV] Llamando API para id_inventario:', idInventario);
+        const r = await fetch(`/api/inventario/${idInventario}/proveedores`);
+        const data = await r.json();
+        console.log('[PROV] Total recibidos:', data.proveedores ? data.proveedores.length : 0);
+
+        if (!data.success) {
+            cuerpo.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-center text-red-500">Error al cargar</td></tr>';
+            return;
+        }
+
+        if (data.proveedores.length === 0) {
+            cuerpo.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400 dark:text-gray-500"><i class="fas fa-truck text-3xl mb-2 block opacity-40"></i>Sin proveedores asociados aún</td></tr>';
+            return;
+        }
+
+        cuerpo.innerHTML = data.proveedores.map(p => `
+            <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/40 transition-colors">
+                <td class="px-4 py-3">
+                    <p class="font-semibold text-gray-900 dark:text-white text-sm">${p.razon_social}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 font-mono">${p.ruc_proveedor}</p>
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">${p.telefono || '-'}</td>
+                <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                    ${p.precio_compra ? `${p.moneda === 'DOLARES' ? '$' : 'S/'} ${parseFloat(p.precio_compra).toFixed(2)}` : '—'}
+                </td>
+                <td class="px-4 py-3 text-center">
+                    ${(p.es_principal == 1)
+                        ? '<span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 rounded-full text-xs font-semibold">Principal</span>'
+                        : '<span class="px-2 py-0.5 bg-gray-100 text-gray-600 dark:bg-slate-600 dark:text-gray-300 rounded-full text-xs font-semibold">Secundario</span>'
+                    }
+                </td>
+                <td class="px-4 py-3 text-center">
+                    <button onclick="desasociarProveedor(${p.id_inventario_proveedor})"
+                            class="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            title="Quitar proveedor">
+                        <i class="fas fa-unlink text-xs"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch(e) {
+        console.error('[PROV] Error:', e);
+        cuerpo.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-center text-red-500">Error de conexión</td></tr>';
+    }
+}
+
+function toggleFormAsociar() {
+    const form = document.getElementById('prov-form-asociar');
+    if (form.classList.contains('hidden')) {
+        form.classList.remove('hidden');
+        cargarSelectorProveedores();
+    } else {
+        form.classList.add('hidden');
+    }
+}
+
+async function cargarSelectorProveedores() {
+    const sel = document.getElementById('prov-select-ruc');
+    sel.innerHTML = '<option value="">Cargando...</option>';
+    try {
+        const r = await fetch('/api/inventario/proveedores/selector');
+        const data = await r.json();
+        sel.innerHTML = '<option value="">Seleccione un proveedor...</option>';
+        if (data.success) {
+            data.proveedores.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.ruc;
+                opt.textContent = `${p.razon_social}${p.nombre_comercial ? ' — ' + p.nombre_comercial : ''}`;
+                sel.appendChild(opt);
+            });
+        }
+    } catch(e) {
+        sel.innerHTML = '<option value="">Error al cargar</option>';
+    }
+}
+
+async function guardarAsociacion() {
+    const ruc = document.getElementById('prov-select-ruc').value;
+    if (!ruc) { mostrarNotificacionInv('Selecciona un proveedor', 'error'); return; }
+
+    const payload = {
+        ruc_proveedor:      ruc,
+        codigo_proveedor:   document.getElementById('prov-codigo').value || null,
+        precio_compra:      document.getElementById('prov-precio').value || null,
+        moneda:             document.getElementById('prov-moneda').value,
+        plazo_entrega_dias: document.getElementById('prov-plazo').value || null,
+        es_principal:       document.getElementById('prov-principal').checked,
+        observaciones:      document.getElementById('prov-obs').value || null
+    };
+
+    try {
+        const r = await fetch(`/api/inventario/${_provModalIdInv}/proveedores/asociar`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if (data.success) {
+            mostrarNotificacionInv(data.message, 'success');
+            document.getElementById('prov-form-asociar').classList.add('hidden');
+            document.getElementById('formAsociarProveedor').reset();
+            cargarProveedoresDelItem(_provModalIdInv);
+        } else {
+            mostrarNotificacionInv(data.error || 'Error al asociar', 'error');
+        }
+    } catch(e) {
+        mostrarNotificacionInv('Error de conexión', 'error');
+    }
+}
+
+async function desasociarProveedor(idRelacion) {
+    if (!confirm('¿Quitar este proveedor del ítem?')) return;
+    try {
+        const r = await fetch(`/api/inventario/proveedores/desasociar/${idRelacion}`, { method: 'DELETE' });
+        const data = await r.json();
+        if (data.success) {
+            mostrarNotificacionInv(data.message, 'success');
+            cargarProveedoresDelItem(_provModalIdInv);
+        } else {
+            mostrarNotificacionInv(data.error || 'Error al desasociar', 'error');
+        }
+    } catch(e) {
+        mostrarNotificacionInv('Error de conexión', 'error');
+    }
+}
+
+function mostrarNotificacionInv(msg, tipo) {
+    // Reutiliza la función existente si hay una, si no usa alert
+    if (typeof mostrarNotificacion === 'function') { mostrarNotificacion(msg, tipo); return; }
+    if (typeof mostrarError === 'function' && tipo === 'error') { mostrarError(msg); return; }
+    alert(msg);
+}
+
 </script>
 {% endblock %}

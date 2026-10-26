@@ -366,3 +366,33 @@ def eliminar_proveedor(ruc):
     except Error as e:
         print(f"[PROVEEDORES] Error SQL: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# API: FICHA DE MATERIALES DE UN PROVEEDOR
+# ============================================================================
+
+@main_bp.route('/api/proveedores/<string:ruc>/materiales', methods=['GET'])
+@login_required
+def listar_materiales_de_proveedor(ruc):
+    """Lista los materiales de inventario vinculados a un proveedor usando SP"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+
+        cursor = connection.cursor(dictionary=True)
+        cursor.callproc('sp_listar_materiales_de_proveedor', [ruc])
+
+        materiales = []
+        for result in cursor.stored_results():
+            materiales = result.fetchall()
+
+        cursor.close()
+        connection.close()
+
+        return jsonify({'success': True, 'materiales': materiales}), 200
+
+    except Error as e:
+        print(f"[PROV-MATERIALES] Error SQL: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
