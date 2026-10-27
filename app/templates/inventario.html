@@ -660,7 +660,7 @@
 
 <!-- MODAL: Proveedores del Ítem -->
 <div id="modalProveedores" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] flex flex-col">
         <!-- Header -->
         <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 rounded-t-2xl flex items-center justify-between flex-shrink-0">
             <div>
@@ -673,7 +673,7 @@
         </div>
 
         <!-- Botón asociar -->
-        <div class="px-6 pt-4 flex-shrink-0">
+        <div id="prov-wrap-btn-asociar" class="px-6 pt-4 flex-shrink-0">
             <button onclick="toggleFormAsociar()"
                     class="w-full px-4 py-2.5 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-xl font-medium transition-colors flex items-center justify-center gap-2">
                 <i class="fas fa-plus-circle"></i> Asociar proveedor
@@ -683,6 +683,9 @@
         <!-- Formulario de asociar (oculto por defecto) -->
         <div id="prov-form-asociar" class="hidden px-6 pt-4 flex-shrink-0">
             <form id="formAsociarProveedor" class="bg-indigo-50 dark:bg-slate-700 rounded-xl p-4 space-y-3">
+                <div id="prov-edit-banner" class="hidden px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg text-xs text-amber-800 dark:text-amber-300">
+                    <i class="fas fa-pen mr-1"></i> Editando: <span id="prov-edit-nombre" class="font-semibold"></span>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div class="md:col-span-2">
                         <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Proveedor <span class="text-red-500">*</span></label>
@@ -725,13 +728,13 @@
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 pt-1">
-                    <button type="button" onclick="toggleFormAsociar()"
+                    <button type="button" onclick="cancelarFormProveedor()"
                             class="px-4 py-2 bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors">
                         Cancelar
                     </button>
-                    <button type="button" onclick="guardarAsociacion()"
+                    <button type="button" onclick="guardarAsociacion()" id="prov-btn-guardar"
                             class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors">
-                        <i class="fas fa-save mr-1"></i>Guardar
+                        <i class="fas fa-save mr-1"></i><span id="prov-btn-guardar-texto">Guardar</span>
                     </button>
                 </div>
             </form>
@@ -743,8 +746,8 @@
                 <thead class="bg-gray-50 dark:bg-slate-700">
                     <tr>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Proveedor</th>
-                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Teléfono</th>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Precio</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Observación</th>
                         <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Tipo</th>
                         <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Acción</th>
                     </tr>
@@ -2011,6 +2014,8 @@ function mostrarError(mensaje) {
 // MODAL: PROVEEDORES DEL ÍTEM
 // ============================================================================
 let _provModalIdInv = null;
+let _provListaActual = [];   // cache de proveedores del ítem abierto
+let _provEditandoRuc = null; // null = modo asociar | '20123456789' = modo edición
 
 function abrirModalProveedores(idInventario, btn) {
     _provModalIdInv = idInventario;
@@ -2023,11 +2028,51 @@ function abrirModalProveedores(idInventario, btn) {
 function cerrarModalProveedores() {
     document.getElementById('modalProveedores').classList.add('hidden');
     document.getElementById('prov-form-asociar').classList.add('hidden');
+    resetFormProveedor();
+    _provListaActual = [];
     _provModalIdInv = null;
+}
+
+// Deja el formulario limpio y en modo "asociar" (desbloquea el select de proveedor)
+function resetFormProveedor() {
+    _provEditandoRuc = null;
+
+    const form = document.getElementById('formAsociarProveedor');
+    if (form) form.reset();
+
+    const sel = document.getElementById('prov-select-ruc');
+    if (sel) {
+        sel.disabled = false;
+        sel.value = '';
+        sel.title = '';
+        sel.classList.remove('opacity-60', 'cursor-not-allowed');
+    }
+
+    const banner = document.getElementById('prov-edit-banner');
+    if (banner) banner.classList.add('hidden');
+
+    const textoBtn = document.getElementById('prov-btn-guardar-texto');
+    if (textoBtn) textoBtn.textContent = 'Guardar';
+
+    mostrarBotonAsociar(true);
+}
+
+// Muestra/oculta el botón grande "Asociar proveedor" (se oculta mientras el formulario está abierto)
+function mostrarBotonAsociar(visible) {
+    const wrap = document.getElementById('prov-wrap-btn-asociar');
+    if (wrap) wrap.classList.toggle('hidden', !visible);
+}
+
+// Escapa texto libre antes de insertarlo en HTML/atributos
+function escProv(v) {
+    return String(v === null || v === undefined ? '' : v)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 async function cargarProveedoresDelItem(idInventario) {
     const cuerpo = document.getElementById('prov-lista');
+    _provListaActual = [];
     cuerpo.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i>Cargando...</td></tr>';
 
     try {
@@ -2041,6 +2086,8 @@ async function cargarProveedoresDelItem(idInventario) {
             return;
         }
 
+        _provListaActual = data.proveedores;
+
         if (data.proveedores.length === 0) {
             cuerpo.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400 dark:text-gray-500"><i class="fas fa-truck text-3xl mb-2 block opacity-40"></i>Sin proveedores asociados aún</td></tr>';
             return;
@@ -2052,9 +2099,11 @@ async function cargarProveedoresDelItem(idInventario) {
                     <p class="font-semibold text-gray-900 dark:text-white text-sm">${p.razon_social}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400 font-mono">${p.ruc_proveedor}</p>
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">${p.telefono || '-'}</td>
-                <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
                     ${p.precio_compra ? `${p.moneda === 'DOLARES' ? '$' : 'S/'} ${parseFloat(p.precio_compra).toFixed(2)}` : '—'}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                    <p class="max-w-[330px] truncate" title="${escProv(p.observaciones)}">${escProv(p.observaciones) || '—'}</p>
                 </td>
                 <td class="px-4 py-3 text-center">
                     ${(p.es_principal == 1)
@@ -2063,11 +2112,18 @@ async function cargarProveedoresDelItem(idInventario) {
                     }
                 </td>
                 <td class="px-4 py-3 text-center">
-                    <button onclick="desasociarProveedor(${p.id_inventario_proveedor})"
-                            class="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                            title="Quitar proveedor">
-                        <i class="fas fa-unlink text-xs"></i>
-                    </button>
+                    <div class="flex items-center justify-center gap-1">
+                        <button onclick="editarProveedor('${p.ruc_proveedor}')"
+                                class="p-1.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                                title="Editar asociación">
+                            <i class="fas fa-pen text-xs"></i>
+                        </button>
+                        <button onclick="desasociarProveedor(${p.id_inventario_proveedor})"
+                                class="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                title="Quitar proveedor">
+                            <i class="fas fa-unlink text-xs"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `).join('');
@@ -2081,11 +2137,59 @@ async function cargarProveedoresDelItem(idInventario) {
 function toggleFormAsociar() {
     const form = document.getElementById('prov-form-asociar');
     if (form.classList.contains('hidden')) {
+        resetFormProveedor();          // siempre abre en modo "asociar"
         form.classList.remove('hidden');
+        mostrarBotonAsociar(false);
         cargarSelectorProveedores();
     } else {
-        form.classList.add('hidden');
+        cancelarFormProveedor();
     }
+}
+
+function cancelarFormProveedor() {
+    document.getElementById('prov-form-asociar').classList.add('hidden');
+    resetFormProveedor();
+}
+
+// Precarga el formulario con los datos de una asociación existente
+async function editarProveedor(ruc) {
+    const prov = _provListaActual.find(p => String(p.ruc_proveedor) === String(ruc));
+    if (!prov) { mostrarNotificacionInv('No se encontró el proveedor', 'error'); return; }
+
+    const form = document.getElementById('prov-form-asociar');
+    const sel  = document.getElementById('prov-select-ruc');
+
+    resetFormProveedor();
+    form.classList.remove('hidden');
+    mostrarBotonAsociar(false);
+
+    await cargarSelectorProveedores();
+
+    // El selector solo trae proveedores activos: si este ya no aparece, se agrega manualmente
+    if (!Array.from(sel.options).some(o => o.value === String(prov.ruc_proveedor))) {
+        const opt = document.createElement('option');
+        opt.value = prov.ruc_proveedor;
+        opt.textContent = `${prov.razon_social}${prov.nombre_comercial ? ' — ' + prov.nombre_comercial : ''}`;
+        sel.appendChild(opt);
+    }
+    sel.value = prov.ruc_proveedor;
+    sel.disabled = true;                                   // el proveedor no se cambia en edición
+    sel.title = 'El proveedor no se puede cambiar. Para reemplazarlo, quítalo y asocia otro.';
+    sel.classList.add('opacity-60', 'cursor-not-allowed');
+
+    document.getElementById('prov-codigo').value = prov.codigo_proveedor || '';
+    document.getElementById('prov-precio').value = (prov.precio_compra !== null && prov.precio_compra !== undefined) ? prov.precio_compra : '';
+    document.getElementById('prov-moneda').value = prov.moneda || 'SOLES';
+    document.getElementById('prov-plazo').value  = (prov.plazo_entrega_dias !== null && prov.plazo_entrega_dias !== undefined) ? prov.plazo_entrega_dias : '';
+    document.getElementById('prov-obs').value    = prov.observaciones || '';
+    document.getElementById('prov-principal').checked = (prov.es_principal == 1);
+
+    _provEditandoRuc = String(prov.ruc_proveedor);
+    document.getElementById('prov-edit-nombre').textContent = prov.razon_social;
+    document.getElementById('prov-edit-banner').classList.remove('hidden');
+    document.getElementById('prov-btn-guardar-texto').textContent = 'Actualizar';
+
+    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 async function cargarSelectorProveedores() {
@@ -2109,7 +2213,8 @@ async function cargarSelectorProveedores() {
 }
 
 async function guardarAsociacion() {
-    const ruc = document.getElementById('prov-select-ruc').value;
+    // En edición se fuerza el RUC original (el select está bloqueado)
+    const ruc = _provEditandoRuc || document.getElementById('prov-select-ruc').value;
     if (!ruc) { mostrarNotificacionInv('Selecciona un proveedor', 'error'); return; }
 
     const payload = {
@@ -2132,7 +2237,7 @@ async function guardarAsociacion() {
         if (data.success) {
             mostrarNotificacionInv(data.message, 'success');
             document.getElementById('prov-form-asociar').classList.add('hidden');
-            document.getElementById('formAsociarProveedor').reset();
+            resetFormProveedor();
             cargarProveedoresDelItem(_provModalIdInv);
         } else {
             mostrarNotificacionInv(data.error || 'Error al asociar', 'error');

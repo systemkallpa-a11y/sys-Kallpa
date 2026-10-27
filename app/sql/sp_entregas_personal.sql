@@ -14,10 +14,11 @@ CREATE PROCEDURE sp_listar_entrega_personal(
 BEGIN
     SELECT
         u.num_documento                                                        AS id_personal,
-        u.num_documento                                                        AS DOCUMENTO,
+        p.documento_numero                                                     AS DOCUMENTO,
         CONCAT(p.nombres, ' ', p.apellido_paterno,
                IF(p.apellido_materno IS NOT NULL AND p.apellido_materno <> '',
                   CONCAT(' ', p.apellido_materno), ''))                        AS NOMBRE_COMPLETO,
+        COALESCE(c.nombre, 'Sin Cargo')                                        AS CARGO,
         COALESCE(a.nombre, 'Sin Área')                                         AS AREA,
         COUNT(DISTINCT ep.id_entrega)                                          AS TOTAL_ENTREGAS,
         COALESCE(SUM(epd.cantidad), 0)                                         AS TOTAL_ITEMS,
@@ -35,12 +36,15 @@ BEGIN
       AND (
             p_busqueda IS NULL
             OR p_busqueda = ''
-            OR u.num_documento              LIKE CONCAT('%', p_busqueda, '%')
+            OR p.documento_numero           LIKE CONCAT('%', p_busqueda, '%')
             OR p.nombres                    LIKE CONCAT('%', p_busqueda, '%')
             OR p.apellido_paterno           LIKE CONCAT('%', p_busqueda, '%')
+            OR p.apellido_materno           LIKE CONCAT('%', p_busqueda, '%')
+            OR c.nombre                     LIKE CONCAT('%', p_busqueda, '%')
             OR a.nombre                     LIKE CONCAT('%', p_busqueda, '%')
           )
-    GROUP BY u.num_documento, p.nombres, p.apellido_paterno, p.apellido_materno, a.nombre
+    GROUP BY u.num_documento, p.documento_numero, p.nombres, p.apellido_paterno,
+             p.apellido_materno, c.nombre, a.nombre
     ORDER BY p.apellido_paterno ASC, p.nombres ASC;
 END$$
 
@@ -137,10 +141,11 @@ CREATE PROCEDURE sp_kardex_personal(
 BEGIN
     -- 1. Ficha del trabajador
     SELECT
-        u.num_documento                                                             AS documento,
+        p.documento_numero                                                          AS documento,
         CONCAT(p.nombres, ' ', p.apellido_paterno,
                IF(p.apellido_materno IS NOT NULL AND p.apellido_materno <> '',
                   CONCAT(' ', p.apellido_materno), ''))                             AS nombre_completo,
+        COALESCE(c.nombre, 'Sin Cargo')                                             AS cargo,
         COALESCE(a.nombre, 'Sin Área')                                              AS area,
         p.email
     FROM TblUsuario u
