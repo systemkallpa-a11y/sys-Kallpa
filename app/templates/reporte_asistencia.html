@@ -385,7 +385,7 @@
                     </div>
                     <div>
                         <h3 class="text-xl font-bold">Editar Marcación</h3>
-                        <p class="text-indigo-100 text-sm">Ajustar hora de marcación</p>
+                        <p id="edit-modal-subtitulo" class="text-indigo-100 text-sm">Ajustar hora de marcación</p>
                     </div>
                 </div>
                 <button onclick="cerrarModalEditarMarcacion()" class="text-white hover:text-gray-200 transition-colors">
@@ -1633,12 +1633,21 @@ function cerrarModalDetalle() {
 
 
 // ==================== FUNCIONES PARA EDITAR MARCACIÓN ====================
-function abrirModalEditarMarcacion(idMarcacion, hora, tipo) {
+// Modal unificado: si el slot tiene id → EDITA (PUT/UPDATE);
+// si el slot está vacío (sin id) → REGISTRA (POST/INSERT).
+let editarModalTurno = null; // turno del slot en edición (1=mañana, 2=tarde)
+
+function abrirModalEditarMarcacion(idMarcacion, hora, tipo, turno) {
+    const esNuevo = !idMarcacion;
+    editarModalTurno = turno || null;
     document.getElementById('modal-editar-marcacion').classList.remove('hidden');
-    document.getElementById('edit-id-marcacion').value = idMarcacion;
-    document.getElementById('edit-hora-actual').value = hora;
+    document.getElementById('edit-id-marcacion').value = idMarcacion || '';
+    document.getElementById('edit-hora-actual').value = esNuevo ? '--' : hora;
     document.getElementById('edit-tipo-marcacion').value = tipo;
-    document.getElementById('edit-nueva-hora').value = hora;
+    document.getElementById('edit-nueva-hora').value = hora || '';
+    document.getElementById('edit-modal-subtitulo').textContent = esNuevo
+        ? 'Registrar marcación faltante'
+        : 'Ajustar hora de marcación';
 }
 
 function cerrarModalEditarMarcacion() {
@@ -1647,6 +1656,8 @@ function cerrarModalEditarMarcacion() {
     document.getElementById('edit-hora-actual').value = '';
     document.getElementById('edit-tipo-marcacion').value = '';
     document.getElementById('edit-nueva-hora').value = '';
+    document.getElementById('edit-modal-subtitulo').textContent = 'Ajustar hora de marcación';
+    editarModalTurno = null;
 }
 
 function ajustarAHoraOficial() {
@@ -1661,12 +1672,20 @@ function ajustarAHoraOficial() {
 function guardarMarcacionEditada() {
     const idMarcacion = document.getElementById('edit-id-marcacion').value;
     const nuevaHora = document.getElementById('edit-nueva-hora').value;
+    const tipoMarcacion = document.getElementById('edit-tipo-marcacion').value;
     
     if (!nuevaHora) {
         mostrarMensaje('Por favor ingresa una nueva hora', 'warning');
         return;
     }
     
+    // Sin id = la marcación no existe aún → registrar (POST/INSERT)
+    if (!idMarcacion) {
+        guardarMarcacionComoNueva(tipoMarcacion, nuevaHora);
+        return;
+    }
+    
+    // Con id = la marcación existe → editar hora (PUT/UPDATE)
     // Confirmar cambio
     if (!confirm(`¿Estás seguro de cambiar la hora de marcación a ${nuevaHora}?`)) {
         return;
@@ -1703,6 +1722,50 @@ function guardarMarcacionEditada() {
         console.error('Error:', error);
         mostrarMensaje('Error al actualizar la marcación', 'error');
     });
+}
+
+// Slot vacío: registrar la marcación faltante con la hora indicada (POST)
+async function guardarMarcacionComoNueva(tipoMarcacion, nuevaHora) {
+    if (!detalleActual.numDocumento || !detalleActual.fecha) {
+        mostrarMensaje('No hay un día seleccionado para registrar', 'warning');
+        return;
+    }
+
+    const turnoTexto = editarModalTurno === 1 ? 'Turno mañana' : 'Turno tarde';
+    if (!confirm(`¿Registrar ${tipoMarcacion} (${turnoTexto}) a las ${nuevaHora} el ${detalleActual.fecha}?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/marcacion/registrar-manual', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                num_documento: detalleActual.numDocumento,
+                fecha: detalleActual.fecha,
+                hora: nuevaHora,
+                tipo_marcacion: tipoMarcacion,
+                turno: editarModalTurno
+            })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarMensaje(data.message || 'Marcación registrada exitosamente', 'success');
+            cerrarModalEditarMarcacion();
+            // Refrescar detalle del día y resumen
+            verDetalleDia(detalleActual.numDocumento, detalleActual.fecha, detalleActual.nombre);
+            aplicarFiltros();
+        } else {
+            mostrarMensaje(data.error || 'Error al registrar la marcación', 'error');
+        }
+    } catch (error) {
+        console.error('[REGISTRAR_MANUAL] Error:', error);
+        mostrarMensaje('Error al registrar la marcación', 'error');
+    }
 }
 
 // ============================================================================
@@ -2022,13 +2085,7 @@ function renderizarTablaDetalle(slots) {
 
         const turnoClase = m.turno === 1 ? 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200' : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
 
-        const botonesEditar = vacia
-
-            ? `<button onclick="mostrarMensaje('Aún no se registra esta marcación', 'warning')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-medium transition-colors" title="Editar marcación">
-                    <i class="fas fa-edit mr-1"></i>Editar
-                </button>`
-
-            : `<button onclick="abrirModalEditarMarcacion(${m.id_marcacion}, '${m.hora}', '${m.tipo_marcacion}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-medium transition-colors" title="Editar marcación">
+        const botonesEditar = `<button onclick="abrirModalEditarMarcacion(${m.id_marcacion || 'null'}, '${m.hora || ''}', '${m.tipo_marcacion}', ${m.turno || 1})" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-medium transition-colors" title="Editar marcación">
                     <i class="fas fa-edit mr-1"></i>Editar
                 </button>`;
 

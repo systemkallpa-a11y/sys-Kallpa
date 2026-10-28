@@ -519,6 +519,181 @@ def editar_marcacion(id_marcacion):
 
 
 # ============================================================================
+# API: REGISTRAR MARCACIÓN MANUAL (SLOT VACÍO)
+# ============================================================================
+
+@marcacion_bp.route('/api/marcacion/registrar-manual', methods=['POST'])
+@login_required
+def registrar_marcacion_manual():
+    """Registrar manualmente una marcación faltante de un empleado.
+
+    Se usa desde el modal de detalle del día cuando un slot (entrada/salida
+    de un turno) está vacío porque el empleado no marcó. El alta es siempre
+    histórica: fecha y hora elegidas por el admin, sin GPS ni foto.
+    """
+    try:
+        data = request.get_json() or {}
+        num_documento = data.get('num_documento')
+        fecha = data.get('fecha')       # YYYY-MM-DD
+        hora = data.get('hora')         # HH:MM
+        tipo_marcacion = (data.get('tipo_marcacion') or '').upper()
+        turno = data.get('turno')
+        observacion = (data.get('observacion') or '').strip() or None
+
+        print(f"[REGISTRO_MANUAL] [...] num_documento={num_documento}, fecha={fecha}, "
+              f"hora={hora}, tipo={tipo_marcacion}, turno={turno}")
+
+        if not num_documento or not fecha or not hora or tipo_marcacion not in ('ENTRADA', 'SALIDA'):
+            return jsonify({'success': False, 'error': 'Faltan datos: num_documento, fecha, hora, tipo_marcacion'}), 400
+
+        try:
+            turno = int(turno)
+        except (TypeError, ValueError):
+            turno = None
+        if turno not in (1, 2):
+            return jsonify({'success': False, 'error': 'Turno inválido (debe ser 1 o 2)'}), 400
+
+        try:
+            fecha_dt = datetime.strptime(fecha, '%Y-%m-%d').date()
+            hora_dt = datetime.strptime(hora, '%H:%M').time()
+        except ValueError:
+            return jsonify({'success': False, 'error': 'Formato inválido (fecha YYYY-MM-DD, hora HH:MM)'}), 400
+
+        fecha_hora = datetime.combine(fecha_dt, hora_dt)
+
+        connection = get_db_connection()
+        if not connection:
+            print("[REGISTRO_MANUAL] [X] Error de conexin a BD")
+            return jsonify({'success': False, 'error': 'Error de conexin'}), 500
+
+        try:
+            cursor = connection.cursor(dictionary=True)
+
+            # num_usuario del empleado (columna NOT NULL de TblMarcacion)
+            cursor.execute("""
+                SELECT num_usuario FROM TblUsuario WHERE num_documento = %s
+            """, (num_documento,))
+            usuario = cursor.fetchone()
+            if not usuario:
+                cursor.close()
+                connection.close()
+                return jsonify({'success': False, 'error': 'Empleado no encontrado'}), 404
+
+            # Horario del día: define el turno y el estado de la entrada
+            cursor.execute("""
+                SELECT hora_entrada, hora_salida, hora_entrada2
+                  FROM TblHorarioTrabajo
+                 WHERE num_documento = %s
+                   AND es_activo = 1
+                   AND UPPER(dia_semana) = CASE DAYOFWEEK(%s)
+                        WHEN 1 THEN 'DOMINGO'
+                        WHEN 2 THEN 'LUNES'
+                        WHEN 3 THEN 'MARTES'
+                        WHEN 4 THEN 'MIÉRCOLES'
+                        WHEN 5 THEN 'JUEVES'
+                        WHEN 6 THEN 'VIERNES'
+                        WHEN 7 THEN 'SÁBADO'
+                   END
+                 LIMIT 1
+            """, (num_documento, fecha))
+            horario = cursor.fetchone()
+
+            def hora_segundos(valor):
+                partes = str(valor).split(':')
+                try:
+                    return int(partes[0]) * 3600 + int(partes[1]) * 60 + (int(partes[2]) if len(partes) > 2 else 0)
+                except (ValueError, IndexError):
+                    return -1
+
+            # El día ya no debe tener 4 marcaciones (los 4 slots del detalle)
+            cursor.execute("""
+                SELECT tipo_marcacion, TIME(fecha_marcacion) as hora
+                  FROM TblMarcacion
+                 WHERE num_documento = %s AND DATE(fecha_marcacion) = %s
+                 ORDER BY fecha_marcacion ASC
+            """, (num_documento, fecha))
+            existentes = cursor.fetchall()
+
+            if len(existentes) >= 4:
+                cursor.close()
+                connection.close()
+                return jsonify({'success': False, 'error': 'Este día ya tiene las 4 marcaciones registradas'}), 409
+
+            # El slot destino debe seguir vacío: misma regla de turno que
+            # sp_ObtenerDetalleDia en el backend (ver detalle-dia arriba).
+            def turno_de(tipo_e, hora_e, ultima_entrada):
+                base = hora_e if tipo_e == 'ENTRADA' else ultima_entrada
+                if not horario or horario.get('hora_entrada2') is None or horario.get('hora_salida') is None:
+                    return 1
+                if base is None:
+                    return 1 if hora_segundos(hora_e) <= 14 * 3600 else 2
+                return 1 if hora_segundos(str(base)) <= hora_segundos(str(horario['hora_salida'])) else 2
+
+            ultima_entrada = None
+            for marc in existentes:
+                hora_e = marc['hora'] or '00:00:00'
+                if (marc['tipo_marcacion'] == tipo_marcacion
+                        and turno_de(marc['tipo_marcacion'], hora_e, ultima_entrada) == turno):
+                    cursor.close()
+                    connection.close()
+                    return jsonify({
+                        'success': False,
+                        'error': f'Ya existe una {tipo_marcacion.lower()} registrada en el turno {turno} de ese día'
+                    }), 409
+                if marc['tipo_marcacion'] == 'ENTRADA':
+                    ultima_entrada = hora_e
+
+            # Estado calculado como sp_EditarMarcacion (solo para ENTRADA)
+            estado_calculado = 'Registrado'
+            if tipo_marcacion == 'ENTRADA':
+                if horario and horario.get('hora_entrada'):
+                    he = hora_segundos(str(horario['hora_entrada']))
+                    hn = hora_segundos(hora)
+                    if hn <= he + 5 * 60:
+                        estado_calculado = 'ASISTIO'
+                    elif hn <= he + 30 * 60:
+                        estado_calculado = 'TARDE'
+                    else:
+                        estado_calculado = 'ASISTIO +5'
+                else:
+                    estado_calculado = 'ASISTIO'
+
+            cursor.execute("""
+                INSERT INTO TblMarcacion
+                    (num_usuario, num_documento, tipo_marcacion, fecha_marcacion,
+                     tipo_ubicacion, dispositivo, observacion, estado)
+                VALUES (%s, %s, %s, %s, 'OFICINA', 'ADMIN', %s, %s)
+            """, (usuario['num_usuario'], num_documento, tipo_marcacion,
+                  fecha_hora, observacion, estado_calculado))
+
+            connection.commit()
+            nuevo_id = cursor.lastrowid
+
+            cursor.close()
+            connection.close()
+
+            print(f"[REGISTRO_MANUAL] [OK] Marcación ID={nuevo_id}: {tipo_marcacion} "
+                  f"{fecha_hora} (turno {turno}, estado={estado_calculado})")
+
+            return jsonify({
+                'success': True,
+                'message': f'{tipo_marcacion} registrada manualmente a las {hora}',
+                'id_marcacion': nuevo_id,
+                'estado': estado_calculado
+            }), 201
+
+        except Error as e:
+            print(f"[REGISTRO_MANUAL] [X] Error SQL: {e}")
+            if connection:
+                connection.close()
+            return jsonify({'success': False, 'error': f'Error en la base de datos: {str(e)}'}), 500
+
+    except Exception as e:
+        print(f"[REGISTRO_MANUAL] [X] Error general: {e}")
+        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+
+
+# ============================================================================
 # API: OBTENER REPORTE DE ASISTENCIA DE TODOS LOS USUARIOS
 # ============================================================================
 
