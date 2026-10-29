@@ -277,6 +277,25 @@ def generar_memo():
         story = []
         styles = getSampleStyleSheet()
         
+        # ========== LOGO DE EMPRESA (ESQUINA SUPERIOR IZQUIERDA) ==========
+        if empresa_logo_bytes:
+            try:
+                from reportlab.platypus import Image as RLImage
+                from io import BytesIO
+                
+                logo_buffer = BytesIO(empresa_logo_bytes)
+                logo_img = RLImage(logo_buffer)
+                logo_max_width = 1.04*inch
+                logo_max_height = 0.65*inch
+                ratio = min(logo_max_width / logo_img.drawWidth, logo_max_height / logo_img.drawHeight)
+                logo_img.drawWidth = logo_img.drawWidth * ratio
+                logo_img.drawHeight = logo_img.drawHeight * ratio
+                logo_img.hAlign = 'LEFT'
+                story.append(logo_img)
+                story.append(Spacer(1, 0.4*inch))
+            except Exception as e:
+                print(f"[MEMO_PDF] [!] Error al insertar logo: {e}")
+        
         # Estilos personalizados - formato exacto de las plantillas
         header_style = ParagraphStyle(
             'MemoHeader',
@@ -609,29 +628,6 @@ def generar_memo():
         # ========== FIRMA ==========
         story.append(Paragraph("Atentamente,", body_style))
         story.append(Spacer(1, 0.2*inch))
-        
-        # Logo de empresa como sello (si existe) - mantener proporcionales
-        if empresa_logo_bytes:
-            try:
-                from reportlab.platypus import Image as RLImage
-                from io import BytesIO
-                
-                logo_buffer = BytesIO(empresa_logo_bytes)
-                logo_img = RLImage(logo_buffer)
-                # Mantener proporcion: usar solo ancho max, altura se calcula solas
-                logo_max_width = 1.6*inch
-                logo_max_height = 1.0*inch
-                # Calcular escala manteniendo aspect ratio
-                ratio = min(logo_max_width / logo_img.drawWidth, logo_max_height / logo_img.drawHeight)
-                logo_img.drawWidth = logo_img.drawWidth * ratio
-                logo_img.drawHeight = logo_img.drawHeight * ratio
-                logo_img.hAlign = 'CENTER'
-                story.append(logo_img)
-            except Exception as e:
-                print(f"[MEMO_PDF] [!] Error al insertar logo: {e}")
-                story.append(Spacer(1, 0.15*inch))
-        else:
-            story.append(Spacer(1, 0.15*inch))
         
         # Imagen de firma y sello (busca en platillas de documento/Firmas/)
         import os as _os
