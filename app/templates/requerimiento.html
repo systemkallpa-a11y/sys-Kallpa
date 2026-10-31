@@ -718,26 +718,30 @@ async function cargarItemsPresupuesto(idPresupuesto) {
         if (data.success && data.data && data.data.detalles) {
             const detalles = data.data.detalles;
             
-            // ⭐ DEBUG: Ver qué valores de id_material estamos recibiendo
+            // ⭐ DEBUG: Ver qué valores de id_inventario estamos recibiendo
             console.log('[DEBUG_ID_MATERIAL] Detalles recibidos del backend:', detalles.map(item => ({
                 id_detalle: item.id_detalle,
                 descripcion: item.descripcion,
-                id_material: item.id_material,
+                id_inventario: item.id_inventario,
                 tipo_item: item.tipo_item
             })));
             
-            const html = detalles.map((item, idx) => `
+            const html = detalles.map((item, idx) => {
+                const idInv = item.id_inventario ?? '';
+                const etiquetaTipo = (item.tipo_item || 'MATERIAL') === 'PARTIDA' ? 'PARTIDA' : '';
+                return `
                 <div class="bg-white dark:bg-slate-700 p-3 rounded-lg border border-gray-200 dark:border-slate-600 flex items-center justify-between">
                     <div class="flex-1">
-                        <p class="font-medium text-gray-900 dark:text-white text-sm">${item.material_nombre || item.descripcion}</p>
+                        <p class="font-medium text-gray-900 dark:text-white text-sm">${item.material_nombre || item.descripcion}${etiquetaTipo ? ` <span class="ml-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800">PARTIDA</span>` : ''}</p>
                         <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
                             Disp: ${parseFloat(item.cantidad_saldo || item.cantidad || 0).toFixed(2)} ${item.unidad_nombre || item.unidad_abreviatura || 'und'}
                             ${item.cantidad_consumida && parseFloat(item.cantidad_consumida) > 0 ? `(Cons: ${parseFloat(item.cantidad_consumida).toFixed(2)})` : ''}
                         </p>
                     </div>
-                    <button type="button" class="btn-agregar-item ml-2 px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded text-xs font-medium transition-colors" data-id-detalle="${item.id_detalle}" data-id-material="${item.id_material || ''}" data-nombre="${(item.material_nombre || item.descripcion).replace(/"/g, '&quot;')}" data-cantidad="${item.cantidad_saldo || item.cantidad}" data-tipo="${item.tipo_item}" data-unidad="${item.unidad_nombre || item.unidad_abreviatura || 'und'}" data-cantidad-original="${item.cantidad}" data-cantidad-consumida="${item.cantidad_consumida || 0}">Agregar</button>
+                    <button type="button" class="btn-agregar-item ml-2 px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded text-xs font-medium transition-colors" data-id-detalle="${item.id_detalle}" data-id-inventario="${idInv}" data-nombre="${(item.material_nombre || item.descripcion).replace(/"/g, '&quot;')}" data-cantidad="${item.cantidad_saldo || item.cantidad}" data-tipo="${item.tipo_item}" data-unidad="${item.unidad_nombre || item.unidad_abreviatura || 'und'}" data-cantidad-original="${item.cantidad}" data-cantidad-consumida="${item.cantidad_consumida || 0}">Agregar</button>
                 </div>
-            `).join('');
+                `;
+            }).join('');
             document.getElementById('contenido-resultados').innerHTML = html;
             
             // Agregar event listeners a los botones
@@ -746,7 +750,7 @@ async function cargarItemsPresupuesto(idPresupuesto) {
                     // ⭐ DEBUG: Ver qué valores estamos pasando a agregarItem
                     console.log('[DEBUG_ID_MATERIAL] Botón clickeado. Dataset:', {
                         idDetalle: this.dataset.idDetalle,
-                        idMaterial: this.dataset.idMaterial,
+                        idInventario: this.dataset.idInventario,
                         nombre: this.dataset.nombre,
                         tipo: this.dataset.tipo
                     });
@@ -757,7 +761,7 @@ async function cargarItemsPresupuesto(idPresupuesto) {
                         this.dataset.cantidad,
                         this.dataset.tipo,
                         this.dataset.unidad,
-                        this.dataset.idMaterial ? parseInt(this.dataset.idMaterial) : null
+                        this.dataset.idInventario ? parseInt(this.dataset.idInventario) : null
                     );
                 });
             });
@@ -767,7 +771,7 @@ async function cargarItemsPresupuesto(idPresupuesto) {
     }
 }
 
-function agregarItem(idDetalle, nombre, cantidad, tipo, unidad, idMaterial = null) {
+function agregarItem(idDetalle, nombre, cantidad, tipo, unidad, idInventario = null) {
     // ⭐ DEBUG: Ver qué valores están llegando a agregarItem
     console.log('[DEBUG_ID_MATERIAL] agregarItem llamado con:', {
         idDetalle,
@@ -775,18 +779,18 @@ function agregarItem(idDetalle, nombre, cantidad, tipo, unidad, idMaterial = nul
         cantidad,
         tipo,
         unidad,
-        idMaterial
+        idInventario
     });
     
     // cantidad aquí es ahora cantidad_saldo (disponible)
     const nuevoItem = { 
         id_detalle_presupuesto: idDetalle,
-        id_material: idMaterial,
+        id_inventario: idInventario,
         nombre: nombre,
         cantidad: cantidad,  // cantidad_saldo
         cantidad_saldo: cantidad,  // guardar el saldo disponible
         tipo_item: tipo
-        // unidad_medida removida - se obtiene vía id_material → TblMateriales → TblUnidadMedida
+        // unidad_medida removida - se obtiene vía id_inventario → TblInventario → TblUnidadMedida
     };
     
     console.log('[DEBUG_ID_MATERIAL] Item agregado al array:', nuevoItem);
@@ -845,7 +849,7 @@ function eliminarItem(idx) {
 function actualizarResumen() {
     let totalItems = itemsRequerimiento.length;
     let materiales = itemsRequerimiento.filter(i => i.tipo_item === 'MATERIAL').length;
-    let servicios = itemsRequerimiento.filter(i => i.tipo_item === 'SERVICIO').length;
+    let servicios = itemsRequerimiento.filter(i => i.tipo_item === 'SERVICIO' || i.tipo_item === 'PARTIDA').length;
     
     document.getElementById('total-items').textContent = totalItems;
     document.getElementById('total-materiales').textContent = materiales;
@@ -866,11 +870,11 @@ async function guardarRequerimiento(e) {
             const cantidad_editada = parseInt(input.value) || parseInt(itemsRequerimiento[idx].cantidad) || 1;
             items_finales.push({
                 id_detalle_presupuesto: itemsRequerimiento[idx].id_detalle_presupuesto,
-                id_material: itemsRequerimiento[idx].id_material,  // ⭐ AGREGAR id_material
+                id_inventario: itemsRequerimiento[idx].id_inventario,  // ⭐ ID definitivo
                 nombre: itemsRequerimiento[idx].nombre,
                 cantidad: cantidad_editada,  // ⭐ USAR CANTIDAD EDITADA
                 tipo_item: itemsRequerimiento[idx].tipo_item
-                // unidad removida - se obtiene vía id_material → TblMateriales → TblUnidadMedida
+                // unidad removida - se obtiene vía id_inventario → TblInventario → TblUnidadMedida
             });
         }
     });
@@ -879,9 +883,9 @@ async function guardarRequerimiento(e) {
     
     // ⭐ DEBUG DETALLADO: Ver cada item individual
     items_finales.forEach((item, idx) => {
-        console.log(`[DEBUG_ID_MATERIAL] Item ${idx}:`, {
+        console.log(`[DEBUG_ITEM] Item ${idx}:`, {
             id_detalle_presupuesto: item.id_detalle_presupuesto,
-            id_material: item.id_material,
+            id_inventario: item.id_inventario,
             nombre: item.nombre,
             tipo_item: item.tipo_item
         });
@@ -1488,7 +1492,7 @@ function mostrarItemsEdicion(detalles) {
 function actualizarResumenEdicion(detalles) {
     let totalItems = detalles.length;
     let materiales = detalles.filter(i => i.tipo_item === 'MATERIAL').length;
-    let servicios = detalles.filter(i => i.tipo_item === 'SERVICIO').length;
+    let servicios = detalles.filter(i => i.tipo_item === 'SERVICIO' || i.tipo_item === 'PARTIDA').length;
     
     document.getElementById('edit-total-items').textContent = totalItems;
     document.getElementById('edit-total-materiales').textContent = materiales;
@@ -1569,7 +1573,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             descripcion: '', 
                             cantidad: 1,
                             tipo_item: cantidadField ? cantidadField.getAttribute('data-tipo-item') || 'MATERIAL' : 'MATERIAL',
-                            id_material: cantidadField ? (cantidadField.getAttribute('data-id-material') || null) : null
+                            id_inventario: cantidadField ? (cantidadField.getAttribute('data-id-inventario') || null) : null
                         };
                         detalles_editados.push(detalle);
                     }
@@ -1673,18 +1677,22 @@ async function cargarItemsPresupuestoEdicion(idPresupuesto) {
             const detalles = data.data.detalles;
             const resultadosDiv = document.getElementById('edit-resultados-presupuesto');
             
-            const html = detalles.map((item, idx) => `
+            const html = detalles.map((item, idx) => {
+                const idInv = item.id_inventario ?? '';
+                const etiquetaTipo = (item.tipo_item || 'MATERIAL') === 'PARTIDA' ? 'PARTIDA' : '';
+                return `
                 <div class="bg-white dark:bg-slate-700 p-3 rounded-lg border border-gray-200 dark:border-slate-600 flex items-center justify-between">
                     <div class="flex-1">
-                        <p class="font-medium text-gray-900 dark:text-white text-sm">${item.material_nombre || item.descripcion}</p>
+                        <p class="font-medium text-gray-900 dark:text-white text-sm">${item.material_nombre || item.descripcion}${etiquetaTipo ? ` <span class="ml-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800">PARTIDA</span>` : ''}</p>
                         <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
                             Disp: ${parseFloat(item.cantidad_saldo || item.cantidad || 0).toFixed(2)} ${item.unidad_nombre || item.unidad_abreviatura || 'und'}
                             ${item.cantidad_consumida && parseFloat(item.cantidad_consumida) > 0 ? `(Cons: ${parseFloat(item.cantidad_consumida).toFixed(2)})` : ''}
                         </p>
                     </div>
-                    <button type="button" class="btn-agregar-item-edicion ml-2 px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded text-xs font-medium transition-colors" data-id-detalle="${item.id_detalle}" data-id-material="${item.id_material || ''}" data-nombre="${(item.material_nombre || item.descripcion).replace(/"/g, '&quot;')}" data-cantidad="${item.cantidad_saldo || item.cantidad}" data-tipo="${item.tipo_item}" data-unidad="${item.unidad_nombre || item.unidad_abreviatura || 'und'}">Agregar</button>
+                    <button type="button" class="btn-agregar-item-edicion ml-2 px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded text-xs font-medium transition-colors" data-id-detalle="${item.id_detalle}" data-id-inventario="${idInv}" data-nombre="${(item.material_nombre || item.descripcion).replace(/"/g, '&quot;')}" data-cantidad="${item.cantidad_saldo || item.cantidad}" data-tipo="${item.tipo_item}" data-unidad="${item.unidad_nombre || item.unidad_abreviatura || 'und'}">Agregar</button>
                 </div>
-            `).join('');
+                `;
+            }).join('');
             resultadosDiv.innerHTML = html;
             resultadosDiv.classList.remove('hidden');
             
@@ -1697,7 +1705,7 @@ async function cargarItemsPresupuestoEdicion(idPresupuesto) {
                         this.dataset.cantidad,
                         this.dataset.tipo,
                         this.dataset.unidad,
-                        this.dataset.idMaterial ? parseInt(this.dataset.idMaterial) : null
+                        this.dataset.idInventario ? parseInt(this.dataset.idInventario) : null
                     );
                 });
             });
@@ -1721,7 +1729,7 @@ async function cargarItemsPresupuestoEdicion(idPresupuesto) {
 }
 
 // Agregar item desde presupuesto a edición
-function agregarItemAEdicion(idDetalle, nombre, cantidad, tipo, unidad, idMaterial = null) {
+function agregarItemAEdicion(idDetalle, nombre, cantidad, tipo, unidad, idInventario = null) {
     try {
         // Obtener contenedor de items
         const container = document.getElementById('edit-items-lista');
@@ -1765,7 +1773,7 @@ function agregarItemAEdicion(idDetalle, nombre, cantidad, tipo, unidad, idMateri
                             type="number"
                             data-id-detalle="${nuevoId}"
                             data-field="cantidad"
-                            data-id-material="${idMaterial || ''}"
+                            data-id-inventario="${idInventario || ''}"
                             data-tipo-item="${tipo}"
                             value="${cantidad}"
                             min="1"

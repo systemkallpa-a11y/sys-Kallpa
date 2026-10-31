@@ -242,7 +242,8 @@ async function cargarDatosPresupuestoParaEditar(id_presupuesto) {
                 materiales_agregados.push({
                     id_temporal: id_contador_material,
                     id_detalle: m.id_detalle,
-                    id_material: m.id_material,
+                    id_inventario: m.id_inventario ?? null,
+                    tipo_item: 'MATERIAL',
                     nombre: m.nombre || 'Sin nombre',
                     codigo: m.codigo || '',
                     categoria: m.categoria || '',
@@ -263,6 +264,8 @@ async function cargarDatosPresupuestoParaEditar(id_presupuesto) {
                 servicios_agregados.push({
                     id_temporal: id_contador_servicio,
                     id_detalle: s.id_detalle,
+                    id_inventario: s.id_inventario ?? null,
+                    tipo_item: (s.tipo_item || 'SERVICIO').toUpperCase(),
                     descripcion: s.descripcion || '',
                     cantidad: parseFloat(s.cantidad) || 0,
                     precio_unitario: parseFloat(s.precio_unitario) || 0,
@@ -444,10 +447,14 @@ function mostrarResultadosMateriales(materiales) {
     
     console.log('[MOSTRAR_RESULTADOS] 📋 Procesando', materiales.length, 'materiales...');
     
-    // Filtrar materiales que ya estén agregados
-    const filtrados = materiales.filter(m => 
-        !materiales_agregados.some(ma => ma.id_material === m.id_material)
-    );
+    // Filtrar items que ya estén agregados (materiales o servicios)
+    const filtrados = materiales.filter(m => {
+        const id = m.id_inventario;
+        if (id == null) return true;
+        const enMateriales = materiales_agregados.some(ma => ma.id_inventario === id);
+        const enServicios = servicios_agregados.some(sa => sa.id_inventario === id);
+        return !enMateriales && !enServicios;
+    });
     
     console.log('[MOSTRAR_RESULTADOS] 📋 Después del filtrado:', filtrados.length, 'materiales únicos');
     
@@ -468,24 +475,33 @@ function mostrarResultadosMateriales(materiales) {
         console.log('[MOSTRAR_RESULTADOS] 🔨 Generando HTML...');
         
         lista.innerHTML = filtrados.map((m, idx) => {
-            const id_material = m.id_material || `temp_${Date.now()}_${idx}`;
+            const id_inventario = m.id_inventario;
             const materialKey = `material_${Date.now()}_${idx}`;
             window[materialKey] = {
-                id: id_material,
+                id: id_inventario,
                 nombre: m.nombre || 'Sin nombre',
-                codigo: m.codigo_material || m.codigo || '',
+                codigo: m.codigo || '',
                 categoria: m.categoria || 'Sin categoría',
-                unidad: m.unidad_medida || m.unidad || 'Unidad'
+                unidad: m.unidad_medida || m.unidad || 'Unidad',
+                tipo_inventario: (m.tipo_inventario || 'MATERIAL').toUpperCase()
             };
+            
+            const esPartida = (m.tipo_inventario || '').toUpperCase() === 'PARTIDA';
+            const esServicio = (m.tipo_inventario || '').toUpperCase() === 'SERVICIO';
+            const etiqueta = esPartida
+                ? '<span class="ml-2 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800">PARTIDA</span>'
+                : (esServicio
+                    ? '<span class="ml-2 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-800">SERVICIO</span>'
+                    : '');
             
             return `
             <div class="px-4 py-3 hover:bg-gray-100 dark:hover:bg-slate-700 cursor-pointer border-b border-gray-200 dark:border-slate-700 transition-colors flex items-center justify-between group" 
                  onclick="agregarMaterialDeBusquedaSeguro('${materialKey}')" 
                  title="Click para agregar">
                 <div class="flex-1">
-                    <div class="font-medium text-gray-900 dark:text-white">${m.nombre || 'Sin nombre'}</div>
+                    <div class="font-medium text-gray-900 dark:text-white">${m.nombre || 'Sin nombre'}${etiqueta}</div>
                     <div class="text-sm text-gray-600 dark:text-gray-400">
-                        ${m.codigo_material || m.codigo || 'S/C'} • ${m.categoria || 'Sin categoría'} • ${m.unidad_medida || m.unidad || 'Unidad'}
+                        ${m.codigo || 'S/C'} • ${m.categoria || 'Sin categoría'} • ${m.unidad_medida || m.unidad || 'Unidad'}
                     </div>
                 </div>
                 <button type="button" class="ml-2 px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap flex items-center gap-1">
@@ -524,23 +540,51 @@ function agregarMaterialDeBusquedaSeguro(materialKey) {
     }
     
     console.log('[AGREGAR_MATERIAL] Agregando:', materialData);
-    agregarMaterialDeBusqueda(materialData.id, materialData.nombre, materialData.codigo, materialData.categoria, materialData.unidad);
+    agregarMaterialDeBusqueda(
+        materialData.id,
+        materialData.nombre,
+        materialData.codigo,
+        materialData.categoria,
+        materialData.unidad,
+        materialData.tipo_inventario
+    );
 }
 
-function agregarMaterialDeBusqueda(id_material, nombre, codigo, categoria, unidad) {
-    console.log('[AGREGAR_MATERIAL] Agregando:', { id_material, nombre, codigo, categoria, unidad });
+function agregarMaterialDeBusqueda(id_inventario, nombre, codigo, categoria, unidad, tipo_inventario) {
+    console.log('[AGREGAR_MATERIAL] Agregando:', { id_inventario, nombre, codigo, categoria, unidad, tipo_inventario });
     
     // Limpiar búsqueda
     document.getElementById('buscador-material').value = '';
     document.getElementById('filtro-categoria').value = '';
     document.getElementById('resultados-materiales').classList.add('hidden');
     
+    const tipo = (tipo_inventario || 'MATERIAL').toUpperCase();
+    
+    // Servicios y partidas del catalogo van a la seccion Servicios
+    if (tipo === 'SERVICIO' || tipo === 'PARTIDA') {
+        id_contador_servicio++;
+        servicios_agregados.push({
+            id_temporal: id_contador_servicio,
+            id_inventario: id_inventario,
+            tipo_item: tipo,
+            descripcion: nombre,
+            cantidad: 1,
+            precio_unitario: 0,
+            subtotal: 0
+        });
+        renderizarServicios();
+        actualizarTotales();
+        console.log('[AGREGAR_MATERIAL] ✓ Servicio/partida agregado. Total:', servicios_agregados.length);
+        return;
+    }
+    
     // Agregar material con valores vacíos para cantidad y precio
     id_contador_material++;
     
     const material = {
         id_temporal: id_contador_material,
-        id_material: id_material,
+        id_inventario: id_inventario,
+        tipo_item: 'MATERIAL',
         nombre: nombre,
         codigo: codigo,
         categoria: categoria,
@@ -654,6 +698,8 @@ function agregarServicio() {
     
     const servicio = {
         id_temporal: id_contador_servicio,
+        id_inventario: null,
+        tipo_item: 'SERVICIO',
         descripcion: descripcion,
         cantidad: cantidad,
         precio_unitario: precio,
@@ -690,7 +736,11 @@ function renderizarServicios() {
     sin_servicios.style.display = 'none';
     tabla.innerHTML = servicios_agregados.map(s => `
         <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50">
-            <td class="px-4 py-3 text-sm text-gray-900 dark:text-white">${s.descripcion}</td>
+            <td class="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                ${(s.tipo_item || 'SERVICIO') === 'PARTIDA'
+                    ? '<span class="mr-2 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800">PARTIDA</span>'
+                    : ''}${s.descripcion}
+            </td>
             <td class="px-4 py-3 text-sm text-center">
                 <input type="number" value="${s.cantidad}" step="0.01" min="0.01"
                        onchange="actualizarCantidadServicio(${s.id_temporal}, this.value)"
@@ -1048,13 +1098,14 @@ function abrirModalNuevoMaterial() {
         return;
     }
     
-    // Agregar material manual (sin id_material, será como un servicio pero tipo MATERIAL)
+    // Agregar material manual (sin id_inventario, se guardará como MATERIAL sin vínculo)
     id_contador_material++;
     const subtotal = parseFloat(cantidad) * parseFloat(precio);
     
     materiales_agregados.push({
         id_temporal: id_contador_material,
-        id_material: null,  // Sin ID porque es nuevo/manual
+        id_inventario: null,
+        tipo_item: 'MATERIAL',
         nombre: nombre,
         codigo: codigo || '',
         categoria: 'Manual',
@@ -1211,12 +1262,15 @@ async function guardarPresupuestoCompleto(e) {
             utilidad: parseFloat(document.getElementById('utilidad').value) || 0,
             supervision_obra: parseFloat(document.getElementById('supervision-obra').value) || 0,
             materiales: materiales_agregados.map(m => ({
-                id_material: m.id_material,
+                id_inventario: m.id_inventario,
+                tipo_item: 'MATERIAL',
                 nombre: m.nombre,
                 cantidad: m.cantidad,
                 precio_unitario: m.precio_unitario
             })),
             servicios: servicios_agregados.map(s => ({
+                id_inventario: s.id_inventario || null,
+                tipo_item: s.tipo_item || 'SERVICIO',
                 descripcion: s.descripcion,
                 cantidad: s.cantidad,
                 precio_unitario: s.precio_unitario
@@ -1775,17 +1829,18 @@ async function guardarNuevoMaterial() {
         
         if (result.success) {
             console.log('[NUEVO_MATERIAL] ✓ Material creado:', result.data);
-            mostrarExito(`Material creado correctamente con código ${result.data.codigo_material}`);
-            cerrarModalNuevoMaterial();
-            
             // Agregar automáticamente el material recién creado al presupuesto
             const materialCreado = result.data;
+            mostrarExito(`Material creado correctamente con código ${materialCreado.codigo}`);
+            cerrarModalNuevoMaterial();
+            
             agregarMaterialDeBusqueda(
-                materialCreado.id_material,
+                materialCreado.id_inventario,
                 materialCreado.nombre,
-                materialCreado.codigo_material,
+                materialCreado.codigo,
                 materialCreado.categoria || 'Sin categoría',
-                materialCreado.unidad_medida || 'Unidad'
+                materialCreado.unidad_medida || 'Unidad',
+                materialCreado.tipo_inventario || 'MATERIAL'
             );
             
         } else {
@@ -1843,20 +1898,37 @@ async function importarPDF(input) {
         // Agregar materiales al array global
         if (result.materiales && result.materiales.length > 0) {
             result.materiales.forEach(m => {
-                id_contador_material++;
-                materiales_agregados.push({
-                    id_temporal: id_contador_material,
-                    id_material: m.id_material || null,
-                    nombre: m.nombre,
-                    codigo: '',
-                    categoria: '',
-                    unidad: m.unidad || 'Unidad',
-                    cantidad: m.cantidad || 1,
-                    precio_unitario: m.precio_unitario || 0,
-                    subtotal: m.subtotal || 0
-                });
+                const idInventario = m.id_inventario ?? null;
+                const tipoItem = (m.tipo_item || 'MATERIAL').toUpperCase();
+                if (tipoItem === 'SERVICIO' || tipoItem === 'PARTIDA') {
+                    id_contador_servicio++;
+                    servicios_agregados.push({
+                        id_temporal: id_contador_servicio,
+                        id_inventario: idInventario,
+                        tipo_item: tipoItem,
+                        descripcion: m.nombre || m.descripcion,
+                        cantidad: m.cantidad || 1,
+                        precio_unitario: m.precio_unitario || 0,
+                        subtotal: m.subtotal || 0
+                    });
+                } else {
+                    id_contador_material++;
+                    materiales_agregados.push({
+                        id_temporal: id_contador_material,
+                        id_inventario: idInventario,
+                        tipo_item: 'MATERIAL',
+                        nombre: m.nombre,
+                        codigo: m.codigo || '',
+                        categoria: '',
+                        unidad: m.unidad || 'Unidad',
+                        cantidad: m.cantidad || 1,
+                        precio_unitario: m.precio_unitario || 0,
+                        subtotal: m.subtotal || 0
+                    });
+                }
             });
             renderizarMateriales();
+            renderizarServicios();
         }
         
         // Agregar servicios al array global
@@ -1865,6 +1937,8 @@ async function importarPDF(input) {
                 id_contador_servicio++;
                 servicios_agregados.push({
                     id_temporal: id_contador_servicio,
+                    id_inventario: s.id_inventario ?? null,
+                    tipo_item: (s.tipo_item || 'SERVICIO').toUpperCase(),
                     descripcion: s.descripcion,
                     cantidad: s.cantidad || 1,
                     precio_unitario: s.precio_unitario || 0,
@@ -1969,20 +2043,37 @@ async function importarExcel(input) {
         // Agregar materiales al array global (misma logica que importarPDF)
         if (result.materiales && result.materiales.length > 0) {
             result.materiales.forEach(m => {
-                id_contador_material++;
-                materiales_agregados.push({
-                    id_temporal: id_contador_material,
-                    id_material: m.id_material || null,
-                    nombre: m.nombre,
-                    codigo: '',
-                    categoria: '',
-                    unidad: m.unidad || 'Unidad',
-                    cantidad: m.cantidad || 1,
-                    precio_unitario: m.precio_unitario || 0,
-                    subtotal: m.subtotal || 0
-                });
+                const idInventario = m.id_inventario ?? null;
+                const tipoItem = (m.tipo_item || 'MATERIAL').toUpperCase();
+                if (tipoItem === 'SERVICIO' || tipoItem === 'PARTIDA') {
+                    id_contador_servicio++;
+                    servicios_agregados.push({
+                        id_temporal: id_contador_servicio,
+                        id_inventario: idInventario,
+                        tipo_item: tipoItem,
+                        descripcion: m.nombre || m.descripcion,
+                        cantidad: m.cantidad || 1,
+                        precio_unitario: m.precio_unitario || 0,
+                        subtotal: m.subtotal || 0
+                    });
+                } else {
+                    id_contador_material++;
+                    materiales_agregados.push({
+                        id_temporal: id_contador_material,
+                        id_inventario: idInventario,
+                        tipo_item: 'MATERIAL',
+                        nombre: m.nombre,
+                        codigo: m.codigo || '',
+                        categoria: '',
+                        unidad: m.unidad || 'Unidad',
+                        cantidad: m.cantidad || 1,
+                        precio_unitario: m.precio_unitario || 0,
+                        subtotal: m.subtotal || 0
+                    });
+                }
             });
             renderizarMateriales();
+            renderizarServicios();
         }
         
         // Agregar servicios al array global
@@ -1991,6 +2082,8 @@ async function importarExcel(input) {
                 id_contador_servicio++;
                 servicios_agregados.push({
                     id_temporal: id_contador_servicio,
+                    id_inventario: s.id_inventario ?? null,
+                    tipo_item: (s.tipo_item || 'SERVICIO').toUpperCase(),
                     descripcion: s.descripcion,
                     cantidad: s.cantidad || 1,
                     precio_unitario: s.precio_unitario || 0,
@@ -2261,7 +2354,7 @@ async function verVersionDetalle(idPresupuesto, numeroVersion) {
 function mostrarModalDetalleVersion(version, partidas) {
     // Separar materiales y servicios
     const materiales = partidas.filter(p => p.tipo_partida === 'MATERIAL');
-    const servicios = partidas.filter(p => p.tipo_partida === 'SERVICIO');
+    const servicios = partidas.filter(p => p.tipo_partida === 'SERVICIO' || p.tipo_partida === 'PARTIDA');
     
     const modalHTML = `
         <div id="modal-detalle-version" class="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
@@ -2729,7 +2822,7 @@ async function verVersionDetalle(id_presupuesto, version_numero) {
  */
 function mostrarModalDetalleVersion(id_presupuesto, version, detalles) {
     const materiales = detalles.filter(d => d.tipo_partida === 'MATERIAL');
-    const servicios = detalles.filter(d => d.tipo_partida === 'SERVICIO');
+    const servicios = detalles.filter(d => d.tipo_partida === 'SERVICIO' || d.tipo_partida === 'PARTIDA');
     
     const modalHTML = `
         <div id="modal-detalle-version" class="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">

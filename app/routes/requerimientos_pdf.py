@@ -177,6 +177,7 @@ def descargar_requerimiento_pdf(id_requerimiento):
         
         # 1. ENCABEZADO CON LOGO DINMICO DE LA EMPRESA (como presupuesto)
         logo_path = None
+        default_logo_path = None   # se define abajo si no hay logo de empresa
         
         if requerimiento.get('empresa_logo'):
             try:

@@ -130,12 +130,12 @@ function mostrarExito(mensaje) {
 /**
  * Agregar detalle de orden
  */
-function agregarDetalleOrden(descripcion, cantidad, precioUnitario, idMaterial = null, observaciones = '') {
+function agregarDetalleOrden(descripcion, cantidad, precioUnitario, idInventario = null, observaciones = '') {
     const subtotal = cantidad * precioUnitario;
     
     const detalle = {
         id_temporal: ++id_contador_detalle,
-        id_material: idMaterial,
+        id_inventario: idInventario,
         descripcion: descripcion,
         cantidad: cantidad,
         precio_unitario: precioUnitario,

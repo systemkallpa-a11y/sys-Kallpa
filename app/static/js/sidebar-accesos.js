@@ -97,12 +97,12 @@ function renderizarSidebar(menus, submenus, menusCompletos) {
             console.log(`[SIDEBAR-ACCESOS] ${menu.nombre} tiene ${submenusDatos.length} submenus`);
             
             divMenu.innerHTML = `
-                <button class="w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200 group text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 submenuToggle" onclick="toggleSubmenu(this)">
+                <button type="button" aria-expanded="false" class="w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-colors duration-200 group text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 submenuToggle" onclick="toggleSubmenu(this)">
                     <span class="flex items-center gap-3">
-                        <i class="fas ${menu.icono || 'fa-folder'} w-5 text-center text-gray-400 group-hover:text-[#4D148C] transition-colors"></i>
+                        <i class="fas ${menu.icono || 'fa-folder'} w-5 text-center text-gray-400 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors"></i>
                         <span>${menu.nombre}</span>
                     </span>
-                    <i class="fas fa-chevron-down text-sm transition-transform duration-300 text-gray-400"></i>
+                    <i class="fas fa-chevron-down text-sm transition-transform duration-300 text-gray-400" aria-hidden="true"></i>
                 </button>
                 <div class="submenu hidden pl-4 mt-1 space-y-1">
                     <!-- Submenús se cargarán aquí -->
@@ -121,9 +121,9 @@ function renderizarSidebar(menus, submenus, menusCompletos) {
                 console.log(`[SIDEBAR-ACCESOS] Agregando submenú: ${submenu.nombre}, icono: "${submenu.icono}" -> ${ruta}`);
                 
                 submenuLink.href = ruta;
-                submenuLink.className = 'flex items-center w-full px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group text-gray-600 dark:text-gray-400 hover:bg-[#4D148C]/10 dark:hover:bg-[#4D148C]/30 hover:text-[#4D148C] dark:hover:text-[#4D148C]';
+                submenuLink.className = 'flex items-center w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 group text-gray-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white';
                 submenuLink.innerHTML = `
-                    <i class="fas ${submenu.icono || 'fa-file'} w-4 text-center text-gray-400 group-hover:text-[#4D148C] transition-colors"></i>
+                    <i class="fas ${submenu.icono || 'fa-file'} w-4 text-center text-gray-400 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors"></i>
                     <span class="ml-3">${submenu.nombre}</span>
                 `;
                 submenuContainer.appendChild(submenuLink);
@@ -133,8 +133,8 @@ function renderizarSidebar(menus, submenus, menusCompletos) {
             console.log(`[SIDEBAR-ACCESOS] ${menu.nombre} es acceso directo (sin submenus específicos)`);
             
             divMenu.innerHTML = `
-                <a href="#" class="flex items-center w-full px-4 py-3 rounded-xl font-medium transition-all duration-200 group text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
-                    <i class="fas ${menu.icono || 'fa-folder'} w-5 text-center text-gray-400 group-hover:text-[#4D148C] transition-colors"></i>
+                <a href="#" class="flex items-center w-full px-4 py-3 rounded-xl font-medium transition-colors duration-200 group text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
+                    <i class="fas ${menu.icono || 'fa-folder'} w-5 text-center text-gray-400 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors"></i>
                     <span class="ml-3">${menu.nombre}</span>
                 </a>
             `;
@@ -156,11 +156,12 @@ function renderizarSidebar(menus, submenus, menusCompletos) {
 function toggleSubmenu(button) {
     const submenu = button.nextElementSibling;
     const chevron = button.querySelector('.fa-chevron-down');
-    
+
     if (submenu && submenu.classList.contains('submenu')) {
-        submenu.classList.toggle('hidden');
+        const estaOculto = submenu.classList.toggle('hidden');
+        button.setAttribute('aria-expanded', String(!estaOculto));
         if (chevron) {
-            chevron.style.transform = submenu.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+            chevron.style.transform = estaOculto ? 'rotate(0deg)' : 'rotate(180deg)';
         }
     }
 }

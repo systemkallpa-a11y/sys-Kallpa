@@ -19,6 +19,27 @@ def get_db_connection():
         print(f"Error de conexin: {e}")
         return None
 
+
+def normalizar_items_presupuesto(items, tipo_por_defecto='MATERIAL'):
+    """
+    Normaliza los items que se envian a los SPs de presupuesto.
+
+    - id_inventario es el identificador definitivo. Se acepta id_material
+      solo como tolerancia de entrada (posible JS cacheado en el navegador).
+    - tipo_item se limita a MATERIAL, SERVICIO o PARTIDA.
+    """
+    normalizados = []
+    for item in items or []:
+        limpio = dict(item)
+        limpio['id_inventario'] = limpio.get('id_inventario') or limpio.get('id_material')
+
+        tipo_item = (limpio.get('tipo_item') or tipo_por_defecto).upper()
+        if tipo_item not in ('MATERIAL', 'SERVICIO', 'PARTIDA'):
+            tipo_item = tipo_por_defecto
+        limpio['tipo_item'] = tipo_item
+        normalizados.append(limpio)
+    return normalizados
+
 # Decorador para requerir autenticacin
 def login_required(f):
     """Decorador para proteger rutas que requieren autenticacin"""
@@ -290,7 +311,7 @@ def buscar_presupuestos():
 @main_bp.route('/api/presupuestos/obtener/<int:id_presupuesto>', methods=['GET'])
 @login_required
 def obtener_presupuesto(id_presupuesto):
-    """Obtener datos de un presupuesto especfico sin id_material"""
+    """Obtener datos de un presupuesto específico"""
     connection = get_db_connection()
     if not connection:
         return jsonify({'success': False, 'error': 'Error de conexin'}), 500
@@ -320,14 +341,14 @@ def obtener_presupuesto(id_presupuesto):
                 pr.fecha_creacion,
                 pr.fecha_actualizacion,
                 COUNT(DISTINCT pd.id_detalle) as total_items,
-                GROUP_CONCAT(DISTINCT m.nombre SEPARATOR ', ') as materiales_utilizados
+                GROUP_CONCAT(DISTINCT i.nombre SEPARATOR ', ') as materiales_utilizados
             FROM TblPresupuesto pr
             INNER JOIN TblObra o ON pr.id_obra = o.id_obra
             INNER JOIN TblProyecto p ON o.id_proyecto = p.id_proyecto
             INNER JOIN TblUsuario u ON pr.num_documento = u.num_documento
             INNER JOIN TblPersona per ON u.num_documento = per.num_documento
             LEFT JOIN TblPresupuestoDetalle pd ON pr.id_presupuesto = pd.id_presupuesto
-            LEFT JOIN TblMateriales m ON pd.id_material = m.id_material
+            LEFT JOIN TblInventario i ON pd.id_inventario = i.id_inventario
             WHERE pr.id_presupuesto = %s
             GROUP BY pr.id_presupuesto, pr.numero_presupuesto, pr.id_obra, pr.num_documento,
                      o.codigo_obra, o.nombre, p.codigo_proyecto, p.nombre,
@@ -492,8 +513,8 @@ def crear_presupuesto():
             return jsonify({'success': False, 'error': 'Empresa y Obra son requeridas'}), 400
         
         # Validar que al menos haya un material o servicio
-        materiales = datos.get('materiales', [])
-        servicios = datos.get('servicios', [])
+        materiales = normalizar_items_presupuesto(datos.get('materiales', []), 'MATERIAL')
+        servicios = normalizar_items_presupuesto(datos.get('servicios', []), 'SERVICIO')
         
         if not materiales and not servicios:
             print(f"[CREAR_PRESUPUESTO] [ERROR] Sin materiales ni servicios")
@@ -892,34 +913,64 @@ def crear_presupuesto_detalle():
     try:
         data = request.get_json()
         
-        # Validar campos - id_material es OPCIONAL
+        # Validar campos - id_inventario es OPCIONAL
         campos_requeridos = ['id_presupuesto', 'cantidad', 'precio_unitario']
         for campo in campos_requeridos:
             if not data.get(campo):
                 return jsonify({'success': False, 'error': f'Campo requerido: {campo}'}), 400
+        
+        # Normalizar identificador: id_inventario es el definitivo.
+        # id_material se acepta solo como puente temporal.
+        id_inventario = data.get('id_inventario') or data.get('id_material')
+        tipo_item = (data.get('tipo_item') or 'MATERIAL').upper()
         
         connection = get_db_connection()
         if not connection:
             return jsonify({'success': False, 'error': 'Error de conexin'}), 500
         
         try:
-            cursor = connection.cursor()
+            cursor = connection.cursor(dictionary=True)
             
             print(f"[CREAR_PRESUPUESTO_DETALLE] Creando item para presupuesto {data['id_presupuesto']}")
             
-            # Insertar item - id_material puede ser NULL
+            # Si viene del catalogo, el tipo real lo define TblInventario.
+            if id_inventario:
+                cursor.execute(
+                    "SELECT nombre, tipo_inventario FROM TblInventario WHERE id_inventario = %s",
+                    (id_inventario,)
+                )
+                inventario = cursor.fetchone()
+                if inventario:
+                    tipo_item = (
+                        inventario['tipo_inventario']
+                        if inventario['tipo_inventario'] in ('SERVICIO', 'PARTIDA')
+                        else 'MATERIAL'
+                    )
+            
+            if tipo_item not in ('MATERIAL', 'SERVICIO', 'PARTIDA'):
+                tipo_item = 'MATERIAL'
+            
+            descripcion = data.get('descripcion') or data.get('nombre')
+            
+            # Insertar item - id_inventario puede ser NULL
             cursor.execute("""
                 INSERT INTO TblPresupuestoDetalle (
                     id_presupuesto,
-                    id_material,
+                    id_inventario,
+                    tipo_item,
+                    descripcion,
                     cantidad,
+                    cantidad_original,
                     precio_unitario,
                     observaciones,
                     fecha_creacion
-                ) VALUES (%s, %s, %s, %s, %s, NOW())
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
             """, (
                 data['id_presupuesto'],
-                data.get('id_material'),  # Puede ser None/null
+                id_inventario,
+                tipo_item,
+                descripcion,
+                data['cantidad'],
                 data['cantidad'],
                 data['precio_unitario'],
                 data.get('observaciones', '')
@@ -964,15 +1015,17 @@ def obtener_presupuesto_detalle(id_presupuesto):
             SELECT 
                 pd.id_detalle,
                 pd.id_presupuesto,
-                pd.id_material,
+                pd.id_inventario,
+                pd.tipo_item,
+                pd.descripcion,
                 pd.cantidad,
                 pd.precio_unitario,
                 pd.subtotal,
                 pd.observaciones,
-                m.codigo_material,
-                m.nombre as nombre_material
+                COALESCE(i.codigo, '') AS codigo,
+                COALESCE(i.nombre, pd.descripcion) as nombre_material
             FROM TblPresupuestoDetalle pd
-            INNER JOIN TblMateriales m ON pd.id_material = m.id_material
+            LEFT JOIN TblInventario i ON pd.id_inventario = i.id_inventario
             WHERE pd.id_presupuesto = %s
             ORDER BY pd.fecha_creacion
         """, (id_presupuesto,))
@@ -1218,7 +1271,7 @@ def obtener_presupuesto_para_editar(id_presupuesto):
             SELECT 
                 pd.id_detalle,
                 pd.id_presupuesto,
-                pd.id_material,
+                pd.id_inventario,
                 pd.tipo_item,
                 pd.descripcion,
                 pd.cantidad,
@@ -1227,16 +1280,16 @@ def obtener_presupuesto_para_editar(id_presupuesto):
                 COALESCE(pd.cantidad_saldo, 0) as cantidad_saldo,
                 pd.precio_unitario,
                 pd.subtotal,
-                COALESCE(m.nombre, pd.descripcion) as nombre_item,
-                m.codigo_material,
-                COALESCE(mc.nombre, 'General') as categoria,
+                COALESCE(i.nombre, pd.descripcion) as nombre_item,
+                COALESCE(i.codigo, '') as codigo,
+                COALESCE(ci.nombre, 'General') as categoria,
                 COALESCE(um.nombre, 'und') as unidad_medida,
                 COALESCE(um.nombre, 'und') as unidad_nombre,
                 COALESCE(um.abreviatura, 'und') as unidad_abreviatura
             FROM TblPresupuestoDetalle pd
-            LEFT JOIN TblMateriales m ON pd.id_material = m.id_material
-            LEFT JOIN TblCategoriaMaterial mc ON m.id_categoria = mc.id_categoria
-            LEFT JOIN TblUnidadMedida um ON m.id_unidad = um.id_unidad
+            LEFT JOIN TblInventario i ON pd.id_inventario = i.id_inventario
+            LEFT JOIN TblCategoriaInventario ci ON i.id_categoria = ci.id_categoria
+            LEFT JOIN TblUnidadMedida um ON i.id_unidad = um.id_unidad
             WHERE pd.id_presupuesto = %s
             ORDER BY pd.tipo_item ASC, pd.id_detalle ASC
         """, (id_presupuesto,))
@@ -1250,10 +1303,13 @@ def obtener_presupuesto_para_editar(id_presupuesto):
         
         if detalles_raw:
             for d in detalles_raw:
-                if d.get('tipo_item') == 'SERVICIO':
+                tipo_item = (d.get('tipo_item') or 'MATERIAL').upper()
+                if tipo_item in ('SERVICIO', 'PARTIDA'):
                     servicios.append({
                         'id_temporal': d['id_detalle'],
                         'id_detalle': d['id_detalle'],
+                        'id_inventario': d.get('id_inventario'),
+                        'tipo_item': tipo_item,
                         'descripcion': d.get('descripcion', ''),
                         'cantidad': float(d.get('cantidad', 0)),
                         'precio_unitario': float(d.get('precio_unitario', 0)),
@@ -1263,9 +1319,10 @@ def obtener_presupuesto_para_editar(id_presupuesto):
                     materiales.append({
                         'id_temporal': d['id_detalle'],
                         'id_detalle': d['id_detalle'],
-                        'id_material': d.get('id_material'),
+                        'id_inventario': d.get('id_inventario'),
+                        'tipo_item': 'MATERIAL',
                         'nombre': d.get('nombre_item', 'Sin nombre'),
-                        'codigo': d.get('codigo_material', ''),
+                        'codigo': d.get('codigo', ''),
                         'categoria': d.get('categoria', 'General'),
                         'unidad': d.get('unidad_medida', 'und'),
                         'cantidad': float(d.get('cantidad', 0)),
@@ -1356,7 +1413,7 @@ def obtener_presupuesto_detalles(id_presupuesto):
             SELECT 
                 pd.id_detalle,
                 pd.id_presupuesto,
-                pd.id_material,
+                pd.id_inventario,
                 pd.cantidad,
                 pd.cantidad_original,
                 pd.cantidad_consumida,
@@ -1366,16 +1423,16 @@ def obtener_presupuesto_detalles(id_presupuesto):
                 pd.observaciones,
                 pd.descripcion,
                 COALESCE(pd.tipo_item, 'MATERIAL') as tipo_item,
-                COALESCE(m.codigo_material, '') as codigo_material,
-                COALESCE(m.nombre, pd.descripcion, 'Sin nombre') as nombre_item,
+                COALESCE(i.codigo, '') as codigo,
+                COALESCE(i.nombre, pd.descripcion, 'Sin nombre') as nombre_item,
                 COALESCE(um.nombre, 'und') as unidad_medida,
                 COALESCE(um.nombre, 'und') as unidad_nombre,
                 COALESCE(um.abreviatura, 'und') as unidad_abreviatura,
-                COALESCE(mc.nombre, 'General') as categoria
+                COALESCE(ci.nombre, 'General') as categoria
             FROM TblPresupuestoDetalle pd
-            LEFT JOIN TblMateriales m ON pd.id_material = m.id_material
-            LEFT JOIN TblUnidadMedida um ON m.id_unidad = um.id_unidad
-            LEFT JOIN TblCategoriaMaterial mc ON m.id_categoria = mc.id_categoria
+            LEFT JOIN TblInventario i ON pd.id_inventario = i.id_inventario
+            LEFT JOIN TblUnidadMedida um ON i.id_unidad = um.id_unidad
+            LEFT JOIN TblCategoriaInventario ci ON i.id_categoria = ci.id_categoria
             WHERE pd.id_presupuesto = %s
             ORDER BY COALESCE(pd.tipo_item, 'MATERIAL'), pd.id_detalle
         """, (id_presupuesto,))
@@ -1385,7 +1442,7 @@ def obtener_presupuesto_detalles(id_presupuesto):
         
         # 3. Calcular resumen
         materiales = [d for d in detalles if d.get('tipo_item') == 'MATERIAL'] if detalles else []
-        servicios = [d for d in detalles if d.get('tipo_item') == 'SERVICIO'] if detalles else []
+        servicios = [d for d in detalles if d.get('tipo_item') in ('SERVICIO', 'PARTIDA')] if detalles else []
         
         total_materiales = sum(float(m.get('subtotal', 0) or 0) for m in materiales) if materiales else 0
         total_servicios = sum(float(s.get('subtotal', 0) or 0) for s in servicios) if servicios else 0
@@ -1461,7 +1518,7 @@ def actualizar_presupuesto_editar(id_presupuesto):
         if datos.get('materiales'):
             print(f"\n[ACTUALIZAR_PRESUPUESTO] DETALLES DE MATERIALES:", flush=True)
             for idx, m in enumerate(datos.get('materiales', []), 1):
-                print(f"  [{idx}] id_material: {m.get('id_material')} | nombre: {m.get('nombre')} | cantidad: {m.get('cantidad')} | precio: {m.get('precio_unitario')} | subtotal: {m.get('subtotal')}", flush=True)
+                print(f"  [{idx}] id_inventario: {m.get('id_inventario')} | nombre: {m.get('nombre')} | cantidad: {m.get('cantidad')} | precio: {m.get('precio_unitario')} | subtotal: {m.get('subtotal')}", flush=True)
         else:
             print(f"\n[ACTUALIZAR_PRESUPUESTO] SIN MATERIALES", flush=True)
         
@@ -1487,7 +1544,7 @@ def actualizar_presupuesto_editar(id_presupuesto):
         
         # Limpiar descripciones de servicios ANTES de enviar al SP
         servicios_limpios = []
-        for servicio in datos.get('servicios', []):
+        for servicio in normalizar_items_presupuesto(datos.get('servicios', []), 'SERVICIO'):
             servicio_limpio = servicio.copy()
             # Limpiar escapes JSON de la descripcin
             if 'descripcion' in servicio_limpio and servicio_limpio['descripcion']:
@@ -1497,7 +1554,10 @@ def actualizar_presupuesto_editar(id_presupuesto):
                 servicio_limpio['descripcion'] = desc
             servicios_limpios.append(servicio_limpio)
         
-        materiales_json = json.dumps(datos.get('materiales', []), ensure_ascii=False)
+        materiales_json = json.dumps(
+            normalizar_items_presupuesto(datos.get('materiales', []), 'MATERIAL'),
+            ensure_ascii=False
+        )
         servicios_json = json.dumps(servicios_limpios, ensure_ascii=False)
         
         print(f"\n[ACTUALIZAR_PRESUPUESTO] JSON A ENVIAR AL SP:", flush=True)
@@ -2494,7 +2554,7 @@ def extraer_items_del_pdf(filepath):
 def importar_presupuesto_pdf():
     """
     Recibe un PDF, extrae items, clasifica materiales/servicios.
-    Crea automticamente los materiales que no existen en TblMateriales.
+    Crea automaticamente los materiales que no existen en TblInventario.
     """
     try:
         if 'archivo' not in request.files:
@@ -2545,6 +2605,8 @@ def importar_presupuesto_pdf():
                     
                     if item['tipo'] == 'SERVICIO':
                         servicios.append({
+                            'id_inventario': None,
+                            'tipo_item': 'SERVICIO',
                             'descripcion': item['descripcion'],
                             'cantidad': item['cantidad'],
                             'precio_unitario': item['precio_unitario'],
@@ -2554,20 +2616,25 @@ def importar_presupuesto_pdf():
                         print(f"[IMPORTAR_PDF]    Servicio agregado")
                     else:
                         nombre_material = item['descripcion']
-                        id_material = None
+                        id_inventario = None
+                        tipo_item = 'MATERIAL'
                         
                         # 1. Buscar si el material ya existe (nombre exacto)
                         cursor.execute(
-                            "SELECT id_material FROM TblMateriales WHERE nombre = %s AND estado = 'ACTIVO' LIMIT 1",
+                            """SELECT id_inventario, tipo_inventario
+                               FROM TblInventario
+                               WHERE nombre = %s AND estado = 'ACTIVO'
+                                 AND tipo_inventario NOT IN ('SERVICIO','PARTIDA')
+                               LIMIT 1""",
                             (nombre_material,)
                         )
                         existente = cursor.fetchone()
                         
                         if existente:
                             # Ya existe - usar su ID
-                            id_material = existente['id_material']
+                            id_inventario = existente['id_inventario']
                             materiales_existentes.append(nombre_material)
-                            print(f"[IMPORTAR_PDF]    Material ya existe: ID={id_material}")
+                            print(f"[IMPORTAR_PDF]    Material ya existe: ID={id_inventario}")
                         else:
                             # 2. No existe - buscar id_unidad por abreviatura
                             unidad_pdf = item['unidad']
@@ -2602,21 +2669,22 @@ def importar_presupuesto_pdf():
                             sp_result = cursor.fetchone()
                             
                             if sp_result and sp_result['resultado'] == 1:
-                                id_material = sp_result['id']
+                                id_inventario = sp_result['id']
                                 materiales_nuevos.append(nombre_material)
-                                print(f"[IMPORTAR_PDF]    Material CREADO: {sp_result['codigo']} (ID={id_material})")
+                                print(f"[IMPORTAR_PDF]    Material CREADO: {sp_result['codigo']} (ID={id_inventario})")
                             else:
                                 materiales_error.append(nombre_material)
                                 print(f"[IMPORTAR_PDF]    ERROR creando material: resultado={sp_result}")
                         
                         materiales.append({
-                            'id_material': id_material,
+                            'id_inventario': id_inventario,
+                            'tipo_item': tipo_item,
                             'nombre': nombre_material,
                             'cantidad': item['cantidad'],
                             'precio_unitario': item['precio_unitario'],
                             'subtotal': item['subtotal'],
                             'unidad': item['unidad'],
-                            'es_nuevo': id_material is not None and nombre_material in materiales_nuevos
+                            'es_nuevo': id_inventario is not None and nombre_material in materiales_nuevos
                         })
                 
                 print(f"[IMPORTAR_PDF] [OK] PDF procesado: {len(materiales)} materiales ({len(materiales_nuevos)} nuevos, {len(materiales_existentes)} existentes, {len(materiales_error)} errores), {len(servicios)} servicios")
@@ -3032,7 +3100,7 @@ def extraer_items_del_excel(filepath):
 def importar_presupuesto_excel():
     """
     Recibe un Excel, extrae items, clasifica materiales/servicios.
-    Crea automaticamente los materiales que no existen en TblMateriales.
+    Crea automaticamente los materiales que no existen en TblInventario.
     Mismo comportamiento que importar-pdf pero para archivos .xlsx/.xls
     """
     try:
@@ -3086,6 +3154,8 @@ def importar_presupuesto_excel():
                     
                     if item['tipo'] == 'SERVICIO':
                         servicios.append({
+                            'id_inventario': None,
+                            'tipo_item': 'SERVICIO',
                             'descripcion': item['descripcion'],
                             'cantidad': item['cantidad'],
                             'precio_unitario': item['precio_unitario'],
@@ -3095,19 +3165,24 @@ def importar_presupuesto_excel():
                         print(f"[IMPORTAR_EXCEL]    Servicio agregado")
                     else:
                         nombre_material = item['descripcion']
-                        id_material = None
+                        id_inventario = None
+                        tipo_item = 'MATERIAL'
                         
                         # 1. Buscar si el material ya existe (nombre exacto)
                         cursor.execute(
-                            "SELECT id_material FROM TblMateriales WHERE nombre = %s AND estado = 'ACTIVO' LIMIT 1",
+                            """SELECT id_inventario, tipo_inventario
+                               FROM TblInventario
+                               WHERE nombre = %s AND estado = 'ACTIVO'
+                                 AND tipo_inventario NOT IN ('SERVICIO','PARTIDA')
+                               LIMIT 1""",
                             (nombre_material,)
                         )
                         existente = cursor.fetchone()
                         
                         if existente:
-                            id_material = existente['id_material']
+                            id_inventario = existente['id_inventario']
                             materiales_existentes.append(nombre_material)
-                            print(f"[IMPORTAR_EXCEL]    Material ya existe: ID={id_material}")
+                            print(f"[IMPORTAR_EXCEL]    Material ya existe: ID={id_inventario}")
                         else:
                             # 2. Buscar id_unidad por abreviatura
                             unidad_excel = item['unidad']
@@ -3144,21 +3219,22 @@ def importar_presupuesto_excel():
                             sp_result = cursor.fetchone()
                             
                             if sp_result and sp_result['resultado'] == 1:
-                                id_material = sp_result['id']
+                                id_inventario = sp_result['id']
                                 materiales_nuevos.append(nombre_material)
-                                print(f"[IMPORTAR_EXCEL]    Material CREADO: {sp_result['codigo']} (ID={id_material})")
+                                print(f"[IMPORTAR_EXCEL]    Material CREADO: {sp_result['codigo']} (ID={id_inventario})")
                             else:
                                 materiales_error.append(nombre_material)
                                 print(f"[IMPORTAR_EXCEL]    ERROR creando material: resultado={sp_result}")
                         
                         materiales.append({
-                            'id_material': id_material,
+                            'id_inventario': id_inventario,
+                            'tipo_item': tipo_item,
                             'nombre': nombre_material,
                             'cantidad': item['cantidad'],
                             'precio_unitario': item['precio_unitario'],
                             'subtotal': item['subtotal'],
                             'unidad': item['unidad'],
-                            'es_nuevo': id_material is not None and nombre_material in materiales_nuevos
+                            'es_nuevo': id_inventario is not None and nombre_material in materiales_nuevos
                         })
                 
                 print(f"[IMPORTAR_EXCEL] [OK] Excel procesado: {len(materiales)} materiales ({len(materiales_nuevos)} nuevos, {len(materiales_existentes)} existentes, {len(materiales_error)} errores), {len(servicios)} servicios")

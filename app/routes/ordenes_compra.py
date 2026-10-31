@@ -194,16 +194,16 @@ def obtener_orden_compra(id_orden_compra):
         cursor.execute("""
             SELECT 
                 ocd.id_detalle,
-                ocd.id_material,
+                ocd.id_inventario,
                 ocd.descripcion,
                 ocd.cantidad,
                 ocd.precio_unitario,
                 ocd.subtotal,
                 ocd.observaciones,
-                m.nombre as material_nombre,
-                m.codigo_material
+                i.nombre as material_nombre,
+                i.codigo
             FROM TblOrdenCompraDetalle ocd
-            LEFT JOIN TblMateriales m ON ocd.id_material = m.id_material
+            LEFT JOIN TblInventario i ON ocd.id_inventario = i.id_inventario
             WHERE ocd.id_orden_compra = %s
             ORDER BY ocd.id_detalle
         """, (id_orden_compra,))
@@ -303,13 +303,15 @@ def crear_orden_compra():
             
             # 2. Insertar detalles de la orden
             for detalle in detalles:
+                # id_inventario es el identificador definitivo; id_material se
+                # acepta solo como tolerancia de entrada (posible JS cacheado).
                 cursor.execute("""
                     INSERT INTO TblOrdenCompraDetalle
-                    (id_orden_compra, id_material, descripcion, cantidad, precio_unitario, subtotal, observaciones)
+                    (id_orden_compra, id_inventario, descripcion, cantidad, precio_unitario, subtotal, observaciones)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """, (
                     id_orden_compra,
-                    detalle.get('id_material'),
+                    detalle.get('id_inventario') or detalle.get('id_material'),
                     detalle.get('descripcion', ''),
                     detalle.get('cantidad', 1),
                     detalle.get('precio_unitario', 0),

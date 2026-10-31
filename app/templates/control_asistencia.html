@@ -1,112 +1,58 @@
 {% extends "base.html" %}
 
 {% block title %}Kallpa - Control de Asistencia{% endblock %}
+{% block header_title %}Control de Asistencia{% endblock %}
+{% block header_subtitle %}Reporte detallado por d&iacute;a{% endblock %}
 
 {% block content %}
 
 <style>
-    /* Fondo por defecto para todas las celdas de la tabla */
-    #tabla-control-asistencia td {
-        background-color: white;
+    /* El fondo vive en <tr>; las celdas no deben taparlo. */
+    #tabla-control-asistencia {
+        font-variant-numeric: tabular-nums;
     }
-    
-    @media (prefers-color-scheme: dark) {
-        #tabla-control-asistencia td {
-            background-color: #0f172a;
-        }
-    }
-    
-    .dark #tabla-control-asistencia td {
-        background-color: #0f172a;
-    }
-    
-    /* Sticky columns - Responsive al tema */
-    .sticky-col-1 { position: sticky; left: 0; z-index: 20; }
-    .sticky-col-2 { position: sticky; left: 60px; z-index: 20; }
-    .sticky-col-3 { position: sticky; left: 180px; z-index: 20; }
-    .sticky-col-5 { position: sticky; left: 260px; z-index: 20; }
-    
-    /* Fondo para sticky columns según tema - override el fondo por defecto */
-    .sticky-col-1, .sticky-col-2, .sticky-col-3, .sticky-col-5 {
-        background: white !important;
-        color: #111827; /* gray-900 */
-    }
-    
-    @media (prefers-color-scheme: dark) {
-        .sticky-col-1, .sticky-col-2, .sticky-col-3, .sticky-col-5 {
-            background: #0f172a !important;
-            color: white;
-        }
-    }
-    
-    /* Soporte para clase dark de Tailwind */
-    .dark .sticky-col-1, .dark .sticky-col-2, .dark .sticky-col-3, .dark .sticky-col-5 {
-        background: #0f172a !important;
-        color: white;
-    }
-    
-    /* Colores OFICINA - Responsive al tema */
-    .bg-oficina { 
-        background: #DBEAFE !important; /* Azul claro en tema claro */
-    }
-    .text-oficina { 
-        color: #1E40AF !important; /* Azul oscuro en tema claro */
-    }
-    
-    @media (prefers-color-scheme: dark) {
-        .bg-oficina { background: #1E3A5F !important; }
-        .text-oficina { color: #93C5FD !important; }
-    }
-    
+
+    /* Sticky: hereda el fondo de la fila (incluye estados). */
+    .sticky-col-1 { position: sticky; left: 0; z-index: 20; background-color: inherit; }
+    .sticky-col-2 { position: sticky; left: 60px; z-index: 20; background-color: inherit; }
+    .sticky-col-3 { position: sticky; left: 180px; z-index: 20; background-color: inherit; }
+    .sticky-col-5 { position: sticky; left: 260px; z-index: 20; background-color: inherit; }
+
+    /* Colores OFICINA */
+    .bg-oficina { background: #DBEAFE !important; }
+    .text-oficina { color: #1E40AF !important; }
     .dark .bg-oficina { background: #1E3A5F !important; }
     .dark .text-oficina { color: #93C5FD !important; }
-    
-    /* Colores CAMPO - Responsive al tema */
-    .bg-campo { 
-        background: #D1FAE5 !important; /* Verde claro en tema claro */
-    }
-    .text-campo { 
-        color: #065F46 !important; /* Verde oscuro en tema claro */
-    }
-    
-    @media (prefers-color-scheme: dark) {
-        .bg-campo { background: #064E3B !important; }
-        .text-campo { color: #6EE7B7 !important; }
-    }
-    
+
+    /* Colores CAMPO */
+    .bg-campo { background: #D1FAE5 !important; }
+    .text-campo { color: #065F46 !important; }
     .dark .bg-campo { background: #064E3B !important; }
     .dark .text-campo { color: #6EE7B7 !important; }
+
+    /* Modal: no encadenar el scroll del fondo */
+    #modal-editar-marcacion { overscroll-behavior: contain; }
 </style>
 
-<div class="flex flex-col h-screen bg-gray-50 dark:bg-slate-950">
+<div class="flex flex-col bg-gray-50 dark:bg-slate-950">
 
-    <!-- Header -->
-    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
-        <!-- Título y botones -->
+    <!-- Toolbar -->
+    <div class="relative z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
         <div class="px-4 py-3">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="bg-gradient-to-br from-green-600 to-green-800 p-2 rounded-lg shadow-lg">
-                        <i class="fas fa-clipboard-check text-xl text-white"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-lg font-bold text-gray-900 dark:text-white">Control de Asistencia</h1>
-                        <p class="text-gray-500 dark:text-gray-400 text-xs">Reporte detallado por día</p>
-                    </div>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="exportarExcel()" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
-                        <i class="fas fa-file-excel mr-1"></i>Exportar
+            <div class="flex flex-wrap items-center justify-end gap-3">
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="exportarExcel()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors">
+                        <i class="fas fa-file-excel mr-1" aria-hidden="true"></i>Exportar
                     </button>
                     <div class="relative" id="contenedor-sunafil">
-                        <button type="button" onclick="toggleMenuSunafil()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium transition-colors">
-                            <i class="fas fa-file-pdf mr-1"></i>SUNAFIL <i class="fas fa-caret-down ml-1"></i>
+                        <button type="button" onclick="toggleMenuSunafil()" class="px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-lg text-sm font-medium transition-colors">
+                            <i class="fas fa-file-pdf mr-1" aria-hidden="true"></i>SUNAFIL <i class="fas fa-caret-down ml-1" aria-hidden="true"></i>
                         </button>
                         <div id="menu-sunafil" class="hidden absolute right-0 mt-1 w-72 max-h-64 overflow-y-auto bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-xl z-50 py-1">
                         </div>
                     </div>
-                    <button onclick="aplicarFiltrosControl()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
-                        <i class="fas fa-sync-alt mr-1"></i>Actualizar
+                    <button type="button" onclick="aplicarFiltrosControl()" class="px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-sm font-medium transition-colors">
+                        <i class="fas fa-sync-alt mr-1" aria-hidden="true"></i>Actualizar
                     </button>
                 </div>
             </div>
@@ -119,7 +65,8 @@
                 <div class="flex items-center gap-3 flex-wrap">
                     <!-- Fecha Inicio -->
                     <div>
-                        <input type="date" id="filtro-fecha-inicio" 
+                        <input type="date" id="filtro-fecha-inicio" name="fecha_inicio"
+                               aria-label="Fecha de inicio" autocomplete="off"
                                class="px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
                     </div>
 
@@ -128,19 +75,22 @@
 
                     <!-- Fecha Fin -->
                     <div>
-                        <input type="date" id="filtro-fecha-fin" 
+                        <input type="date" id="filtro-fecha-fin" name="fecha_fin"
+                               aria-label="Fecha de fin" autocomplete="off"
                                class="px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
                     </div>
 
                     <!-- Empleado -->
                     <div class="w-48">
-                        <input type="text" id="filtro-empleado" placeholder="Buscar empleado (vacío = todos)..."
+                        <input type="search" id="filtro-empleado" name="empleado"
+                               aria-label="Buscar empleado" autocomplete="off" spellcheck="false"
+                               placeholder="Buscar empleado (vac&iacute;o = todos)&hellip;"
                                class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
                     </div>
 
                     <!-- Empresa -->
                     <div class="w-40">
-                        <select id="filtro-empresa" title="Filtrar por empresa"
+                        <select id="filtro-empresa" name="empresa" aria-label="Filtrar por empresa" autocomplete="off"
                                 class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
                             <option value="">Todas las empresas</option>
                         </select>
@@ -148,28 +98,28 @@
 
                     <!-- Área -->
                     <div class="w-40">
-                        <select id="filtro-area" title="Filtrar por área"
+                        <select id="filtro-area" name="area" aria-label="Filtrar por &aacute;rea" autocomplete="off"
                                 class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-xs">
                             <option value="">Todas las áreas</option>
                         </select>
                     </div>
 
                     <!-- Botón Buscar -->
-                    <button onclick="aplicarFiltrosControl()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors">
-                        <i class="fas fa-search mr-1"></i>Buscar
+                    <button type="button" onclick="aplicarFiltrosControl()" class="px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded text-xs font-medium transition-colors">
+                        <i class="fas fa-search mr-1" aria-hidden="true"></i>Buscar
                     </button>
                 </div>
 
                 <!-- Botones derecha -->
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                     <!-- Botón Tardanzas -->
-                    <button onclick="exportarTardanzas()" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-colors">
-                        <i class="fas fa-clock mr-1"></i>Exportaciones Excel de Tardanzas
+                    <button type="button" onclick="exportarTardanzas()" class="px-3 py-1.5 bg-red-700 hover:bg-red-800 text-white rounded text-xs font-medium transition-colors">
+                        <i class="fas fa-clock mr-1" aria-hidden="true"></i>Exportaciones Excel de Tardanzas
                     </button>
 
                     <!-- Botón Horas Laboradas -->
-                    <button onclick="exportarHorasLaboradas()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-medium transition-colors">
-                        <i class="fas fa-business-time mr-1"></i>Exportar Horas Laboradas
+                    <button type="button" onclick="exportarHorasLaboradas()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs font-medium transition-colors">
+                        <i class="fas fa-business-time mr-1" aria-hidden="true"></i>Exportar Horas Laboradas
                     </button>
                 </div>
             </div>
@@ -178,7 +128,7 @@
 
     <!-- Leyenda de estados -->
     <div class="px-6 py-2 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
-        <div class="flex items-center gap-4 text-xs">
+        <div class="flex flex-wrap items-center gap-4 text-xs">
             <span class="font-semibold text-gray-600 dark:text-gray-400">Leyenda:</span>
             <span class="flex items-center gap-1">
                 <span class="w-3 h-3 rounded-full bg-green-500"></span>
@@ -201,8 +151,8 @@
                 <span class="text-gray-700 dark:text-gray-300">Vacaciones</span>
             </span>
             <span class="flex items-center gap-1">
-                <span class="w-3 h-3 rounded-full bg-gray-400"></span>
-                <span class="text-gray-700 dark:text-gray-300">Descanso</span>
+                <span class="w-3 h-3 rounded-full bg-slate-400"></span>
+                <span class="text-gray-700 dark:text-gray-300">Sin horario</span>
             </span>
         </div>
     </div>
@@ -211,72 +161,72 @@
     <div class="flex-1 overflow-auto p-6 space-y-6">
         <!-- Tabla de Asistencia -->
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-slate-700">
-            <div class="px-4 py-3 bg-gradient-to-r from-green-700 to-green-800">
+            <div class="px-4 py-3 bg-slate-800">
                 <h2 class="text-white font-bold text-sm flex items-center gap-2">
-                    <i class="fas fa-clipboard-check"></i> Control de Asistencia
+                    <i class="fas fa-clipboard-check" aria-hidden="true"></i> Control de Asistencia
                 </h2>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-xs bg-white dark:bg-slate-900">
                     <!-- Encabezado agrupado -->
                     <thead>
-                        <tr class="bg-gradient-to-r from-green-700 to-green-800">
-                            <th colspan="5" class="px-2 py-2 text-center text-white font-bold border-r border-green-600">DATOS DEL EMPLEADO</th>
-                            <th colspan="4" class="px-2 py-2 text-center text-white font-bold border-r border-green-600">FECHA</th>
-                            <th colspan="6" class="px-2 py-2 text-center text-white font-bold border-r border-green-600" style="background:#1E40AF">OFICINA</th>
-                            <th colspan="6" class="px-2 py-2 text-center text-white font-bold border-r border-green-600" style="background:#065F46">CAMPO</th>
-                            <th colspan="2" class="px-2 py-2 text-center text-white font-bold border-r border-green-600" style="background:#7C3AED">HORAS LABORADAS</th>
-                            <th colspan="2" class="px-2 py-2 text-center text-white font-bold border-r border-green-600" style="background:#DC2626">TARDANZAS</th>
+                        <tr class="bg-slate-800">
+                            <th scope="colgroup" colspan="5" class="px-2 py-2 text-center text-white font-bold border-r border-slate-600">DATOS DEL EMPLEADO</th>
+                            <th scope="colgroup" colspan="4" class="px-2 py-2 text-center text-white font-bold border-r border-slate-600">FECHA</th>
+                            <th scope="colgroup" colspan="6" class="px-2 py-2 text-center text-white font-bold border-r border-slate-600" style="background:#1E40AF">OFICINA</th>
+                            <th scope="colgroup" colspan="6" class="px-2 py-2 text-center text-white font-bold border-r border-slate-600" style="background:#065F46">CAMPO</th>
+                            <th scope="colgroup" colspan="2" class="px-2 py-2 text-center text-white font-bold border-r border-slate-600" style="background:#334155">HORAS LABORADAS</th>
+                            <th scope="colgroup" colspan="2" class="px-2 py-2 text-center text-white font-bold border-r border-slate-600" style="background:#991B1B">TARDANZAS</th>
                             <!-- COLUMNA ACCIÓN COMENTADA (reservada a futuro). Para reactivar: quitar comentarios de los 3 th y del td del render, y volver colspan a 26 en los 4 mensajes ("Cargando datos" estatico, "Cargando datos" JS, "Error", "No se encontraron registros"). -->
                             <!--
-                            <th colspan="1" class="px-2 py-2 text-center text-white font-bold">ACCIÓN</th>
+                            <th scope="colgroup" colspan="1" class="px-2 py-2 text-center text-white font-bold">ACCIÓN</th>
                             -->
                         </tr>
-                        <tr class="bg-gradient-to-r from-green-600 to-green-700">
-                            <th colspan="5" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500"></th>
-                            <th colspan="4" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500"></th>
-                            <th colspan="3" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#2563EB">Turno Mañana</th>
-                            <th colspan="3" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#1D4ED8">Turno Tarde</th>
-                            <th colspan="3" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#059669">Turno Mañana</th>
-                            <th colspan="3" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#047857">Turno Tarde</th>
-                            <th class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#9333EA">T. Mañana</th>
-                            <th class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#7C3AED">T. Tarde</th>
-                            <th class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#EF4444">T. Mañana</th>
-                            <th class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-green-500" style="background:#DC2626">T. Tarde</th>
-                            <!-- <th class="px-2 py-1"></th> -->
+                        <tr class="bg-slate-700">
+                            <th scope="colgroup" colspan="5" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-slate-600"></th>
+                            <th scope="colgroup" colspan="4" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-slate-600"></th>
+                            <th scope="colgroup" colspan="3" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-slate-600" style="background:#1E40AF">Turno Mañana</th>
+                            <th scope="colgroup" colspan="3" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-slate-600" style="background:#1D4ED8">Turno Tarde</th>
+                            <th scope="colgroup" colspan="3" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-slate-600" style="background:#065F46">Turno Mañana</th>
+                            <th scope="colgroup" colspan="3" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-slate-600" style="background:#047857">Turno Tarde</th>
+                            <th scope="col" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-slate-600" style="background:#475569">T. Mañana</th>
+                            <th scope="col" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-slate-600" style="background:#334155">T. Tarde</th>
+                            <th scope="col" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-slate-600" style="background:#B91C1C">T. Mañana</th>
+                            <th scope="col" class="px-2 py-1 text-center text-white text-[10px] font-semibold border-r border-slate-600" style="background:#991B1B">T. Tarde</th>
+                            <!-- <th scope="col" class="px-2 py-1"></th> -->
                         </tr>
-                        <tr class="bg-gradient-to-r from-green-600 to-green-700">
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500 sticky left-0 bg-green-700 z-20">EMPRESA</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500 sticky left-[60px] bg-green-700 z-20">NOMBRES</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500 sticky left-[180px] bg-green-700 z-20">DNI / CE</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">CARGO</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500 sticky left-[260px] bg-green-700 z-20">SEDE</th>
-                            <th colspan="2" class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">DÍA</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">MES</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500">AÑO</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#3B82F6">H.Ent</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#3B82F6">H.Sal</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#3B82F6">Det</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#2563EB">H.Ent</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#2563EB">H.Sal</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#2563EB">Det</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#10B981">H.Ent</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#10B981">H.Sal</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#10B981">Det</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#059669">H.Ent</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#059669">H.Sal</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#059669">Det</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#9333EA">HH:MM:SS</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#7C3AED">HH:MM:SS</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#EF4444">HH:MM:SS</th>
-                            <th class="px-2 py-2 text-center text-white font-semibold border-r border-green-500" style="background:#DC2626">HH:MM:SS</th>
-                            <!-- <th class="px-2 py-2 text-center text-white font-semibold">ACCIÓN</th> -->
+                        <tr class="bg-slate-700">
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600 sticky left-0 bg-slate-700 z-20">EMPRESA</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600 sticky left-[60px] bg-slate-700 z-20">NOMBRES</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600 sticky left-[180px] bg-slate-700 z-20">DNI / CE</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600">CARGO</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600 sticky left-[260px] bg-slate-700 z-20">SEDE</th>
+                            <th scope="colgroup" colspan="2" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600">DÍA</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600">MES</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600">AÑO</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600" style="background:#1D4ED8">H.Ent</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600" style="background:#1D4ED8">H.Sal</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600" style="background:#1D4ED8">Det</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600" style="background:#1E40AF">H.Ent</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600" style="background:#1E40AF">H.Sal</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600" style="background:#1E40AF">Det</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600" style="background:#047857">H.Ent</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600" style="background:#047857">H.Sal</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600" style="background:#047857">Det</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600" style="background:#065F46">H.Ent</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600" style="background:#065F46">H.Sal</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600" style="background:#065F46">Det</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600" style="background:#475569">HH:MM:SS</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600" style="background:#334155">HH:MM:SS</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600" style="background:#B91C1C">HH:MM:SS</th>
+                            <th scope="col" class="px-2 py-2 text-center text-white font-semibold border-r border-slate-600" style="background:#991B1B">HH:MM:SS</th>
+                            <!-- <th scope="col" class="px-2 py-2 text-center text-white font-semibold">ACCIÓN</th> -->
                         </tr>
                     </thead>
                     <tbody id="tabla-control-asistencia" class="divide-y divide-gray-200 dark:divide-slate-700">
-                        <tr>
+                        <tr role="status" aria-live="polite">
                             <td colspan="25" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                                <i class="fas fa-spinner fa-spin mr-2"></i>Cargando datos...
+                                <i class="fas fa-spinner fa-spin mr-2" aria-hidden="true"></i>Cargando datos&hellip;
                             </td>
                         </tr>
                     </tbody>
@@ -293,25 +243,25 @@
 <!-- ============================================================================
 MODAL: EDITAR HORAS DE MARCACIÓN
 ============================================================================= -->
-<div id="modal-editar-marcacion" class="fixed inset-0 z-50 hidden">
+<div id="modal-editar-marcacion" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="modal-editar-titulo">
     <!-- Fondo oscuro -->
-    <div class="fixed inset-0 bg-black bg-opacity-50" onclick="cerrarModalEditar()"></div>
-    
+    <button type="button" tabindex="-1" class="fixed inset-0 bg-black bg-opacity-50" onclick="cerrarModalEditar()" aria-label="Cerrar modal"></button>
+
     <!-- Contenido del modal -->
     <div class="fixed inset-0 flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-full md:max-w-md">
             <!-- Header -->
-            <div class="px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-xl">
+            <div class="px-4 py-3 bg-slate-800 rounded-t-xl">
                 <div class="flex items-center justify-between">
-                    <h3 class="text-white font-bold text-sm">
-                        <i class="fas fa-clock mr-2"></i>Editar Horas de Marcación
+                    <h3 id="modal-editar-titulo" class="text-white font-bold text-sm">
+                        <i class="fas fa-clock mr-2" aria-hidden="true"></i>Editar Horas de Marcaci&oacute;n
                     </h3>
-                    <button onclick="cerrarModalEditar()" class="text-white hover:text-gray-200">
-                        <i class="fas fa-times text-lg"></i>
+                    <button type="button" onclick="cerrarModalEditar()" class="text-white hover:text-gray-200" aria-label="Cerrar">
+                        <i class="fas fa-times text-lg" aria-hidden="true"></i>
                     </button>
                 </div>
             </div>
-            
+
             <!-- Body -->
             <div class="px-4 py-4">
                 <!-- Empleado y fecha -->
@@ -319,110 +269,110 @@ MODAL: EDITAR HORAS DE MARCACIÓN
                     <p class="text-gray-900 dark:text-white font-semibold" id="modal-empleado-nombre">Nombre Empleado</p>
                     <p class="text-gray-500 dark:text-gray-400 text-sm" id="modal-fecha-marcaicon">Fecha: 01/01/2026</p>
                 </div>
-                
+
                 <!-- Sección OFICINA -->
-                <div id="modal-seccion-oficina" class="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg">
-                    <h4 class="text-green-700 dark:text-green-400 font-semibold text-xs mb-3 uppercase">
-                        <i class="fas fa-building mr-1"></i>Oficina
+                <div id="modal-seccion-oficina" class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+                    <h4 class="text-blue-700 dark:text-blue-400 font-semibold text-xs mb-3 uppercase">
+                        <i class="fas fa-building mr-1" aria-hidden="true"></i>Oficina
                     </h4>
-                    
+
                     <!-- Turno Mañana -->
                     <div class="mb-3 p-2 bg-white dark:bg-slate-700 rounded">
                         <p class="text-gray-600 dark:text-gray-400 text-[10px] mb-2 font-semibold uppercase">
-                            <i class="fas fa-sun text-yellow-500 mr-1"></i>Turno Mañana
+                            <i class="fas fa-sun text-yellow-500 mr-1" aria-hidden="true"></i>Turno Ma&ntilde;ana
                         </p>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <div>
-                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Entrada</label>
-                                <input type="time" id="modal-hora-ofi-t1-ent" 
-                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500">
+                                <label for="modal-hora-ofi-t1-ent" class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Entrada</label>
+                                <input type="time" id="modal-hora-ofi-t1-ent" name="ofi_t1_entrada"
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div>
-                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Salida</label>
-                                <input type="time" id="modal-hora-ofi-t1-sal" 
-                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500">
+                                <label for="modal-hora-ofi-t1-sal" class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Salida</label>
+                                <input type="time" id="modal-hora-ofi-t1-sal" name="ofi_t1_salida"
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500">
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Turno Tarde -->
                     <div class="p-2 bg-white dark:bg-slate-700 rounded">
                         <p class="text-gray-600 dark:text-gray-400 text-[10px] mb-2 font-semibold uppercase">
-                            <i class="fas fa-moon text-blue-500 mr-1"></i>Turno Tarde
+                            <i class="fas fa-moon text-blue-500 mr-1" aria-hidden="true"></i>Turno Tarde
                         </p>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <div>
-                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Entrada</label>
-                                <input type="time" id="modal-hora-ofi-t2-ent" 
-                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500">
+                                <label for="modal-hora-ofi-t2-ent" class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Entrada</label>
+                                <input type="time" id="modal-hora-ofi-t2-ent" name="ofi_t2_entrada"
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div>
-                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Salida</label>
-                                <input type="time" id="modal-hora-ofi-t2-sal" 
-                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500">
+                                <label for="modal-hora-ofi-t2-sal" class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Salida</label>
+                                <input type="time" id="modal-hora-ofi-t2-sal" name="ofi_t2_salida"
+                                       class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500">
                             </div>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Sección CAMPO -->
                 <div id="modal-seccion-campo" class="mb-4 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-lg">
                     <h4 class="text-emerald-700 dark:text-emerald-400 font-semibold text-xs mb-3 uppercase">
-                        <i class="fas fa-map-marker-alt mr-1"></i>Campo
+                        <i class="fas fa-map-marker-alt mr-1" aria-hidden="true"></i>Campo
                     </h4>
-                    
+
                     <!-- Turno Mañana -->
                     <div class="mb-3 p-2 bg-white dark:bg-slate-700 rounded">
                         <p class="text-gray-600 dark:text-gray-400 text-[10px] mb-2 font-semibold uppercase">
-                            <i class="fas fa-sun text-yellow-500 mr-1"></i>Turno Mañana
+                            <i class="fas fa-sun text-yellow-500 mr-1" aria-hidden="true"></i>Turno Ma&ntilde;ana
                         </p>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <div>
-                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Entrada</label>
-                                <input type="time" id="modal-hora-cmp-t1-ent" 
+                                <label for="modal-hora-cmp-t1-ent" class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Entrada</label>
+                                <input type="time" id="modal-hora-cmp-t1-ent" name="cmp_t1_entrada"
                                        class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500">
                             </div>
                             <div>
-                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Salida</label>
-                                <input type="time" id="modal-hora-cmp-t1-sal" 
+                                <label for="modal-hora-cmp-t1-sal" class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Salida</label>
+                                <input type="time" id="modal-hora-cmp-t1-sal" name="cmp_t1_salida"
                                        class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500">
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Turno Tarde -->
                     <div class="p-2 bg-white dark:bg-slate-700 rounded">
                         <p class="text-gray-600 dark:text-gray-400 text-[10px] mb-2 font-semibold uppercase">
-                            <i class="fas fa-moon text-blue-500 mr-1"></i>Turno Tarde
+                            <i class="fas fa-moon text-blue-500 mr-1" aria-hidden="true"></i>Turno Tarde
                         </p>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <div>
-                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Entrada</label>
-                                <input type="time" id="modal-hora-cmp-t2-ent" 
+                                <label for="modal-hora-cmp-t2-ent" class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Entrada</label>
+                                <input type="time" id="modal-hora-cmp-t2-ent" name="cmp_t2_entrada"
                                        class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500">
                             </div>
                             <div>
-                                <label class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Salida</label>
-                                <input type="time" id="modal-hora-cmp-t2-sal" 
+                                <label for="modal-hora-cmp-t2-sal" class="block text-gray-600 dark:text-gray-400 text-[10px] mb-1">H. Salida</label>
+                                <input type="time" id="modal-hora-cmp-t2-sal" name="cmp_t2_salida"
                                        class="w-full px-2 py-1.5 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500">
                             </div>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Mensaje de estado -->
                 <div id="modal-mensaje-estado" class="hidden mb-3 p-2 rounded text-xs text-center"></div>
             </div>
-            
+
             <!-- Footer -->
             <div class="px-4 py-3 bg-gray-50 dark:bg-slate-700 rounded-b-xl flex justify-end gap-2">
-                <button onclick="cerrarModalEditar()" 
+                <button type="button" onclick="cerrarModalEditar()"
                         class="px-4 py-2 bg-gray-300 dark:bg-slate-600 hover:bg-gray-400 dark:hover:bg-slate-500 text-gray-700 dark:text-white rounded text-sm font-medium transition-colors">
                     Cancelar
                 </button>
-                <button onclick="guardarCambios()" 
-                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
-                    <i class="fas fa-save mr-1"></i>Guardar Cambios
+                <button type="button" onclick="guardarCambios()"
+                        class="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded text-sm font-medium transition-colors">
+                    <i class="fas fa-save mr-1" aria-hidden="true"></i>Guardar Cambios
                 </button>
             </div>
         </div>
@@ -450,17 +400,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Establecer fechas por defecto: primer día del mes actual hasta hoy
     const hoy = new Date();
     const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-    
+
     document.getElementById('filtro-fecha-inicio').value = formatearFechaInput(primerDiaMes);
     document.getElementById('filtro-fecha-fin').value = formatearFechaInput(hoy);
-    
+
     // Cargar desplegables de empresa y área (una sola vez)
     await cargarFiltros();
-    
+
     document.getElementById('filtro-empresa').addEventListener('change', filtrarYRenderizar);
     document.getElementById('filtro-area').addEventListener('change', filtrarYRenderizar);
     document.getElementById('filtro-empleado').addEventListener('input', filtrarYRenderizar);
-    
+
     // Cargar datos iniciales
     aplicarFiltrosControl();
 });
@@ -470,7 +420,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 // ============================================================================
 async function cargarFiltros() {
     if (filtrosCargados) return;
-    
+
     try {
         const [respEmpresas, respAreas] = await Promise.all([
             fetch('/api/empresas/listar'),
@@ -478,10 +428,10 @@ async function cargarFiltros() {
         ]);
         const empresas = await respEmpresas.json();
         const areas = await respAreas.json();
-        
+
         const selectEmpresa = document.getElementById('filtro-empresa');
         const selectArea = document.getElementById('filtro-area');
-        
+
         if (empresas.success && Array.isArray(empresas.data)) {
             empresas.data.forEach(e => {
                 const option = document.createElement('option');
@@ -491,7 +441,7 @@ async function cargarFiltros() {
                 selectEmpresa.appendChild(option);
             });
         }
-        
+
         if (areas.success && Array.isArray(areas.data)) {
             areas.data.forEach(a => {
                 const option = document.createElement('option');
@@ -501,7 +451,7 @@ async function cargarFiltros() {
                 selectArea.appendChild(option);
             });
         }
-        
+
         filtrosCargados = true;
         console.log(`[FILTROS] ${selectEmpresa.options.length - 1} empresas, ${selectArea.options.length - 1} áreas cargadas`);
     } catch (error) {
@@ -526,14 +476,14 @@ async function aplicarFiltrosControl() {
     const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
     const fechaFin = document.getElementById('filtro-fecha-fin').value;
     const empleado = document.getElementById('filtro-empleado').value.trim();
-    
+
     if (!fechaInicio || !fechaFin) {
         alert('Seleccioná ambas fechas');
         return;
     }
-    
+
     console.log(`[CONTROL] Consultando: ${fechaInicio} al ${fechaFin}, empleado=${empleado}`);
-    
+
     await cargarControlAsistencia(fechaInicio, fechaFin, empleado);
 }
 
@@ -542,47 +492,47 @@ async function aplicarFiltrosControl() {
 // ============================================================================
 function filtrarYRenderizar() {
     if (!datosCargados) return;
-    
+
     const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
     const fechaFin = document.getElementById('filtro-fecha-fin').value;
     const empleado = document.getElementById('filtro-empleado').value.trim();
     const empresaSeleccionada = document.getElementById('filtro-empresa').value;
     const areaSeleccionada = document.getElementById('filtro-area').value;
-    
+
     let datos = [...datosReporte];
-    
+
     // Filtrar por empleado si se escribió algo
     if (empleado) {
         const empLower = empleado.toLowerCase();
-        datos = datos.filter(r => 
+        datos = datos.filter(r =>
             (r.NOMBRES && r.NOMBRES.toLowerCase().includes(empLower)) ||
             (r.DNI_CE && r.DNI_CE.toString().includes(empLower))
         );
     }
-    
+
     // Filtrar por empresa (usuarios sin empresa => 'Sin Empresa' => no matchea)
     if (empresaSeleccionada) {
         datos = datos.filter(r => String(r.EMPRESA ?? '') === empresaSeleccionada);
     }
-    
+
     // Filtrar por área (usuarios sin área => 'Sin Área' => no matchea)
     if (areaSeleccionada) {
         datos = datos.filter(r => String(r.AREA ?? '') === areaSeleccionada);
     }
-    
+
     // Filtrar por días seleccionados
     const diasSeleccionados = [];
     document.querySelectorAll('.dia-btn.bg-blue-600').forEach(btn => {
         diasSeleccionados.push(parseInt(btn.getAttribute('data-dia')));
     });
-    
+
     if (diasSeleccionados.length > 0) {
         datos = datos.filter(r => diasSeleccionados.includes(r.DIA));
     }
-    
+
     datosFiltrados = datos;
     paginaActual = 1;
-    
+
     renderizarTabla(datosFiltrados);
 }
 
@@ -591,42 +541,42 @@ function filtrarYRenderizar() {
 // ============================================================================
 async function cargarControlAsistencia(fechaInicio, fechaFin, empleado) {
     const tbody = document.getElementById('tabla-control-asistencia');
-    
+
     // Resetear paginación al cargar nuevos datos
     paginaActual = 1;
     datosCargados = false;
-    
+
     tbody.innerHTML = `
-        <tr>
+        <tr role="status" aria-live="polite">
             <td colspan="25" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                <i class="fas fa-spinner fa-spin mr-2"></i>Cargando datos...
+                <i class="fas fa-spinner fa-spin mr-2" aria-hidden="true"></i>Cargando datos&hellip;
             </td>
         </tr>
     `;
-    
+
     try {
         let url = `/api/reportes/control-asistencia?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;
-        
+
         const response = await fetch(url);
-        
+
         const result = await response.json();
-        
+
         if (!result.success) {
             throw new Error(result.error || 'Error al cargar datos');
         }
-        
+
         datosReporte = result.data || [];
-        
+
         // Aplicar filtros activos (empleado, empresa, área, días)
         datosCargados = true;
         filtrarYRenderizar();
-        
+
     } catch (error) {
         console.error('[CONTROL] Error:', error);
         tbody.innerHTML = `
-            <tr>
-                <td colspan="25" class="px-4 py-8 text-center text-red-500">
-                    <i class="fas fa-exclamation-triangle mr-2"></i>Error al cargar datos: ${error.message}
+            <tr role="alert">
+                <td colspan="25" class="px-4 py-8 text-center text-red-600 dark:text-red-400">
+                    <i class="fas fa-exclamation-triangle mr-2" aria-hidden="true"></i>Error al cargar datos: ${escapeHtml(error.message)}
                 </td>
             </tr>
         `;
@@ -638,7 +588,7 @@ async function cargarControlAsistencia(fechaInicio, fechaFin, empleado) {
 // ============================================================================
 function renderizarTabla(data) {
     const tbody = document.getElementById('tabla-control-asistencia');
-    
+
     if (!data || data.length === 0) {
         tbody.innerHTML = `
             <tr>
@@ -650,36 +600,36 @@ function renderizarTabla(data) {
         document.getElementById('paginacion-controles').innerHTML = '';
         return;
     }
-    
+
     // Calcular paginación
     const totalRegistros = data.length;
     const totalPaginas = Math.ceil(totalRegistros / registrosPorPagina);
-    
+
     if (paginaActual > totalPaginas) paginaActual = totalPaginas;
     if (paginaActual < 1) paginaActual = 1;
-    
+
     const inicio = (paginaActual - 1) * registrosPorPagina;
     const fin = inicio + registrosPorPagina;
     const datosPagina = data.slice(inicio, fin);
-    
+
     let html = '';
-    
+
     datosPagina.forEach((fila, index) => {
         const colorFila = determinarColorFila(fila.DETALLE_OFI_T1, fila.DETALLE_OFI_T2,
                                               fila.DETALLE_CMP_T1, fila.DETALLE_CMP_T2);
-        
+
         // Dia sin ninguna marca (FALTÓ/VACACIONES/futuro): sin botón de edición
         const tieneHora = v => v && v !== '-' && v !== 'NULL';
         const hayMarcas = [fila.H_ENTRADA_OFI_T1, fila.H_SALIDA_OFI_T1, fila.H_ENTRADA_OFI_T2, fila.H_SALIDA_OFI_T2,
                            fila.H_ENTRADA_CMP_T1, fila.H_SALIDA_CMP_T1, fila.H_ENTRADA_CMP_T2, fila.H_SALIDA_CMP_T2]
             .some(tieneHora);
-        
+
         // Minutos del turno: se muestran solo en la sección (OFICINA/CAMPO) que tenga marcas
         const hayOfiT1 = tieneHora(fila.H_ENTRADA_OFI_T1) || tieneHora(fila.H_SALIDA_OFI_T1);
         const hayOfiT2 = tieneHora(fila.H_ENTRADA_OFI_T2) || tieneHora(fila.H_SALIDA_OFI_T2);
         const hayCmpT1 = tieneHora(fila.H_ENTRADA_CMP_T1) || tieneHora(fila.H_SALIDA_CMP_T1);
         const hayCmpT2 = tieneHora(fila.H_ENTRADA_CMP_T2) || tieneHora(fila.H_SALIDA_CMP_T2);
-        
+
         // Función para renderizar celda de hora con estilo
         function celdaHora(valor, tipo) {
             const bgColor = tipo === 'campo' ? 'bg-campo' : 'bg-oficina';
@@ -687,7 +637,7 @@ function renderizarTabla(data) {
             if (!valor || valor === '-' || valor === 'NULL') return `<td class="px-2 py-2 text-center text-gray-400 dark:text-gray-500 border-r border-gray-200 dark:border-slate-700 ${bgColor}">--:--</td>`;
             return `<td class="px-2 py-2 text-center ${textColor} dark:${textColor} font-semibold border-r border-gray-200 dark:border-slate-700 ${bgColor}">${escapeHtml(valor)}</td>`;
         }
-        
+
         // Función para renderizar detalle con color
         function celdaDetalle(valor) {
             if (!valor || valor === '-') {
@@ -696,16 +646,15 @@ function renderizarTabla(data) {
             const colores = obtenerColoresDetalle(valor);
             return `<td class="px-2 py-2 text-center ${colores.colorDetalle} border-r border-gray-200 dark:border-slate-700">${escapeHtml(valor)}</td>`;
         }
-        
+
         // Función para renderizar horas laboradas
         function celdaHorasLaboradas(valor) {
             if (!valor || valor === '-' || valor === 'NULL') {
                 return '<td class="px-2 py-2 text-center text-gray-400 dark:text-gray-500 border-r border-gray-200 dark:border-slate-700">--</td>';
             }
-            // Color púrpura para las horas laboradas
-            return `<td class="px-2 py-2 text-center text-purple-600 dark:text-purple-400 font-bold border-r border-gray-200 dark:border-slate-700">${escapeHtml(valor)}</td>`;
+            return `<td class="px-2 py-2 text-center text-slate-700 dark:text-slate-300 font-bold border-r border-gray-200 dark:border-slate-700">${escapeHtml(valor)}</td>`;
         }
-        
+
         // Función para renderizar tardanza por turno (rojo)
         function celdaTardanza(valor) {
             if (!valor || valor === '-' || valor === 'NULL') {
@@ -713,7 +662,7 @@ function renderizarTabla(data) {
             }
             return `<td class="px-2 py-2 text-center text-red-600 dark:text-red-400 font-bold border-r border-gray-200 dark:border-slate-700">${escapeHtml(valor)}</td>`;
         }
-        
+
         // Función para renderizar minutos con color
         function celdaMinutos(valor) {
             if (!valor || valor === '-' || valor === 'NULL') {
@@ -727,7 +676,7 @@ function renderizarTabla(data) {
             }
             return `<td class="px-2 py-2 text-center ${colorClass} border-r border-gray-200 dark:border-slate-700">${escapeHtml(valor)}</td>`;
         }
-        
+
         html += `
             <tr class="hover:bg-opacity-80 transition-colors ${colorFila}">
                 <td class="px-2 py-2 text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-slate-700 sticky-col-1">${escapeHtml(fila.EMPRESA || '-')}</td>
@@ -758,7 +707,7 @@ function renderizarTabla(data) {
                 <!-- COLUMNA ACCIÓN COMENTADA (reservada a futuro)
                 <td class="px-2 py-2 text-center">
                     ${hayMarcas ? `<div class="flex items-center justify-center gap-1">
-                        <button onclick="abrirModalEditar('${escapeHtml(fila.DNI_CE || '')}', '${escapeHtml(fila.H_ENTRADA_OFI_T1 || '')}', '${escapeHtml(fila.H_SALIDA_OFI_T1 || '')}', '${escapeHtml(fila.H_ENTRADA_OFI_T2 || '')}', '${escapeHtml(fila.H_SALIDA_OFI_T2 || '')}', '${escapeHtml(fila.H_ENTRADA_CMP_T1 || '')}', '${escapeHtml(fila.H_SALIDA_CMP_T1 || '')}', '${escapeHtml(fila.H_ENTRADA_CMP_T2 || '')}', '${escapeHtml(fila.H_SALIDA_CMP_T2 || '')}', '${escapeHtml(fila.NOMBRES || '')}', '${escapeHtml(fila.DIA || '')}', '${escapeHtml(fila.MES || '')}', '${escapeHtml(fila.ANO || '')}')" 
+                        <button onclick="abrirModalEditar('${escapeHtml(fila.DNI_CE || '')}', '${escapeHtml(fila.H_ENTRADA_OFI_T1 || '')}', '${escapeHtml(fila.H_SALIDA_OFI_T1 || '')}', '${escapeHtml(fila.H_ENTRADA_OFI_T2 || '')}', '${escapeHtml(fila.H_SALIDA_OFI_T2 || '')}', '${escapeHtml(fila.H_ENTRADA_CMP_T1 || '')}', '${escapeHtml(fila.H_SALIDA_CMP_T1 || '')}', '${escapeHtml(fila.H_ENTRADA_CMP_T2 || '')}', '${escapeHtml(fila.H_SALIDA_CMP_T2 || '')}', '${escapeHtml(fila.NOMBRES || '')}', '${escapeHtml(fila.DIA || '')}', '${escapeHtml(fila.MES || '')}', '${escapeHtml(fila.ANO || '')}')"
                                 class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-medium transition-colors"
                                 title="Editar horas">
                             <i class="fas fa-edit"></i>
@@ -769,9 +718,9 @@ function renderizarTabla(data) {
             </tr>
         `;
     });
-    
+
     tbody.innerHTML = html;
-    
+
     // Renderizar controles de paginación
     renderizarPaginacion(totalRegistros, totalPaginas);
 }
@@ -781,7 +730,7 @@ function renderizarTabla(data) {
 // ============================================================================
 function renderizarPaginacion(totalRegistros, totalPaginas) {
     const contenedor = document.getElementById('paginacion-controles');
-    
+
     if (totalPaginas <= 1) {
         contenedor.innerHTML = `
             <div class="text-xs text-gray-500 dark:text-gray-400">
@@ -790,58 +739,58 @@ function renderizarPaginacion(totalRegistros, totalPaginas) {
         `;
         return;
     }
-    
+
     const inicio = (paginaActual - 1) * registrosPorPagina + 1;
     const fin = Math.min(paginaActual * registrosPorPagina, totalRegistros);
-    
+
     let botonesPagina = '';
-    
+
     // Botón Primera página
     botonesPagina += `
-        <button onclick="irAPagina(1)" ${paginaActual === 1 ? 'disabled' : ''} 
+        <button type="button" aria-label="Primera p&aacute;gina" onclick="irAPagina(1)" ${paginaActual === 1 ? 'disabled' : ''}
             class="px-2 py-1 rounded text-xs font-medium ${paginaActual === 1 ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600'}">
-            <i class="fas fa-angle-double-left"></i>
+            <i class="fas fa-angle-double-left" aria-hidden="true"></i>
         </button>
     `;
-    
+
     // Botón Anterior
     botonesPagina += `
-        <button onclick="irAPagina(${paginaActual - 1})" ${paginaActual === 1 ? 'disabled' : ''} 
+        <button type="button" aria-label="P&aacute;gina anterior" onclick="irAPagina(${paginaActual - 1})" ${paginaActual === 1 ? 'disabled' : ''}
             class="px-2 py-1 rounded text-xs font-medium ${paginaActual === 1 ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600'}">
-            <i class="fas fa-angle-left"></i>
+            <i class="fas fa-angle-left" aria-hidden="true"></i>
         </button>
     `;
-    
+
     // Números de página (mostrar máximo 5)
     let startPage = Math.max(1, paginaActual - 2);
     let endPage = Math.min(totalPaginas, startPage + 4);
     if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
-    
+
     for (let i = startPage; i <= endPage; i++) {
         botonesPagina += `
-            <button onclick="irAPagina(${i})" 
+            <button type="button" aria-label="P&aacute;gina ${i}" aria-current="${i === paginaActual ? 'page' : 'false'}" onclick="irAPagina(${i})"
                 class="px-3 py-1 rounded text-xs font-medium ${i === paginaActual ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600'}">
                 ${i}
             </button>
         `;
     }
-    
+
     // Botón Siguiente
     botonesPagina += `
-        <button onclick="irAPagina(${paginaActual + 1})" ${paginaActual === totalPaginas ? 'disabled' : ''} 
+        <button type="button" aria-label="P&aacute;gina siguiente" onclick="irAPagina(${paginaActual + 1})" ${paginaActual === totalPaginas ? 'disabled' : ''}
             class="px-2 py-1 rounded text-xs font-medium ${paginaActual === totalPaginas ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600'}">
-            <i class="fas fa-angle-right"></i>
+            <i class="fas fa-angle-right" aria-hidden="true"></i>
         </button>
     `;
-    
+
     // Botón Última página
     botonesPagina += `
-        <button onclick="irAPagina(${totalPaginas})" ${paginaActual === totalPaginas ? 'disabled' : ''} 
+        <button type="button" aria-label="&Uacute;ltima p&aacute;gina" onclick="irAPagina(${totalPaginas})" ${paginaActual === totalPaginas ? 'disabled' : ''}
             class="px-2 py-1 rounded text-xs font-medium ${paginaActual === totalPaginas ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-300 dark:border-slate-600'}">
-            <i class="fas fa-angle-double-right"></i>
+            <i class="fas fa-angle-double-right" aria-hidden="true"></i>
         </button>
     `;
-    
+
     contenedor.innerHTML = `
         <div class="flex items-center justify-between">
             <div class="text-xs text-gray-500 dark:text-gray-400">
@@ -874,9 +823,9 @@ function obtenerColoresDetalle(detalle) {
             colorDetalle: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
         };
     }
-    
+
     const detalleUpper = detalle.toUpperCase();
-    
+
     if (detalleUpper === 'ASISTENCIA' || detalleUpper === 'CUMPLIÓ HORARIO') {
         return {
             colorMinutos: 'text-green-600 dark:text-green-400 font-bold',
@@ -921,8 +870,8 @@ function obtenerColoresDetalle(detalle) {
     }
     if (detalleUpper === 'SIN HORARIO') {
         return {
-            colorMinutos: 'text-purple-600 dark:text-purple-400',
-            colorDetalle: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+            colorMinutos: 'text-slate-600 dark:text-slate-400',
+            colorDetalle: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
         };
     }
     if (detalleUpper === 'FALTÓ') {
@@ -937,7 +886,7 @@ function obtenerColoresDetalle(detalle) {
             colorDetalle: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 font-semibold'
         };
     }
-    
+
     return {
         colorMinutos: 'text-gray-500 dark:text-gray-400',
         colorDetalle: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
@@ -949,14 +898,14 @@ function obtenerColoresDetalle(detalle) {
 // ============================================================================
 function formatearMinutos(minutos) {
     if (!minutos || minutos === '-' || minutos === 'Sin Marcación') return '-';
-    
+
     const num = parseInt(minutos);
     if (isNaN(num)) return minutos;
-    
+
     const horas = Math.floor(Math.abs(num) / 60);
     const mins = Math.abs(num) % 60;
     const formato = `${horas}:${String(mins).padStart(2, '0')}`;
-    
+
     if (num > 0) return `+${formato}`;
     if (num < 0) return `-${formato}`;
     return '0:00';
@@ -969,13 +918,15 @@ function determinarColorFila(detalleT1, detalleT2, detalleCmpT1, detalleCmpT2) {
     const estados = [detalleT1, detalleT2, detalleCmpT1, detalleCmpT2]
         .map(valor => (valor || '').toUpperCase());
 
-    if (estados.includes('VACACIONES')) return 'bg-purple-900/30';
-    if (estados.includes('FALTÓ')) return 'bg-red-900/30';
-    if (estados.includes('TARDANZA')) return 'bg-yellow-900/30';
-    if (estados.includes('INCOMPLETO')) return 'bg-blue-900/30';
-    if (estados.includes('SALIDA TEMPRANA')) return 'bg-orange-900/30';
-    if (estados.includes('SIN MARCACIÓN')) return 'bg-gray-700/50';
-    return 'bg-slate-800';
+    if (estados.includes('VACACIONES')) return 'bg-purple-50 dark:bg-purple-900/30';
+    if (estados.includes('FALTÓ')) return 'bg-red-50 dark:bg-red-900/30';
+    if (estados.includes('TARDANZA')) return 'bg-yellow-50 dark:bg-yellow-900/30';
+    if (estados.includes('INCOMPLETO')) return 'bg-blue-50 dark:bg-blue-900/30';
+    if (estados.includes('SALIDA TEMPRANA')) return 'bg-orange-50 dark:bg-orange-900/30';
+    if (estados.includes('SIN HORARIO')) return 'bg-slate-100 dark:bg-slate-800/60';
+    if (estados.includes('SIN MARCACIÓN')) return 'bg-gray-100 dark:bg-gray-700/50';
+    if (estados.includes('ASISTENCIA')) return 'bg-green-50 dark:bg-green-900/20';
+    return 'bg-white dark:bg-slate-900';
 }
 
 // ============================================================================
@@ -1001,14 +952,14 @@ function escapeHtml(text) {
 function exportarExcel() {
     const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
     const fechaFin = document.getElementById('filtro-fecha-fin').value;
-    
+
     if (!fechaInicio || !fechaFin) {
         alert('Seleccioná ambas fechas para exportar');
         return;
     }
-    
+
     console.log(`[EXPORTAR] Exportando: ${fechaInicio} a ${fechaFin}`);
-    
+
     // Descargar archivo
     window.location.href = `/api/reportes/control-asistencia/excel?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;
 }
@@ -1087,12 +1038,12 @@ document.addEventListener('click', (evento) => {
 function exportarTardanzas() {
     const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
     const fechaFin = document.getElementById('filtro-fecha-fin').value;
-    
+
     if (!fechaInicio || !fechaFin) {
         alert('Seleccioná ambas fechas para exportar tardanzas');
         return;
     }
-    
+
     // Enviar los mismos filtros de la pantalla (empleado/empresa/área)
     // para que el Excel respete lo que se está viendo en la tabla
     const params = new URLSearchParams({
@@ -1102,9 +1053,9 @@ function exportarTardanzas() {
         empresa: document.getElementById('filtro-empresa').value,
         area: document.getElementById('filtro-area').value
     });
-    
+
     console.log(`[TARDANZAS] Exportando tardanzas: ${params.toString()}`);
-    
+
     window.location.href = `/api/reportes/control-asistencia/tardanzas-excel?${params}`;
 }
 
@@ -1244,32 +1195,35 @@ let marcacionEditando = {
 // ============================================================================
 // ABRIR MODAL EDITAR MARCACIÓN
 // ============================================================================
+let ultimoElementoEnfocado = null;
+
 async function abrirModalEditar(numDocumento, hEntOfi1, hSalOfi1, hEntOfi2, hSalOfi2,
                           hEntCmp1, hSalCmp1, hEntCmp2, hSalCmp2,
                           nombreEmpleado, dia, mes, anio) {
-    
+
+    ultimoElementoEnfocado = document.activeElement;
     console.log('[MODAL] === ABRIR MODAL EDITAR ===');
     console.log('[MODAL] Parámetros recibidos:', { numDocumento, hEntOfi1, hSalOfi1, hEntOfi2, hSalOfi2, hEntCmp1, hSalCmp1, hEntCmp2, hSalCmp2, nombreEmpleado, dia, mes, anio });
-    
+
     // Guardar número de documento
     marcacionEditando.numDocumento = numDocumento;
-    
+
     // Formatear fecha para guardar
     const diaFmt = String(dia).padStart(2, '0');
     const mesFmt = String(mes).padStart(2, '0');
     marcacionEditando.fechaOriginal = `${anio}-${mesFmt}-${diaFmt}`;
-    
+
     console.log('[MODAL] Fecha formateada:', marcacionEditando.fechaOriginal);
-    
+
     // Mostrar nombre del empleado
     document.getElementById('modal-empleado-nombre').textContent = nombreEmpleado || 'Sin nombre';
     document.getElementById('modal-fecha-marcaicon').textContent = `Fecha: ${diaFmt}/${mesFmt}/${anio}`;
-    
+
     // Función helper para determinar si una hora es válida
     function esHoraValida(hora) {
         return hora && hora !== '-' && hora !== 'null' && hora.trim() !== '';
     }
-    
+
     // Las celdas pueden traer varias marcas ("13:21, 15:15"): para el
     // prefill tomamos la 1ª hora (entradas) o la última (salidas)
     function horaDeCelda(valor, desdeElFinal) {
@@ -1277,7 +1231,7 @@ async function abrirModalEditar(numDocumento, hEntOfi1, hSalOfi1, hEntOfi2, hSal
         if (!partes.length) return '';
         return desdeElFinal ? partes[partes.length - 1] : partes[0];
     }
-    
+
     // Cargar horas existentes (se mostrarán temporalmente, se ajustarán después con tipo_ubicacion)
     document.getElementById('modal-hora-ofi-t1-ent').value = horaDeCelda(hEntOfi1, false);
     document.getElementById('modal-hora-ofi-t1-sal').value = horaDeCelda(hSalOfi1, true);
@@ -1287,42 +1241,42 @@ async function abrirModalEditar(numDocumento, hEntOfi1, hSalOfi1, hEntOfi2, hSal
     document.getElementById('modal-hora-cmp-t1-sal').value = horaDeCelda(hSalCmp1, true);
     document.getElementById('modal-hora-cmp-t2-ent').value = horaDeCelda(hEntCmp2, false);
     document.getElementById('modal-hora-cmp-t2-sal').value = horaDeCelda(hSalCmp2, true);
-    
+
     // Deshabilitar todos temporalmente
     document.querySelectorAll('#modal-editar-marcacion input[type="time"]').forEach(input => {
         input.disabled = true;
     });
-    
+
     // Ocultar mensaje de estado
     const msgEstado = document.getElementById('modal-mensaje-estado');
     msgEstado.classList.add('hidden');
-    
+
     // Buscar IDs y tipo_ubicacion de las marcaciones
     const urlIds = `/api/marcacion/obtener-ids?num_documento=${numDocumento}&fecha=${marcacionEditando.fechaOriginal}`;
     console.log('[MODAL] Fetching IDs:', urlIds);
-    
+
     try {
         const response = await fetch(urlIds);
         console.log('[MODAL] Response status:', response.status);
-        
+
         const result = await response.json();
         console.log('[MODAL] Response body:', result);
-        
+
         if (result.success) {
             // Guardar IDs
             marcacionEditando.idT1Entrada = result.data.id_t1_entrada;
             marcacionEditando.idT1Salida = result.data.id_t1_salida;
             marcacionEditando.idT2Entrada = result.data.id_t2_entrada;
             marcacionEditando.idT2Salida = result.data.id_t2_salida;
-            
+
             // Guardar tipo_ubicacion
             const tipoT1Ent = result.data.tipo_ubi_t1_ent;
             const tipoT1Sal = result.data.tipo_ubi_t1_sal;
             const tipoT2Ent = result.data.tipo_ubi_t2_ent;
             const tipoT2Sal = result.data.tipo_ubi_t2_sal;
-            
+
             console.log('[MODAL] Tipos ubicación:', { tipoT1Ent, tipoT1Sal, tipoT2Ent, tipoT2Sal });
-            
+
             // Habilitar inputs según tipo_ubicacion
             // T1 Entrada
             if (tipoT1Ent === 'OFICINA') {
@@ -1330,35 +1284,35 @@ async function abrirModalEditar(numDocumento, hEntOfi1, hSalOfi1, hEntOfi2, hSal
             } else if (tipoT1Ent === 'CAMPO') {
                 document.getElementById('modal-hora-cmp-t1-ent').disabled = false;
             }
-            
+
             // T1 Salida
             if (tipoT1Sal === 'OFICINA') {
                 document.getElementById('modal-hora-ofi-t1-sal').disabled = false;
             } else if (tipoT1Sal === 'CAMPO') {
                 document.getElementById('modal-hora-cmp-t1-sal').disabled = false;
             }
-            
+
             // T2 Entrada
             if (tipoT2Ent === 'OFICINA') {
                 document.getElementById('modal-hora-ofi-t2-ent').disabled = false;
             } else if (tipoT2Ent === 'CAMPO') {
                 document.getElementById('modal-hora-cmp-t2-ent').disabled = false;
             }
-            
+
             // T2 Salida
             if (tipoT2Sal === 'OFICINA') {
                 document.getElementById('modal-hora-ofi-t2-sal').disabled = false;
             } else if (tipoT2Sal === 'CAMPO') {
                 document.getElementById('modal-hora-cmp-t2-sal').disabled = false;
             }
-            
+
             // Mostrar secciones si tienen al menos un input habilitado
             const oficinaVisible = tipoT1Ent === 'OFICINA' || tipoT1Sal === 'OFICINA' || tipoT2Ent === 'OFICINA' || tipoT2Sal === 'OFICINA';
             const campoVisible = tipoT1Ent === 'CAMPO' || tipoT1Sal === 'CAMPO' || tipoT2Ent === 'CAMPO' || tipoT2Sal === 'CAMPO';
-            
+
             document.getElementById('modal-seccion-oficina').style.display = oficinaVisible ? 'block' : 'none';
             document.getElementById('modal-seccion-campo').style.display = campoVisible ? 'block' : 'none';
-            
+
             console.log('[MODAL] Secciones:', { oficinaVisible, campoVisible });
             console.log('[MODAL] IDs guardados:', marcacionEditando);
         } else {
@@ -1375,9 +1329,11 @@ async function abrirModalEditar(numDocumento, hEntOfi1, hSalOfi1, hEntOfi2, hSal
         marcacionEditando.idT2Entrada = null;
         marcacionEditando.idT2Salida = null;
     }
-    
+
     // Mostrar modal
-    document.getElementById('modal-editar-marcacion').classList.remove('hidden');
+    const modal = document.getElementById('modal-editar-marcacion');
+    modal.classList.remove('hidden');
+    modal.querySelector('button[aria-label="Cerrar"]').focus();
     console.log('[MODAL] Modal abierto');
 }
 
@@ -1386,33 +1342,67 @@ async function abrirModalEditar(numDocumento, hEntOfi1, hSalOfi1, hEntOfi2, hSal
 // ============================================================================
 function cerrarModalEditar() {
     document.getElementById('modal-editar-marcacion').classList.add('hidden');
+    if (ultimoElementoEnfocado) {
+        ultimoElementoEnfocado.focus();
+        ultimoElementoEnfocado = null;
+    }
 }
+
+document.addEventListener('keydown', function(event) {
+    const modal = document.getElementById('modal-editar-marcacion');
+    if (!modal || modal.classList.contains('hidden')) return;
+
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        cerrarModalEditar();
+        return;
+    }
+
+    if (event.key !== 'Tab') return;
+
+    const enfocables = Array.from(
+        modal.querySelectorAll('button:not([tabindex="-1"]), input:not([disabled]), select, textarea, [href], [tabindex]:not([tabindex="-1"])')
+    ).filter(elemento => elemento.offsetParent !== null);
+
+    if (!enfocables.length) return;
+
+    const primero = enfocables[0];
+    const ultimo = enfocables[enfocables.length - 1];
+
+    if (event.shiftKey && document.activeElement === primero) {
+        event.preventDefault();
+        ultimo.focus();
+    } else if (!event.shiftKey && document.activeElement === ultimo) {
+        event.preventDefault();
+        primero.focus();
+    }
+});
 
 // ============================================================================
 // GUARDAR CAMBIOS
 // ============================================================================
 async function guardarCambios() {
     console.log('[GUARDAR] === GUARDAR CAMBIOS ===');
-    
+
     // OFICINA
     const ofiT1Ent = document.getElementById('modal-hora-ofi-t1-ent').value;
     const ofiT1Sal = document.getElementById('modal-hora-ofi-t1-sal').value;
     const ofiT2Ent = document.getElementById('modal-hora-ofi-t2-ent').value;
     const ofiT2Sal = document.getElementById('modal-hora-ofi-t2-sal').value;
-    
+
     // CAMPO
     const cmpT1Ent = document.getElementById('modal-hora-cmp-t1-ent').value;
     const cmpT1Sal = document.getElementById('modal-hora-cmp-t1-sal').value;
     const cmpT2Ent = document.getElementById('modal-hora-cmp-t2-ent').value;
     const cmpT2Sal = document.getElementById('modal-hora-cmp-t2-sal').value;
-    
+
     console.log('[GUARDAR] Horas capturadas:', { ofiT1Ent, ofiT1Sal, ofiT2Ent, ofiT2Sal, cmpT1Ent, cmpT1Sal, cmpT2Ent, cmpT2Sal });
     console.log('[GUARDAR] IDs disponibles:', marcacionEditando);
-    
+
     const msgEstado = document.getElementById('modal-mensaje-estado');
     let hayErrores = false;
     let totalEditados = 0;
-    
+
     // Validar que al menos haya una hora para editar
     const hayHoras = [ofiT1Ent, ofiT1Sal, ofiT2Ent, ofiT2Sal, cmpT1Ent, cmpT1Sal, cmpT2Ent, cmpT2Sal].some(h => h);
     if (!hayHoras) {
@@ -1422,7 +1412,7 @@ async function guardarCambios() {
         msgEstado.classList.remove('hidden');
         return;
     }
-    
+
     // T1 Entrada: usa OFICINA si tiene valor, si no CAMPO
     if (marcacionEditando.idT1Entrada && ofiT1Ent) {
         console.log(`[GUARDAR] Editando T1 Entrada (OFI): ID=${marcacionEditando.idT1Entrada}, Hora=${ofiT1Ent}`);
@@ -1435,7 +1425,7 @@ async function guardarCambios() {
         if (resultado) totalEditados++;
         else hayErrores = true;
     }
-    
+
     // T1 Salida: usa OFICINA si tiene valor, si no CAMPO
     if (marcacionEditando.idT1Salida && ofiT1Sal) {
         console.log(`[GUARDAR] Editando T1 Salida (OFI): ID=${marcacionEditando.idT1Salida}, Hora=${ofiT1Sal}`);
@@ -1448,7 +1438,7 @@ async function guardarCambios() {
         if (resultado) totalEditados++;
         else hayErrores = true;
     }
-    
+
     // T2 Entrada: usa OFICINA si tiene valor, si no CAMPO
     if (marcacionEditando.idT2Entrada && ofiT2Ent) {
         console.log(`[GUARDAR] Editando T2 Entrada (OFI): ID=${marcacionEditando.idT2Entrada}, Hora=${ofiT2Ent}`);
@@ -1461,7 +1451,7 @@ async function guardarCambios() {
         if (resultado) totalEditados++;
         else hayErrores = true;
     }
-    
+
     // T2 Salida: usa OFICINA si tiene valor, si no CAMPO
     if (marcacionEditando.idT2Salida && ofiT2Sal) {
         console.log(`[GUARDAR] Editando T2 Salida (OFI): ID=${marcacionEditando.idT2Salida}, Hora=${ofiT2Sal}`);
@@ -1474,15 +1464,15 @@ async function guardarCambios() {
         if (resultado) totalEditados++;
         else hayErrores = true;
     }
-    
+
     console.log(`[GUARDAR] Total editados: ${totalEditados}, Errores: ${hayErrores}`);
-    
+
     // Mostrar resultado
     if (totalEditados > 0 && !hayErrores) {
         msgEstado.textContent = `✓ ${totalEditados} marcación(es) actualizada(s) exitosamente`;
         msgEstado.className = 'mb-3 p-2 rounded text-xs text-center bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
         msgEstado.classList.remove('hidden');
-        
+
         // Recargar tabla después de 1.5 segundos
         setTimeout(() => {
             cerrarModalEditar();
@@ -1501,14 +1491,14 @@ async function guardarCambios() {
 async function editarMarcacionIndividual(idMarcacion, nuevaHora, fechaOriginal) {
     console.log(`[EDITAR] === EDITAR MARCACIÓN INDIVIDUAL ===`);
     console.log(`[EDITAR] ID=${idMarcacion}, Hora=${nuevaHora}, Fecha=${fechaOriginal}`);
-    
+
     const body = {
         id_marcacion: idMarcacion,
         nueva_hora: nuevaHora,
         fecha_original: fechaOriginal
     };
     console.log(`[EDITAR] Body:`, body);
-    
+
     try {
         console.log(`[EDITAR] Fetch PUT /api/marcacion/editar`);
         const response = await fetch('/api/marcacion/editar', {
@@ -1518,11 +1508,11 @@ async function editarMarcacionIndividual(idMarcacion, nuevaHora, fechaOriginal) 
             },
             body: JSON.stringify(body)
         });
-        
+
         console.log(`[EDITAR] Response status: ${response.status}`);
         const result = await response.json();
         console.log(`[EDITAR] Response body:`, result);
-        
+
         if (result.success) {
             console.log(`[EDITAR] [OK] Marcación ${idMarcacion} actualizada: ${result.message}`);
             return true;
@@ -1559,17 +1549,17 @@ function verJustificacionesDia(nombre, dia, mes, anio, justEntT1, justSalT1, jus
     const fecha = `${dia}/${mes}/${anio}`;
     document.getElementById('just-dia-nombre').textContent = nombre;
     document.getElementById('just-dia-fecha').textContent = fecha;
-    
+
     let html = '';
-    
+
     // TURNO MAÑANA (T1)
     const t1Ent = justEntT1 && justEntT1 !== 'null' && justEntT1.trim() !== '';
     const t1Sal = justSalT1 && justSalT1 !== 'null' && justSalT1.trim() !== '';
-    
+
     if (t1Ent || t1Sal) {
         html += `<div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-4">`;
         html += `<p class="text-xs text-emerald-600 dark:text-emerald-400 mb-3 font-semibold"><i class="fas fa-sun mr-1"></i>Turno Mañana</p>`;
-        
+
         if (t1Ent) {
             html += `
                 <div class="mb-2 last:mb-0">
@@ -1588,15 +1578,15 @@ function verJustificacionesDia(nombre, dia, mes, anio, justEntT1, justSalT1, jus
         }
         html += `</div>`;
     }
-    
+
     // TURNO TARDE (T2)
     const t2Ent = justEntT2 && justEntT2 !== 'null' && justEntT2.trim() !== '';
     const t2Sal = justSalT2 && justSalT2 !== 'null' && justSalT2.trim() !== '';
-    
+
     if (t2Ent || t2Sal) {
         html += `<div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-4">`;
         html += `<p class="text-xs text-emerald-600 dark:text-emerald-400 mb-3 font-semibold"><i class="fas fa-moon mr-1"></i>Turno Tarde</p>`;
-        
+
         if (t2Ent) {
             html += `
                 <div class="mb-2 last:mb-0">
@@ -1615,7 +1605,7 @@ function verJustificacionesDia(nombre, dia, mes, anio, justEntT1, justSalT1, jus
         }
         html += `</div>`;
     }
-    
+
     if (!html) {
         html = `
             <div class="text-center text-gray-500 dark:text-gray-400 py-4">
@@ -1623,7 +1613,7 @@ function verJustificacionesDia(nombre, dia, mes, anio, justEntT1, justSalT1, jus
             </div>
         `;
     }
-    
+
     document.getElementById('just-dia-contenido').innerHTML = html;
     document.getElementById('modalVerJustificacionesDia').classList.remove('hidden');
 }
@@ -1633,14 +1623,14 @@ function cerrarModalJustificacionesDia() {
 }</script>
 
 <!-- Modal Ver Justificación -->
-<div id="modalVerJustificacion" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
+<div id="modalVerJustificacion" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="titulo-justificacion">
     <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-200 dark:border-slate-600">
         <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white">
-                <i class="fas fa-file-alt mr-2 text-yellow-500"></i>Justificación
+            <h3 id="titulo-justificacion" class="text-lg font-bold text-gray-900 dark:text-white">
+                <i class="fas fa-file-alt mr-2 text-yellow-500" aria-hidden="true"></i>Justificaci&oacute;n
             </h3>
-            <button onclick="cerrarModalJustificacion()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                <i class="fas fa-times text-xl"></i>
+            <button type="button" aria-label="Cerrar" onclick="cerrarModalJustificacion()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <i class="fas fa-times text-xl" aria-hidden="true"></i>
             </button>
         </div>
         <div class="space-y-3">
@@ -1665,7 +1655,7 @@ function cerrarModalJustificacionesDia() {
                 <p id="justificacion-modal-texto" class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">-</p>
             </div>
         </div>
-        <button onclick="cerrarModalJustificacion()" 
+        <button type="button" onclick="cerrarModalJustificacion()"
             class="w-full mt-4 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-slate-600 dark:hover:bg-slate-500 text-gray-800 dark:text-white rounded-xl font-semibold transition-colors">
             Cerrar
         </button>
@@ -1673,14 +1663,14 @@ function cerrarModalJustificacionesDia() {
 </div>
 
 <!-- Modal Ver Justificaciones del Día -->
-<div id="modalVerJustificacionesDia" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
+<div id="modalVerJustificacionesDia" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="titulo-justificaciones-dia">
     <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-gray-200 dark:border-slate-600">
         <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white">
-                <i class="fas fa-file-alt mr-2 text-yellow-500"></i>Justificaciones del día
+            <h3 id="titulo-justificaciones-dia" class="text-lg font-bold text-gray-900 dark:text-white">
+                <i class="fas fa-file-alt mr-2 text-yellow-500" aria-hidden="true"></i>Justificaciones del d&iacute;a
             </h3>
-            <button onclick="cerrarModalJustificacionesDia()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                <i class="fas fa-times text-xl"></i>
+            <button type="button" aria-label="Cerrar" onclick="cerrarModalJustificacionesDia()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <i class="fas fa-times text-xl" aria-hidden="true"></i>
             </button>
         </div>
         <div class="space-y-3 mb-4">
@@ -1694,8 +1684,8 @@ function cerrarModalJustificacionesDia() {
             </div>
         </div>
         <div id="just-dia-contenido" class="space-y-3 mb-4"></div>
-        <button onclick="cerrarModalJustificacionesDia()" 
-            class="w-full py-3 bg-gray-200 hover:bg-gray-300 dark:bg-slate-600 dark:hover:bg-slate-500 text-gray-800 dark:text-white rounded-xl font-semibold transition-colors">
+        <button type="button" onclick="cerrarModalJustificacionesDia()"
+            class="w-full py-3 bg-gray-300 hover:bg-gray-400 dark:bg-slate-600 dark:hover:bg-slate-500 text-gray-800 dark:text-white rounded-xl font-semibold transition-colors">
             Cerrar
         </button>
     </div>

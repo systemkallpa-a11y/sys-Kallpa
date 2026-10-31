@@ -25,6 +25,167 @@ def get_db_connection():
         return None
 
 
+# ============================================================================
+# FICHAS POR TIPO DE INVENTARIO
+# ============================================================================
+# Cada tipo físico tiene una tabla hija 1 a 1 con TblInventario.
+# Se usan para los datos propios del tipo (talla, marca, dimensiones, etc.).
+FICHAS = {
+    'ROPA': {
+        'tabla': 'TblInventarioRopa',
+        'campos': ['talla', 'color', 'genero', 'material_tela',
+                   'norma_certificacion', 'tipo_proteccion'],
+    },
+    'MATERIAL': {
+        'tabla': 'TblInventarioMaterial',
+        'campos': ['presentacion', 'marca', 'tipo', 'norma', 'medida',
+                   'color', 'resistencia', 'lote', 'peso_unitario_kg',
+                   'largo_cm', 'ancho_cm', 'alto_cm'],
+    },
+    'HERRAMIENTA': {
+        'tabla': 'TblInventarioHerramienta',
+        'campos': ['marca', 'modelo', 'tipo_herramienta', 'potencia',
+                   'voltaje', 'numero_serie', 'peso_kg',
+                   'largo_cm', 'ancho_cm', 'alto_cm'],
+    },
+    'EQUIPO': {
+        'tabla': 'TblInventarioEquipo',
+        'campos': ['marca', 'modelo', 'capacidad', 'potencia',
+                   'numero_serie', 'anio_fabricacion', 'placa', 'peso_kg',
+                   'largo_cm', 'ancho_cm', 'alto_cm'],
+    },
+    'TECNOLOGIA': {
+        'tabla': 'TblInventarioTecnologia',
+        'campos': ['marca', 'modelo', 'procesador', 'ram', 'almacenamiento',
+                   'pantalla', 'sistema_operativo', 'numero_serie',
+                   'garantia_meses', 'peso_kg', 'largo_cm', 'ancho_cm', 'alto_cm'],
+    },
+    'CONSUMIBLE': {
+        'tabla': 'TblInventarioConsumible',
+        'campos': ['marca', 'presentacion', 'tamano', 'gramaje', 'color',
+                   'unidades_paquete', 'blancura_pct'],
+    },
+}
+
+CAMPOS_NUMERICOS = {
+    'peso_unitario_kg', 'peso_kg', 'largo_cm', 'ancho_cm', 'alto_cm',
+    'gramaje', 'blancura_pct', 'garantia_meses', 'anio_fabricacion',
+    'unidades_paquete',
+}
+
+CAMPOS_ENTEROS = {'garantia_meses', 'anio_fabricacion', 'unidades_paquete'}
+
+LARGOS_FICHA = {
+    'talla': 20, 'color': 30, 'material_tela': 50, 'norma_certificacion': 100,
+    'tipo_proteccion': 50, 'presentacion': 50, 'marca': 50, 'tipo': 50,
+    'norma': 100, 'medida': 50, 'resistencia': 50, 'lote': 50,
+    'modelo': 100, 'tipo_herramienta': 20, 'potencia': 50, 'voltaje': 50,
+    'numero_serie': 80, 'capacidad': 50, 'placa': 20, 'procesador': 100,
+    'ram': 50, 'almacenamiento': 50, 'pantalla': 50, 'sistema_operativo': 50,
+    'tamano': 50,
+}
+
+GENEROS_VALIDOS = {'HOMBRE', 'MUJER', 'UNISEX', 'OTRO'}
+TIPOS_HERRAMIENTA_VALIDOS = {'MANUAL', 'ELECTRICA', 'BATERIA', 'NEUMATICA', 'OTRO'}
+
+
+def normalizar_ficha(tipo, ficha):
+    """Filtra y castea los campos de la ficha según el tipo de inventario."""
+    config = FICHAS.get(tipo)
+    if not config or not isinstance(ficha, dict):
+        return {}
+
+    datos = {}
+    for campo in config['campos']:
+        if campo not in ficha:
+            continue
+        valor = ficha.get(campo)
+        if valor is None or (isinstance(valor, str) and not valor.strip()):
+            datos[campo] = None
+            continue
+
+        if campo in CAMPOS_NUMERICOS:
+            try:
+                datos[campo] = int(float(valor)) if campo in CAMPOS_ENTEROS else float(valor)
+            except (TypeError, ValueError):
+                raise ValueError(f"Valor numérico inválido en '{campo}': {valor}")
+        else:
+            texto = str(valor).strip()
+            datos[campo] = texto[:LARGOS_FICHA.get(campo, 255)]
+
+    if 'genero' in datos and datos['genero'] and datos['genero'].upper() not in GENEROS_VALIDOS:
+        raise ValueError(f"Género inválido: {datos['genero']}")
+    if 'genero' in datos and datos['genero']:
+        datos['genero'] = datos['genero'].upper()
+
+    if 'tipo_herramienta' in datos and datos['tipo_herramienta']:
+        tipo_herr = datos['tipo_herramienta'].upper()
+        if tipo_herr not in TIPOS_HERRAMIENTA_VALIDOS:
+            raise ValueError(f"Tipo de herramienta inválido: {datos['tipo_herramienta']}")
+        datos['tipo_herramienta'] = tipo_herr
+
+    return datos
+
+
+def guardar_ficha(cursor, id_inventario, tipo, datos):
+    """Inserta o actualiza la ficha del producto.
+
+    Si todos los campos llegan vacíos no se crea una ficha nueva, pero sí se
+    actualiza una existente (permite borrar los datos desde el formulario).
+    """
+    config = FICHAS.get(tipo)
+    if not config or not datos:
+        return
+
+    if not any(v is not None for v in datos.values()):
+        cursor.execute(
+            f"SELECT 1 FROM `{config['tabla']}` WHERE id_inventario = %s",
+            (id_inventario,),
+        )
+        if cursor.fetchone() is None:
+            return
+
+    columnas = ['id_inventario'] + list(datos.keys())
+    valores = [id_inventario] + list(datos.values())
+    placeholders = ', '.join(['%s'] * len(columnas))
+    actualizaciones = ', '.join(f"`{c}` = VALUES(`{c}`)" for c in datos.keys())
+
+    cursor.execute(
+        f"INSERT INTO `{config['tabla']}` ({', '.join(f'`{c}`' for c in columnas)}) "
+        f"VALUES ({placeholders}) ON DUPLICATE KEY UPDATE {actualizaciones}",
+        valores,
+    )
+
+
+def eliminar_ficha(cursor, id_inventario, tipo):
+    """Elimina la ficha de un producto (necesario antes de cambiar de tipo)."""
+    config = FICHAS.get(tipo)
+    if not config:
+        return
+    cursor.execute(
+        f"DELETE FROM `{config['tabla']}` WHERE id_inventario = %s",
+        (id_inventario,),
+    )
+
+
+def leer_ficha(cursor, id_inventario, tipo):
+    """Devuelve los datos de la ficha como dict (sin columnas técnicas)."""
+    config = FICHAS.get(tipo)
+    if not config:
+        return {}
+    cursor.execute(
+        f"SELECT * FROM `{config['tabla']}` WHERE id_inventario = %s",
+        (id_inventario,),
+    )
+    fila = cursor.fetchone()
+    if not fila:
+        return {}
+    datos = dict(fila)
+    for clave in ('id_inventario', 'tipo_inventario', 'fecha_actualizacion'):
+        datos.pop(clave, None)
+    return datos
+
+
 def login_required(f):
     """Decorador para proteger rutas que requieren autenticación"""
     @wraps(f)
@@ -298,6 +459,11 @@ def crear_item():
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'success': False, 'message': f'Campo requerido: {field}'}), 400
+
+        try:
+            ficha = normalizar_ficha(data['tipo_inventario'], data.get('ficha') or {})
+        except ValueError as e:
+            return jsonify({'success': False, 'message': str(e)}), 400
         
         connection = get_db_connection()
         if not connection:
@@ -353,7 +519,11 @@ def crear_item():
             print(f"[DEBUG] success={p_success}, message={p_message}, id={p_id_inventario}, codigo={p_codigo}")
             
             if p_success:
-                # Insertar atributos dinámicos
+                # Guardar la ficha propia del tipo (talla, marca, dimensiones, etc.)
+                if ficha:
+                    guardar_ficha(cursor, p_id_inventario, data['tipo_inventario'], ficha)
+
+                # Compatibilidad: atributos dinámicos legados
                 atributos = data.get('atributos', {})
                 if atributos and p_id_inventario:
                     for nombre, valor in atributos.items():
@@ -448,6 +618,9 @@ def detalle_item(id_inventario):
             
             cursor.execute(query_atributos, (id_inventario,))
             atributos = cursor.fetchall()
+
+            # Ficha propia del tipo (1 a 1)
+            ficha = leer_ficha(cursor, id_inventario, item.get('tipo_inventario'))
             
             print(f"[DEBUG] Atributos encontrados: {len(atributos)}")
             
@@ -459,6 +632,7 @@ def detalle_item(id_inventario):
                 'success': True,
                 'data': {
                     'item': item,
+                    'ficha': ficha,
                     'atributos': atributos
                 }
             }), 200
@@ -493,46 +667,55 @@ def actualizar_item():
             if not data.get(field):
                 return jsonify({'success': False, 'message': f'Campo requerido: {field}'}), 400
         
+        try:
+            ficha = normalizar_ficha(data['tipo_inventario'], data.get('ficha') or {})
+        except ValueError as e:
+            return jsonify({'success': False, 'message': str(e)}), 400
+
         connection = get_db_connection()
         if not connection:
             return jsonify({'success': False, 'error': 'Error de conexión'}), 500
         
         try:
-            cursor = connection.cursor()
-            
-            # Obtener usuario actual
-            num_usuario = session.get('user_documento')
-            if num_usuario:
-                try:
-                    num_usuario = int(num_usuario)
-                except:
-                    num_usuario = 0
-            else:
-                num_usuario = 0
-            
-            # Actualizar TblInventario
-            update_query = """
-                UPDATE TblInventario
-                SET nombre = %s,
-                    descripcion = %s,
-                    tipo_inventario = %s,
-                    id_categoria = %s,
-                    id_unidad = %s,
-                    stock_minimo = %s,
-                    stock_maximo = %s,
-                    precio_compra = %s,
-                    id_almacen = %s,
-                    ubicacion_fisica = %s,
-                    estado = %s,
-                    fecha_modificacion = NOW(),
-                    modificado_por = %s
-                WHERE id_inventario = %s
+            cursor = connection.cursor(dictionary=True)
+            id_inventario = int(data['id_inventario'])
+
+            # Bloquea la fila para que el cambio de tipo sea consistente
+            cursor.execute(
+                "SELECT tipo_inventario FROM TblInventario WHERE id_inventario = %s FOR UPDATE",
+                (id_inventario,)
+            )
+            fila = cursor.fetchone()
+            if not fila:
+                connection.rollback()
+                cursor.close()
+                connection.close()
+                return jsonify({'success': False, 'message': 'El item no existe'}), 404
+
+            tipo_anterior = fila['tipo_inventario']
+            tipo_nuevo = data['tipo_inventario']
+            cambio_tipo = tipo_anterior != tipo_nuevo
+
+            # La ficha vieja se elimina antes de tocar el tipo (si no, la FK falla)
+            if cambio_tipo:
+                eliminar_ficha(cursor, id_inventario, tipo_anterior)
+
+            campos = """
+                nombre = %s,
+                descripcion = %s,
+                id_categoria = %s,
+                id_unidad = %s,
+                stock_minimo = %s,
+                stock_maximo = %s,
+                precio_compra = %s,
+                id_almacen = %s,
+                ubicacion_fisica = %s,
+                estado = %s,
+                fecha_actualizacion = NOW()
             """
-            
-            cursor.execute(update_query, (
+            valores = [
                 data['nombre'],
                 data.get('descripcion', ''),
-                data['tipo_inventario'],
                 int(data['id_categoria']),
                 int(data['id_unidad']),
                 float(data.get('stock_minimo', 0)),
@@ -541,27 +724,37 @@ def actualizar_item():
                 int(data.get('id_almacen')) if data.get('id_almacen') else None,
                 data.get('ubicacion_fisica', ''),
                 data.get('estado', 'ACTIVO'),
-                num_usuario,
-                int(data['id_inventario'])
-            ))
-            
-            # Actualizar atributos dinámicos
-            atributos = data.get('atributos', {})
+            ]
+
+            if cambio_tipo:
+                cursor.execute(
+                    f"UPDATE TblInventario SET {campos}, tipo_inventario = %s "
+                    "WHERE id_inventario = %s",
+                    valores + [tipo_nuevo, id_inventario]
+                )
+            else:
+                cursor.execute(
+                    f"UPDATE TblInventario SET {campos} WHERE id_inventario = %s",
+                    valores + [id_inventario]
+                )
+
+            # Inserta o actualiza la ficha del tipo nuevo
+            guardar_ficha(cursor, id_inventario, tipo_nuevo, ficha)
+
+            # Compatibilidad: atributos dinámicos legados
+            atributos = data.get('atributos') or {}
             if atributos:
-                # Primero eliminar atributos existentes
                 cursor.execute(
                     "DELETE FROM TblInventarioAtributos WHERE id_inventario = %s",
-                    (int(data['id_inventario']),)
+                    (id_inventario,)
                 )
-                
-                # Insertar nuevos atributos
                 for nombre_attr, valor_attr in atributos.items():
-                    if valor_attr:  # Solo insertar si hay valor
+                    if valor_attr:
                         cursor.execute("""
                             INSERT INTO TblInventarioAtributos 
                             (id_inventario, nombre_atributo, valor_atributo, tipo_dato)
                             VALUES (%s, %s, %s, 'TEXTO')
-                        """, (int(data['id_inventario']), nombre_attr, valor_attr))
+                        """, (id_inventario, nombre_attr, valor_attr))
             
             connection.commit()
             cursor.close()

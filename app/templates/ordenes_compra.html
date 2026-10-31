@@ -484,7 +484,7 @@ async function buscarMaterialesOC() {
         if (result.success) {
             const materiales = (result.data || []).filter(m => 
                 m.nombre.toLowerCase().includes(termino.toLowerCase()) || 
-                m.codigo_material.toLowerCase().includes(termino.toLowerCase())
+                (m.codigo || '').toLowerCase().includes(termino.toLowerCase())
             );
             const lista = document.getElementById('lista-materiales-oc');
             
@@ -492,10 +492,10 @@ async function buscarMaterialesOC() {
                 lista.innerHTML = `<div class="px-4 py-2 text-gray-500 text-xs">No se encontraron materiales</div>`;
             } else {
                 lista.innerHTML = materiales.map(mat => `
-                    <div onclick="seleccionarMaterialOC(${mat.id_material}, '${mat.nombre}', ${mat.precio_base || 0})" 
+                    <div onclick="seleccionarMaterialOC(${mat.id_inventario}, '${mat.nombre}', ${mat.precio_base || 0})" 
                          class="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700">
                         <p class="font-semibold text-sm text-gray-900 dark:text-white">${mat.nombre}</p>
-                        <p class="text-xs text-gray-600 dark:text-gray-400">Código: ${mat.codigo_material} | Precio: S/. ${parseFloat(mat.precio_base || 0).toFixed(2)}</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">Código: ${mat.codigo} | Precio: S/. ${parseFloat(mat.precio_base || 0).toFixed(2)}</p>
                     </div>
                 `).join('');
             }

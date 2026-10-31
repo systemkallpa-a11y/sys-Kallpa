@@ -509,7 +509,7 @@
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                                 Tipo <span class="text-red-500">*</span>
                             </label>
-                            <select id="edit_tipo_inventario" name="tipo_inventario" required onchange="cargarCategoriasEditar()"
+                            <select id="edit_tipo_inventario" name="tipo_inventario" required onchange="cambiarTipoEditar()"
                                     class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
                                 <option value="MATERIAL">🏗️ Material</option>
                                 <option value="HERRAMIENTA">🔧 Herramienta</option>
@@ -1172,6 +1172,7 @@ function guardarItem() {
         precio_compra: formData.get('precio_compra'),
         id_almacen: formData.get('id_almacen'),
         ubicacion_fisica: formData.get('ubicacion_fisica'),
+        ficha: {},
         atributos: {}
     };
     
@@ -1185,11 +1186,12 @@ function guardarItem() {
         return;
     }
     
-    // Recopilar atributos dinámicos
+    // Recopilar la ficha técnica del tipo (campos ficha_*) y los atributos legados (attr_*)
     for (let [key, value] of formData.entries()) {
-        if (key.startsWith('attr_') && value) {
-            const attrName = key.replace('attr_', '');
-            data.atributos[attrName] = value;
+        if (key.startsWith('ficha_')) {
+            data.ficha[key.replace('ficha_', '')] = value;
+        } else if (key.startsWith('attr_') && value) {
+            data.atributos[key.replace('attr_', '')] = value;
         }
     }
     
@@ -1270,61 +1272,84 @@ async function cambiarTipoInventario() {
     camposEspecificos.innerHTML = generarCamposEspecificos(tipo);
 }
 
-function generarCamposEspecificos(tipo) {
-    const plantillas = {
-        'TECNOLOGIA': [
-            { nombre: 'procesador', label: 'Procesador', type: 'text', placeholder: 'Ej: Intel Core i7 11va Gen' },
-            { nombre: 'ram', label: 'Memoria RAM', type: 'text', placeholder: 'Ej: 16GB DDR4' },
-            { nombre: 'almacenamiento', label: 'Almacenamiento', type: 'text', placeholder: 'Ej: 512GB SSD' },
-            { nombre: 'pantalla', label: 'Pantalla', type: 'text', placeholder: 'Ej: 15.6" Full HD' },
-            { nombre: 'sistema_operativo', label: 'Sistema Operativo', type: 'text', placeholder: 'Ej: Windows 11 Pro' },
-            { nombre: 'serie', label: 'Número de Serie', type: 'text', placeholder: 'Número de serie del equipo' },
-            { nombre: 'garantia_meses', label: 'Garantía (meses)', type: 'number', placeholder: '12' }
-        ],
-        'CONSUMIBLE': [
-            { nombre: 'tamaño', label: 'Tamaño', type: 'text', placeholder: 'Ej: A4, Carta' },
-            { nombre: 'gramaje', label: 'Gramaje', type: 'number', placeholder: 'Ej: 75' },
-            { nombre: 'color', label: 'Color', type: 'text', placeholder: 'Ej: Blanco, Azul' },
-            { nombre: 'marca', label: 'Marca', type: 'text', placeholder: 'Marca del producto' },
-            { nombre: 'hojas_por_paquete', label: 'Hojas por Paquete', type: 'number', placeholder: 'Ej: 500' },
-            { nombre: 'blancura', label: 'Blancura %', type: 'number', placeholder: 'Ej: 95' }
-        ],
-        'MATERIAL': [
-            { nombre: 'marca', label: 'Marca', type: 'text', placeholder: 'Marca del material' },
-            { nombre: 'tipo', label: 'Tipo', type: 'text', placeholder: 'Tipo de material' },
-            { nombre: 'norma', label: 'Norma', type: 'text', placeholder: 'Ej: NTP 334.009' },
-            { nombre: 'peso_unidad', label: 'Peso por Unidad', type: 'number', placeholder: 'Ej: 42.5' },
-            { nombre: 'resistencia', label: 'Resistencia', type: 'text', placeholder: 'Ej: 4200 PSI' },
-            { nombre: 'lote', label: 'Lote', type: 'text', placeholder: 'Número de lote' }
-        ],
-        'HERRAMIENTA': [
-            { nombre: 'marca', label: 'Marca', type: 'text', placeholder: 'Marca de la herramienta' },
-            { nombre: 'modelo', label: 'Modelo', type: 'text', placeholder: 'Modelo' },
-            { nombre: 'potencia', label: 'Potencia', type: 'text', placeholder: 'Ej: 850W' },
-            { nombre: 'voltaje', label: 'Voltaje', type: 'text', placeholder: 'Ej: 220V' },
-            { nombre: 'peso_kg', label: 'Peso (kg)', type: 'number', placeholder: 'Ej: 2.5' },
-            { nombre: 'serie', label: 'Número de Serie', type: 'text', placeholder: 'Serie' }
-        ],
-        'ROPA': [
-            { nombre: 'talla', label: 'Talla', type: 'text', placeholder: 'Ej: M, L, XL' },
-            { nombre: 'color', label: 'Color', type: 'text', placeholder: 'Color del artículo' },
-            { nombre: 'genero', label: 'Género', type: 'text', placeholder: 'Masculino, Femenino, Unisex' },
-            { nombre: 'material', label: 'Material', type: 'text', placeholder: 'Ej: Algodón 100%' },
-            { nombre: 'norma', label: 'Norma (EPP)', type: 'text', placeholder: 'Ej: ANSI Z89.1' },
-            { nombre: 'tipo_proteccion', label: 'Tipo de Protección', type: 'text', placeholder: 'Ej: Cabeza, Manos' }
-        ],
-        'EQUIPO': [
-            { nombre: 'marca', label: 'Marca', type: 'text', placeholder: 'Marca del equipo' },
-            { nombre: 'modelo', label: 'Modelo', type: 'text', placeholder: 'Modelo' },
-            { nombre: 'capacidad', label: 'Capacidad', type: 'text', placeholder: 'Ej: 9p3' },
-            { nombre: 'potencia', label: 'Potencia', type: 'text', placeholder: 'Ej: 5HP' },
-            { nombre: 'serie', label: 'Número de Serie', type: 'text', placeholder: 'Serie' },
-            { nombre: 'año_fabricacion', label: 'Año de Fabricación', type: 'number', placeholder: '2024' }
-        ]
-    };
-    
-    const campos = plantillas[tipo] || [];
-    
+// Campos de la ficha técnica por tipo. Deben coincidir con app/routes/inventario.py (FICHAS).
+const FICHA_CAMPOS = {
+    ROPA: [
+        { nombre: 'talla', label: 'Talla', type: 'text', placeholder: 'Ej: M, L, XL' },
+        { nombre: 'color', label: 'Color', type: 'text', placeholder: 'Color de la prenda' },
+        { nombre: 'genero', label: 'Género', type: 'select', opciones: ['HOMBRE', 'MUJER', 'UNISEX', 'OTRO'] },
+        { nombre: 'material_tela', label: 'Material / Tela', type: 'text', placeholder: 'Ej: Algodón 100%' },
+        { nombre: 'norma_certificacion', label: 'Norma (EPP)', type: 'text', placeholder: 'Ej: ANSI Z89.1' },
+        { nombre: 'tipo_proteccion', label: 'Tipo de Protección', type: 'text', placeholder: 'Ej: Cabeza, Manos' }
+    ],
+    MATERIAL: [
+        { nombre: 'presentacion', label: 'Presentación', type: 'text', placeholder: 'Ej: Bolsa 42.5 kg' },
+        { nombre: 'marca', label: 'Marca', type: 'text' },
+        { nombre: 'tipo', label: 'Tipo', type: 'text' },
+        { nombre: 'norma', label: 'Norma', type: 'text', placeholder: 'Ej: NTP 334.009' },
+        { nombre: 'medida', label: 'Medida', type: 'text', placeholder: 'Ej: 1/2", 42.5 kg' },
+        { nombre: 'color', label: 'Color', type: 'text' },
+        { nombre: 'resistencia', label: 'Resistencia', type: 'text', placeholder: 'Ej: 4200 PSI' },
+        { nombre: 'lote', label: 'Lote', type: 'text' },
+        { nombre: 'peso_unitario_kg', label: 'Peso por unidad (kg)', type: 'number' },
+        { nombre: 'largo_cm', label: 'Largo (cm)', type: 'number' },
+        { nombre: 'ancho_cm', label: 'Ancho (cm)', type: 'number' },
+        { nombre: 'alto_cm', label: 'Alto (cm)', type: 'number' }
+    ],
+    HERRAMIENTA: [
+        { nombre: 'marca', label: 'Marca', type: 'text', placeholder: 'Marca de la herramienta' },
+        { nombre: 'modelo', label: 'Modelo', type: 'text' },
+        { nombre: 'tipo_herramienta', label: 'Tipo de Herramienta', type: 'select', opciones: ['MANUAL', 'ELECTRICA', 'BATERIA', 'NEUMATICA', 'OTRO'] },
+        { nombre: 'potencia', label: 'Potencia', type: 'text', placeholder: 'Ej: 850W' },
+        { nombre: 'voltaje', label: 'Voltaje', type: 'text', placeholder: 'Ej: 220V' },
+        { nombre: 'numero_serie', label: 'Número de Serie', type: 'text' },
+        { nombre: 'peso_kg', label: 'Peso (kg)', type: 'number' },
+        { nombre: 'largo_cm', label: 'Largo (cm)', type: 'number' },
+        { nombre: 'ancho_cm', label: 'Ancho (cm)', type: 'number' },
+        { nombre: 'alto_cm', label: 'Alto (cm)', type: 'number' }
+    ],
+    EQUIPO: [
+        { nombre: 'marca', label: 'Marca', type: 'text' },
+        { nombre: 'modelo', label: 'Modelo', type: 'text' },
+        { nombre: 'capacidad', label: 'Capacidad', type: 'text', placeholder: 'Ej: 9 m3' },
+        { nombre: 'potencia', label: 'Potencia', type: 'text', placeholder: 'Ej: 5 HP' },
+        { nombre: 'numero_serie', label: 'Número de Serie', type: 'text' },
+        { nombre: 'anio_fabricacion', label: 'Año de Fabricación', type: 'number' },
+        { nombre: 'placa', label: 'Placa', type: 'text' },
+        { nombre: 'peso_kg', label: 'Peso (kg)', type: 'number' },
+        { nombre: 'largo_cm', label: 'Largo (cm)', type: 'number' },
+        { nombre: 'ancho_cm', label: 'Ancho (cm)', type: 'number' },
+        { nombre: 'alto_cm', label: 'Alto (cm)', type: 'number' }
+    ],
+    TECNOLOGIA: [
+        { nombre: 'marca', label: 'Marca', type: 'text' },
+        { nombre: 'modelo', label: 'Modelo', type: 'text' },
+        { nombre: 'procesador', label: 'Procesador', type: 'text', placeholder: 'Ej: Intel Core i7 11va Gen' },
+        { nombre: 'ram', label: 'Memoria RAM', type: 'text', placeholder: 'Ej: 16GB DDR4' },
+        { nombre: 'almacenamiento', label: 'Almacenamiento', type: 'text', placeholder: 'Ej: 512GB SSD' },
+        { nombre: 'pantalla', label: 'Pantalla', type: 'text', placeholder: 'Ej: 15.6" Full HD' },
+        { nombre: 'sistema_operativo', label: 'Sistema Operativo', type: 'text', placeholder: 'Ej: Windows 11 Pro' },
+        { nombre: 'numero_serie', label: 'Número de Serie', type: 'text' },
+        { nombre: 'garantia_meses', label: 'Garantía (meses)', type: 'number' },
+        { nombre: 'peso_kg', label: 'Peso (kg)', type: 'number' },
+        { nombre: 'largo_cm', label: 'Largo (cm)', type: 'number' },
+        { nombre: 'ancho_cm', label: 'Ancho (cm)', type: 'number' },
+        { nombre: 'alto_cm', label: 'Alto (cm)', type: 'number' }
+    ],
+    CONSUMIBLE: [
+        { nombre: 'marca', label: 'Marca', type: 'text' },
+        { nombre: 'presentacion', label: 'Presentación', type: 'text', placeholder: 'Ej: Caja x 10' },
+        { nombre: 'tamano', label: 'Tamaño', type: 'text', placeholder: 'Ej: A4, Carta' },
+        { nombre: 'gramaje', label: 'Gramaje', type: 'number', placeholder: 'Ej: 75' },
+        { nombre: 'color', label: 'Color', type: 'text' },
+        { nombre: 'unidades_paquete', label: 'Unidades por Paquete', type: 'number' },
+        { nombre: 'blancura_pct', label: 'Blancura %', type: 'number' }
+    ]
+};
+
+function generarCamposEspecificos(tipo, valores = {}) {
+    const campos = FICHA_CAMPOS[tipo] || [];
+
     if (campos.length === 0) {
         return `
             <div class="md:col-span-2 text-center py-8 text-gray-500 dark:text-gray-400">
@@ -1333,25 +1358,37 @@ function generarCamposEspecificos(tipo) {
             </div>
         `;
     }
-    
-    let html = '';
-    
-    campos.forEach(campo => {
-        html += `
+
+    const clases = 'w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white';
+
+    return campos.map(campo => {
+        const valor = valores[campo.nombre] ?? '';
+        let control;
+
+        if (campo.type === 'select') {
+            control = `
+                <select name="ficha_${campo.nombre}" class="${clases}">
+                    <option value="">Seleccione...</option>
+                    ${campo.opciones.map(op => `<option value="${op}" ${String(valor) === op ? 'selected' : ''}>${op}</option>`).join('')}
+                </select>`;
+        } else if (campo.type === 'number') {
+            const enteros = ['anio_fabricacion', 'garantia_meses', 'unidades_paquete'];
+            const paso = enteros.includes(campo.nombre) ? '1' : '0.01';
+            control = `<input type="number" step="${paso}" min="0" name="ficha_${campo.nombre}"
+                       value="${escProv(valor)}" placeholder="${campo.placeholder || ''}" class="${clases}">`;
+        } else {
+            control = `<input type="text" name="ficha_${campo.nombre}"
+                       value="${escProv(valor)}" placeholder="${campo.placeholder || ''}" class="${clases}">`;
+        }
+
+        return `
             <div>
                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     ${campo.label}
                 </label>
-                <input type="${campo.type}" 
-                       name="attr_${campo.nombre}" 
-                       placeholder="${campo.placeholder}"
-                       ${campo.type === 'number' ? 'step="0.01" min="0"' : ''}
-                       class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
-            </div>
-        `;
-    });
-    
-    return html;
+                ${control}
+            </div>`;
+    }).join('');
 }
 
 async function cargarUnidadesMedida() {
@@ -1406,20 +1443,37 @@ async function verDetalle(idInventario) {
         const data = await response.json();
         
         if (data.success) {
-            const item = data.data;
-            let atributosHtml = '';
-            
-            if (item.atributos && item.atributos.length > 0) {
-                atributosHtml = '<div class="grid grid-cols-2 gap-3">';
-                item.atributos.forEach(attr => {
-                    atributosHtml += `
+            const item = (data.data && data.data.item) ? data.data.item : data.data;
+            const ficha = (data.data && data.data.ficha) ? data.data.ficha : {};
+
+            // Ficha propia del tipo: solo se muestran los campos con valor
+            const camposFicha = (FICHA_CAMPOS[item.tipo_inventario] || []).filter(c =>
+                ficha[c.nombre] !== null && ficha[c.nombre] !== undefined && ficha[c.nombre] !== ''
+            );
+
+            let especificacionesHtml = '';
+            if (camposFicha.length > 0) {
+                especificacionesHtml = '<div class="grid grid-cols-2 gap-3">';
+                camposFicha.forEach(campo => {
+                    especificacionesHtml += `
                         <div class="bg-gray-50 dark:bg-slate-700 rounded p-3">
-                            <p class="text-xs text-gray-600 dark:text-gray-400">${attr.nombre_atributo}</p>
-                            <p class="font-semibold text-gray-900 dark:text-white">${attr.valor_atributo}</p>
+                            <p class="text-xs text-gray-600 dark:text-gray-400">${campo.label}</p>
+                            <p class="font-semibold text-gray-900 dark:text-white">${escProv(ficha[campo.nombre])}</p>
                         </div>
                     `;
                 });
-                atributosHtml += '</div>';
+                especificacionesHtml += '</div>';
+            } else if (item.atributos && item.atributos.length > 0) {
+                especificacionesHtml = '<div class="grid grid-cols-2 gap-3">';
+                item.atributos.forEach(attr => {
+                    especificacionesHtml += `
+                        <div class="bg-gray-50 dark:bg-slate-700 rounded p-3">
+                            <p class="text-xs text-gray-600 dark:text-gray-400">${escProv(attr.nombre_atributo)}</p>
+                            <p class="font-semibold text-gray-900 dark:text-white">${escProv(attr.valor_atributo)}</p>
+                        </div>
+                    `;
+                });
+                especificacionesHtml += '</div>';
             }
             
             contenido.innerHTML = `
@@ -1478,10 +1532,10 @@ async function verDetalle(idInventario) {
                         </p>
                     </div>
                     
-                    ${atributosHtml ? `
+                    ${especificacionesHtml ? `
                         <div>
                             <p class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Especificaciones Técnicas</p>
-                            ${atributosHtml}
+                            ${especificacionesHtml}
                         </div>
                     ` : ''}
                     
@@ -1713,14 +1767,31 @@ async function editarMaterial(idInventario) {
         
         const item = result.data.item;
         const atributos = result.data.atributos || [];
-        
+        const ficha = result.data.ficha || {};
+
+        // Guardamos el tipo original para detectar el cambio de tipo al guardar
+        window._tipoOriginalEdicion = item.tipo_inventario;
+
         console.log('[DEBUG] Item:', item);
-        console.log('[DEBUG] Atributos:', atributos);
+        console.log('[DEBUG] Atributos legados:', atributos);
+        console.log('[DEBUG] Ficha:', ficha);
         
         // Llenar campos básicos
         document.getElementById('edit_id_inventario').value = item.id_inventario;
         document.getElementById('edit_codigo').value = item.codigo;
-        document.getElementById('edit_tipo_inventario').value = item.tipo_inventario;
+
+        // El select de edición solo lista los tipos con ficha; si el item es
+        // SERVICIO o PARTIDA se agrega la opción para poder visualizarlo.
+        const selectTipo = document.getElementById('edit_tipo_inventario');
+        Array.from(selectTipo.options).forEach(op => {
+            if (op.value === 'SERVICIO' || op.value === 'PARTIDA') {
+                op.remove();
+            }
+        });
+        if (!Array.from(selectTipo.options).some(op => op.value === item.tipo_inventario)) {
+            selectTipo.add(new Option(item.tipo_inventario, item.tipo_inventario));
+        }
+        selectTipo.value = item.tipo_inventario;
         document.getElementById('edit_nombre').value = item.nombre;
         document.getElementById('edit_descripcion').value = item.descripcion || '';
         document.getElementById('edit_stock_minimo').value = item.stock_minimo || 0;
@@ -1759,27 +1830,28 @@ async function editarMaterial(idInventario) {
             console.error('Error al cargar almacenes:', error);
         }
         
-        // Cargar atributos dinámicos
+        // Cargar ficha técnica del tipo y, si no hay ficha, los atributos legados
         const containerAtributos = document.getElementById('edit_atributos_dinamicos');
-        containerAtributos.innerHTML = '';
-        
-        if (atributos.length > 0) {
+        const tieneFicha = Object.values(ficha).some(v => v !== null && v !== '' && v !== undefined);
+
+        if (tieneFicha || !atributos.length) {
+            containerAtributos.innerHTML = generarCamposEspecificos(item.tipo_inventario, ficha);
+        } else {
+            containerAtributos.innerHTML = '';
             atributos.forEach(attr => {
                 const div = document.createElement('div');
                 div.innerHTML = `
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 capitalize">
-                        ${attr.nombre_atributo}
+                        ${escProv(attr.nombre_atributo)}
                     </label>
-                    <input type="text" name="attr_${attr.nombre_atributo}" value="${attr.valor_atributo || ''}"
+                    <input type="text" name="attr_${escProv(attr.nombre_atributo)}" value="${escProv(attr.valor_atributo || '')}"
                            class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
                 `;
                 containerAtributos.appendChild(div);
             });
-        } else {
-            containerAtributos.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-4">No hay especificaciones técnicas registradas</p>';
         }
-        
-        console.log('[DEBUG] Atributos cargados');
+
+        console.log('[DEBUG] Ficha cargada');
         
         // Mostrar modal
         console.log('[DEBUG] Mostrando modal...');
@@ -1884,6 +1956,16 @@ async function cargarCategoriasEditar() {
     }
 }
 
+// Al cambiar el tipo en edición: recarga categorías y redibuja la ficha del tipo nuevo.
+// Los valores del tipo anterior se descartan (la ficha vieja se elimina al guardar).
+async function cambiarTipoEditar() {
+    const tipo = document.getElementById('edit_tipo_inventario').value;
+    const container = document.getElementById('edit_atributos_dinamicos');
+
+    container.innerHTML = generarCamposEspecificos(tipo, {});
+    await cargarCategoriasEditar();
+}
+
 async function cargarUnidadesEditar() {
     const selectUnidad = document.getElementById('edit_id_unidad');
     
@@ -1931,6 +2013,7 @@ async function guardarEdicion() {
         id_almacen: formData.get('id_almacen'),
         ubicacion_fisica: formData.get('ubicacion_fisica'),
         estado: formData.get('estado'),
+        ficha: {},
         atributos: {}
     };
     
@@ -1943,15 +2026,34 @@ async function guardarEdicion() {
         });
         return;
     }
-    
-    // Recopilar atributos dinámicos
-    for (let [key, value] of formData.entries()) {
-        if (key.startsWith('attr_') && value) {
-            const attrName = key.replace('attr_', '');
-            data.atributos[attrName] = value;
+
+    // Si cambió el tipo, se reemplaza la ficha: confirmar con el usuario
+    if (window._tipoOriginalEdicion && data.tipo_inventario !== window._tipoOriginalEdicion) {
+        const confirmacion = await Swal.fire({
+            icon: 'warning',
+            title: '¿Cambiar el tipo de inventario?',
+            html: `El item pasará de <b>${escProv(window._tipoOriginalEdicion)}</b> a <b>${escProv(data.tipo_inventario)}</b>.<br>
+                   Se eliminarán las especificaciones técnicas del tipo anterior.`,
+            showCancelButton: true,
+            confirmButtonText: 'Sí, cambiar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#ea580c'
+        });
+        if (!confirmacion.isConfirmed) {
+            return;
         }
     }
     
+    // Recopilar la ficha técnica del tipo (campos ficha_*) y los atributos legados (attr_*)
+    for (let [key, value] of formData.entries()) {
+        if (key.startsWith('ficha_')) {
+            data.ficha[key.replace('ficha_', '')] = value;
+        } else if (key.startsWith('attr_') && value) {
+            data.atributos[key.replace('attr_', '')] = value;
+        }
+    }
+    
+
     try {
         const response = await fetch('/api/inventario/actualizar', {
             method: 'PUT',
@@ -1962,6 +2064,7 @@ async function guardarEdicion() {
         const result = await response.json();
         
         if (result.success) {
+            window._tipoOriginalEdicion = data.tipo_inventario;
             Swal.fire({
                 icon: 'success',
                 title: '¡Éxito!',

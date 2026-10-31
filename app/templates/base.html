@@ -4,8 +4,12 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="color-scheme" content="light dark">
     <title>{% block title %}Kallpa - Sistema de Gestión{% endblock %}</title>
     <link rel="icon" href="{{ url_for('static', filename='images/Logo Kallpa.png', v=assets_version) }}" type="image/png">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -23,8 +27,36 @@
         }
     </script>
     <style>
-        [data-v-app] {
-            color-scheme: light dark;
+        :root {
+            color-scheme: light;
+        }
+        html.dark {
+            color-scheme: dark;
+        }
+        :focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+
+        /* Botón para colapsar el sidebar en escritorio */
+        #sidebar-toggle-desktop {
+            left: 18rem;
+        }
+        #sidebar-toggle-desktop.sidebar-colapsado {
+            left: 0;
+        }
+        @media (min-width: 768px) {
+            #sidebar.sidebar-colapsado {
+                display: none;
+            }
         }
         
         /* Fix mobile sidebar z-index issue */
@@ -43,9 +75,18 @@
     </style>
 </head>
 <body class="bg-white dark:bg-slate-950 text-gray-900 dark:text-gray-100 transition-colors">
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-slate-900 focus:text-white focus:rounded-lg focus:shadow-lg">
+        Saltar al contenido principal
+    </a>
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         {% include 'components/sidebar.html' %}
+
+        <!-- Botón para mostrar/ocultar el sidebar en escritorio -->
+        <button type="button" id="sidebar-toggle-desktop" aria-label="Ocultar menú lateral" aria-controls="sidebar" aria-expanded="true"
+                class="hidden md:flex fixed top-1/2 -translate-y-1/2 z-40 h-12 w-6 items-center justify-center rounded-r-lg border border-l-0 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-800 shadow transition-[left,color,background-color] duration-300">
+            <i id="sidebar-toggle-icon" class="fas fa-chevron-left text-xs" aria-hidden="true"></i>
+        </button>
 
     <!-- Main Content -->
     <div class="flex-1 overflow-auto">
@@ -66,34 +107,34 @@
                 <div class="flex items-center space-x-3">
                     <!-- Notificaciones -->
                     <div class="relative group">
-                        <button id="notifications-btn" class="relative p-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-all hover:scale-105">
-                            <i class="fas fa-bell text-xl"></i>
-                            <span id="notifications-badge" class="absolute top-2 right-2 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center text-[10px]">0</span>
+                        <button type="button" id="notifications-btn" aria-label="Notificaciones" aria-expanded="false" aria-controls="notifications-dropdown" class="relative p-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors hover:scale-105">
+                            <i class="fas fa-bell text-xl" aria-hidden="true"></i>
+                            <span id="notifications-badge" aria-hidden="true" class="absolute top-2 right-2 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center text-[10px]">0</span>
                         </button>
                         
                         <!-- Dropdown de Notificaciones -->
                         <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto border border-gray-200 dark:border-slate-700">
                             <div class="p-4 border-b border-gray-200 dark:border-slate-700">
-                                <h3 class="font-semibold text-gray-900 dark:text-white">📋 Documentos Pendientes</h3>
+                                <h3 class="font-semibold text-gray-900 dark:text-white"><i class="fas fa-clipboard-list mr-2" aria-hidden="true"></i>Documentos Pendientes</h3>
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Presupuestos y documentos por aprobar</p>
                             </div>
                             
-                            <div id="notifications-list" class="divide-y divide-gray-200 dark:divide-slate-700">
+                            <div id="notifications-list" aria-live="polite" class="divide-y divide-gray-200 dark:divide-slate-700">
                                 <div class="p-4 text-center text-gray-500 dark:text-gray-400">
-                                    <i class="fas fa-spinner fa-spin mr-2"></i>Cargando notificaciones...
+                                    <i class="fas fa-spinner fa-spin mr-2" aria-hidden="true"></i>Cargando notificaciones&hellip;
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Theme Toggle -->
-                    <button id="theme-toggle" class="p-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-all hover:scale-105">
-                        <i id="theme-icon" class="fas fa-moon text-xl"></i>
+                    <button type="button" id="theme-toggle" aria-label="Cambiar tema" aria-pressed="false" class="p-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors hover:scale-105">
+                        <i id="theme-icon" class="fas fa-moon text-xl" aria-hidden="true"></i>
                     </button>
 
                     <!-- User Profile - Rediseñado -->
                     <div class="relative group">
-                        <div class="flex items-center space-x-3 pl-4 border-l-2 border-gray-200 dark:border-slate-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800/50 rounded-xl pr-3 py-2 transition-all">
+                        <button type="button" id="user-menu-btn" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu" class="flex items-center space-x-3 pl-4 border-l-2 border-gray-200 dark:border-slate-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800/50 rounded-xl pr-3 py-2 transition-colors text-left">
                             <!-- Avatar con iniciales -->
                             <div class="relative">
                                 <!-- Anillo de estado -->
@@ -112,14 +153,14 @@
                                     <i class="fas fa-chevron-down text-xs text-gray-400 group-hover:text-purple-600 transition-colors"></i>
                                 </div>
                                 <span class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                                    <i class="fas fa-briefcase text-xs"></i>
+                                    <i class="fas fa-briefcase text-xs" aria-hidden="true"></i>
                                     {{ session.get('user_cargo', 'Sin cargo') }}
                                 </span>
                             </div>
-                        </div>
+                        </button>
                         
                         <!-- Dropdown Menu - Mejorado -->
-                        <div class="absolute right-0 top-16 hidden group-hover:block bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 py-3 min-w-72 z-50 animate-scale-in">
+                        <div id="user-menu" class="absolute right-0 top-16 hidden bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 py-3 min-w-72 z-50 animate-scale-in">
                             <!-- Header del dropdown -->
                             <div class="px-4 pb-3 border-b border-gray-200 dark:border-slate-700">
                                 <div class="flex items-center gap-3">
@@ -182,7 +223,7 @@
         </header>
 
             <!-- Page Content -->
-            <main class="p-4 md:p-6">
+            <main id="main-content" tabindex="-1" class="p-4 md:p-6">
                 {% block content %}{% endblock %}
             </main>
         </div>
@@ -218,10 +259,49 @@
             }
             
             // También agregar iniciales en el dropdown
-            const dropdownAvatar = document.querySelector('.group-hover\\:block .w-14');
+            const dropdownAvatar = document.querySelector('#user-menu .w-14');
             if (dropdownAvatar) {
                 dropdownAvatar.textContent = initials;
             }
+        })();
+
+        // Menú de usuario accesible (click, teclado y clic fuera)
+        (function() {
+            const boton = document.getElementById('user-menu-btn');
+            const menu = document.getElementById('user-menu');
+            if (!boton || !menu) return;
+
+            function abrirMenu() {
+                menu.classList.remove('hidden');
+                boton.setAttribute('aria-expanded', 'true');
+            }
+
+            function cerrarMenu() {
+                menu.classList.add('hidden');
+                boton.setAttribute('aria-expanded', 'false');
+            }
+
+            boton.addEventListener('click', function(event) {
+                event.stopPropagation();
+                if (menu.classList.contains('hidden')) {
+                    abrirMenu();
+                } else {
+                    cerrarMenu();
+                }
+            });
+
+            document.addEventListener('click', function(event) {
+                if (!menu.contains(event.target) && !boton.contains(event.target)) {
+                    cerrarMenu();
+                }
+            });
+
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape' && !menu.classList.contains('hidden')) {
+                    cerrarMenu();
+                    boton.focus();
+                }
+            });
         })();
     </script>
     
@@ -241,13 +321,25 @@
                 // Toggle dropdown al hacer click
                 notificationsBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
+                    const abrir = notificationsDropdown.classList.contains('hidden');
                     notificationsDropdown.classList.toggle('hidden');
+                    notificationsBtn.setAttribute('aria-expanded', String(abrir));
                 });
                 
                 // Cerrar dropdown al hacer click afuera
                 document.addEventListener('click', function(e) {
                     if (!e.target.closest('#notifications-btn') && !e.target.closest('#notifications-dropdown')) {
                         notificationsDropdown.classList.add('hidden');
+                        notificationsBtn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+
+                // Cerrar dropdown con Escape
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && !notificationsDropdown.classList.contains('hidden')) {
+                        notificationsDropdown.classList.add('hidden');
+                        notificationsBtn.setAttribute('aria-expanded', 'false');
+                        notificationsBtn.focus();
                     }
                 });
                 
@@ -483,7 +575,7 @@
                                     </div>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <p class="text-gray-700 dark:text-gray-300">${descripcion.substring(0, 50)}${descripcion.length > 50 ? '...' : ''}</p>
+                                    <p class="text-gray-700 dark:text-gray-300">${descripcion.substring(0, 50)}${descripcion.length > 50 ? '\u2026' : ''}</p>
                                 </td>
                                 <td class="px-4 py-3 text-center">
                                     <span class="inline-block bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-xs font-medium">${items}</span>
@@ -573,7 +665,7 @@
                                     <div class="inline-block">
                                         <i class="fas fa-spinner fa-spin text-blue-600 text-4xl"></i>
                                     </div>
-                                    <p class="mt-4 text-gray-600 dark:text-gray-400">Cargando detalles...</p>
+                                    <p class="mt-4 text-gray-600 dark:text-gray-400">Cargando detalles&hellip;</p>
                                 </div>
                             </div>
                         </div>
@@ -914,7 +1006,7 @@
                             id="motivo-rechazo-texto" 
                             class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 resize-none"
                             rows="5" 
-                            placeholder="Ej: Presupuesto no cumple con los requisitos de calidad. Por favor, revisar especificaciones técnicas..."
+                            placeholder="Ej: Presupuesto no cumple con los requisitos de calidad. Por favor, revisar especificaciones técnicas&hellip;"
                             autofocus></textarea>
                         
                         <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
@@ -1164,7 +1256,7 @@
             }
             const originalBtnText = submitBtn.innerHTML;
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Cambiando...';
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2" aria-hidden="true"></i>Cambiando&hellip;';
             
             try {
                 // Llamar al API de cambio de contraseña

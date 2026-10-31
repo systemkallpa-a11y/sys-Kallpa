@@ -445,7 +445,15 @@ def crear_tabla_servicios(servicios, styles):
     
     for idx, servicio in enumerate(servicios, 1):
         # Usar Paragraph para descripcin larga que necesita word wrap
-        descripcion = Paragraph(servicio.get('servicio_nombre', 'N/A'), text_style)
+        texto_servicio = (
+            servicio.get('servicio_nombre')
+            or servicio.get('descripcion')
+            or 'N/A'
+        )
+        # Las partidas comparten la seccion de servicios pero se etiquetan.
+        if str(servicio.get('tipo_item', '')).upper() == 'PARTIDA':
+            texto_servicio = f"[PARTIDA] {texto_servicio}"
+        descripcion = Paragraph(texto_servicio, text_style)
         
         svc_data.append([
             str(idx),

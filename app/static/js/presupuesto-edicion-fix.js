@@ -37,7 +37,8 @@ async function cargarDatosPresupuestoParaEditar(id_presupuesto) {
                 materiales_agregados.push({
                     id_temporal: id_contador_material,
                     id_detalle: m.id_detalle,
-                    id_material: m.id_material,
+                    id_inventario: m.id_inventario ?? null,
+                    tipo_item: 'MATERIAL',
                     nombre: m.nombre || 'Sin nombre',  // ← AQUI ESTÁ EL FIX
                     codigo: m.codigo || '',
                     categoria: m.categoria || '',
@@ -58,6 +59,8 @@ async function cargarDatosPresupuestoParaEditar(id_presupuesto) {
                 servicios_agregados.push({
                     id_temporal: id_contador_servicio,
                     id_detalle: s.id_detalle,
+                    id_inventario: s.id_inventario ?? null,
+                    tipo_item: (s.tipo_item || 'SERVICIO').toUpperCase(),
                     descripcion: s.descripcion || '',
                     cantidad: parseFloat(s.cantidad) || 0,
                     precio_unitario: parseFloat(s.precio_unitario) || 0,

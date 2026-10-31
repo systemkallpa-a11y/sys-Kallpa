@@ -383,8 +383,13 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                ultimosResultados = data.data;
-                mostrarResultadosBusqueda(data.data);
+                // Normalizar: id_inventario es el identificador definitivo.
+                const resultados = (data.data || []).map(m => ({
+                    ...m,
+                    codigo: m.codigo ?? ''
+                }));
+                ultimosResultados = resultados;
+                mostrarResultadosBusqueda(resultados);
             } else {
                 console.error('Error al buscar materiales:', data.error);
                 mostrarMensajeError('Error al buscar materiales');
@@ -416,7 +421,7 @@
         let html = '<div class="divide-y divide-orange-200 dark:divide-orange-800">';
         materiales.forEach(material => {
             // Verificar si ya está seleccionado
-            const yaSeleccionado = materialesSeleccionados.some(m => m.id_material === material.id_material);
+            const yaSeleccionado = materialesSeleccionados.some(m => m.id_inventario === material.id_inventario);
             
             html += `
                 <div class="px-4 py-3 bg-white dark:bg-slate-800 hover:bg-orange-50 dark:hover:bg-slate-700 transition-colors">
@@ -429,7 +434,7 @@
                                 ${yaSeleccionado ? '<span class="flex-shrink-0 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full font-medium"><i class="fas fa-check mr-1"></i>Agregado</span>' : ''}
                             </div>
                             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 dark:text-gray-400">
-                                <span><i class="fas fa-barcode mr-1"></i>${material.codigo_material || 'Sin código'}</span>
+                                <span><i class="fas fa-barcode mr-1"></i>${material.codigo || 'Sin código'}</span>
                                 ${material.categoria ? `<span><i class="fas fa-tag mr-1"></i>${material.categoria}</span>` : ''}
                                 <span class="font-medium text-orange-600 dark:text-orange-400">
                                     <i class="fas fa-ruler mr-1"></i>${material.unidad_abrev || material.unidad_medida || 'UND'}
@@ -438,7 +443,7 @@
                             ${material.descripcion ? `<p class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">${material.descripcion}</p>` : ''}
                         </div>
                         <button 
-                            onclick="agregarMaterialDesdeResultados(${material.id_material})"
+                            onclick="agregarMaterialDesdeResultados(${material.id_inventario})"
                             ${yaSeleccionado ? 'disabled' : ''}
                             class="flex-shrink-0 px-4 py-2 ${yaSeleccionado ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' : 'bg-orange-500 hover:bg-orange-600 text-white'} rounded-lg transition-colors text-sm font-medium">
                             <i class="fas ${yaSeleccionado ? 'fa-check' : 'fa-plus'} mr-1"></i>
@@ -476,7 +481,7 @@
     
     // Agregar material desde los resultados de búsqueda
     window.agregarMaterialDesdeResultados = function(idMaterial) {
-        const material = ultimosResultados.find(m => m.id_material === idMaterial);
+        const material = ultimosResultados.find(m => m.id_inventario === idMaterial);
         if (material) {
             agregarMaterialATabla(material);
             // Actualizar vista de resultados para mostrar "Agregado"
@@ -487,7 +492,7 @@
     // Agregar material a la tabla de requerimientos
     function agregarMaterialATabla(material) {
         // Verificar si ya está agregado
-        if (materialesSeleccionados.some(m => m.id_material === material.id_material)) {
+        if (materialesSeleccionados.some(m => m.id_inventario === material.id_inventario)) {
             return; // Ya está agregado, no hacer nada
         }
         
@@ -505,12 +510,12 @@
         // Crear nueva fila
         const nuevaFila = document.createElement('tr');
         nuevaFila.className = 'bg-white dark:bg-slate-700';
-        nuevaFila.dataset.idMaterial = material.id_material;
+        nuevaFila.dataset.idInventario = material.id_inventario;
         nuevaFila.innerHTML = `
             <td class="px-3 py-2">
                 <div>
                     <p class="font-medium text-gray-900 dark:text-white">${material.nombre}</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">${material.codigo_material || 'Sin código'}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">${material.codigo || 'Sin código'}</p>
                 </div>
             </td>
             <td class="px-3 py-2">
@@ -527,7 +532,7 @@
                 </span>
             </td>
             <td class="px-3 py-2 text-center">
-                <button type="button" onclick="eliminarMaterialDeTabla(${material.id_material})" 
+                <button type="button" onclick="eliminarMaterialDeTabla(${material.id_inventario})" 
                         class="text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors">
                     <i class="fas fa-trash-alt"></i>
                 </button>
@@ -540,10 +545,10 @@
     // Eliminar material de la tabla
     window.eliminarMaterialDeTabla = function(idMaterial) {
         // Remover del array
-        materialesSeleccionados = materialesSeleccionados.filter(m => m.id_material !== idMaterial);
+        materialesSeleccionados = materialesSeleccionados.filter(m => m.id_inventario !== idMaterial);
         
         // Remover fila de la tabla
-        const fila = document.querySelector(`tr[data-id-material="${idMaterial}"]`);
+        const fila = document.querySelector(`tr[data-id-inventario="${idMaterial}"]`);
         if (fila) {
             fila.remove();
         }
@@ -627,21 +632,21 @@
         
         // Obtener materiales de la tabla
         const tbody = document.getElementById('tablaMateriales');
-        const filas = tbody.querySelectorAll('tr[data-id-material]');
+        const filas = tbody.querySelectorAll('tr[data-id-inventario]');
         const materiales = [];
         
         filas.forEach(fila => {
-            const idMaterial = parseInt(fila.dataset.idMaterial);
+            const idMaterial = parseInt(fila.dataset.idInventario);
             const inputCantidad = fila.querySelector('input[type="number"]');
             const cantidad = parseFloat(inputCantidad.value);
             
-            const material = materialesSeleccionados.find(m => m.id_material === idMaterial);
+            const material = materialesSeleccionados.find(m => m.id_inventario === idMaterial);
             
             if (material && cantidad > 0) {
                 materiales.push({
-                    id_material: idMaterial,
+                    id_inventario: idMaterial,
                     nombre: material.nombre,
-                    codigo: material.codigo_material,
+                    codigo: material.codigo,
                     cantidad: cantidad,
                     unidad: material.unidad_abrev || material.unidad_medida,
                     id_unidad: material.id_unidad

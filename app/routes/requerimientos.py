@@ -159,7 +159,7 @@ def obtener_requerimiento(id_requerimiento):
         
         # 3. Calcular resumen
         materiales = [d for d in detalles if d.get('tipo_item') == 'MATERIAL'] if detalles else []
-        servicios = [d for d in detalles if d.get('tipo_item') == 'SERVICIO'] if detalles else []
+        servicios = [d for d in detalles if d.get('tipo_item') in ('SERVICIO', 'PARTIDA')] if detalles else []
         
         resumen = {
             'cantidad_items': len(detalles),
@@ -251,7 +251,7 @@ def obtener_requerimiento_detalles(id_requerimiento):
         
         # 3. Calcular resumen
         materiales = [d for d in detalles if d.get('tipo_item') == 'MATERIAL'] if detalles else []
-        servicios = [d for d in detalles if d.get('tipo_item') == 'SERVICIO'] if detalles else []
+        servicios = [d for d in detalles if d.get('tipo_item') in ('SERVICIO', 'PARTIDA')] if detalles else []
         
         total_items = len(detalles) if detalles else 0
         

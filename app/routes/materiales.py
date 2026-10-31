@@ -26,7 +26,8 @@ def get_db_connection():
 @materiales_bp.route('/api/materiales/crear', methods=['POST'])
 def crear_material():
     """
-    Crea un nuevo material en TblMateriales usando SP que genera cdigo automticamente
+    Crea un nuevo material en TblInventario usando SP que genera codigo automticamente.
+    Devuelve id_inventario como campo principal.
     """
     try:
         data = request.json
@@ -54,7 +55,7 @@ def crear_material():
             cursor.execute("""
                 CALL sp_CrearMaterialConCodigoAuto(
                     %s, %s, %s, %s, %s,
-                    @p_id_material_creado,
+                    @p_id_inventario_creado,
                     @p_codigo_generado,
                     @p_resultado
                 )
@@ -69,35 +70,35 @@ def crear_material():
             }), 500
         
         # Obtener los parmetros OUT
-        cursor.execute("SELECT @p_id_material_creado, @p_codigo_generado, @p_resultado")
+        cursor.execute("SELECT @p_id_inventario_creado, @p_codigo_generado, @p_resultado")
         result = cursor.fetchone()
         
-        p_id_material_creado = result['@p_id_material_creado']
+        p_id_inventario_creado = result['@p_id_inventario_creado']
         p_codigo_generado = result['@p_codigo_generado']
         p_resultado = result['@p_resultado']
         
         print(f"[CREAR_MATERIAL] SP retorn:")
         print(f"  - Resultado: {p_resultado}")
-        print(f"  - ID creado: {p_id_material_creado}")
+        print(f"  - ID creado: {p_id_inventario_creado}")
         print(f"  - Cdigo generado: {p_codigo_generado}")
         
         if p_resultado == 1:
             # Obtener el material creado con sus relaciones
             cursor.execute("""
                 SELECT 
-                    m.id_material,
-                    m.codigo_material,
-                    m.nombre,
-                    m.descripcion,
-                    m.observaciones,
-                    m.estado,
+                    i.id_inventario,
+                    i.codigo,
+                    i.nombre,
+                    i.descripcion,
+                    i.tipo_inventario,
+                    i.estado,
                     c.nombre as categoria,
                     u.nombre as unidad_medida
-                FROM TblMateriales m
-                LEFT JOIN TblCategoriaMaterial c ON m.id_categoria = c.id_categoria
-                LEFT JOIN TblUnidadMedida u ON m.id_unidad = u.id_unidad
-                WHERE m.id_material = %s
-            """, (p_id_material_creado,))
+                FROM TblInventario i
+                LEFT JOIN TblCategoriaInventario c ON i.id_categoria = c.id_categoria
+                LEFT JOIN TblUnidadMedida u ON i.id_unidad = u.id_unidad
+                WHERE i.id_inventario = %s
+            """, (p_id_inventario_creado,))
             
             material_creado = cursor.fetchone()
             
