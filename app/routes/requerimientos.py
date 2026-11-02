@@ -294,6 +294,9 @@ def obtener_requerimiento_detalles(id_requerimiento):
 def crear_requerimiento():
     """Crear un nuevo requerimiento con items usando SP"""
     try:
+        # La acción rápida del Dashboard y el módulo usan el mismo endpoint.
+        # Cualquier usuario autenticado puede registrar un requerimiento; la
+        # gestión, aprobación y listado siguen restringidos al módulo.
         data = request.get_json()
         
         # Validar campos obligatorios

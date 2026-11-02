@@ -1,0 +1,118 @@
+<!--
+  Componente único para crear requerimientos.
+  Se usa tanto en el Dashboard (acción rápida) como en el módulo /requerimiento.
+  La lógica JS vive en static/js/requerimiento_crear.js
+-->
+<div id="modal-requerimiento"
+     class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 md:p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl md:rounded-2xl shadow-2xl w-full md:max-w-5xl h-screen md:h-auto md:max-h-[90vh] overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-slate-700 via-slate-600 to-slate-800 text-white px-5 md:px-8 py-4 md:py-5 flex items-center justify-between border-b-4 border-slate-500 flex-shrink-0">
+            <div class="flex-1 min-w-0">
+                <h2 class="text-xl md:text-2xl font-bold">Crear Nuevo Requerimiento</h2>
+                <p class="text-slate-300 text-xs md:text-sm mt-1">Busca un presupuesto aprobado y agrega sus items</p>
+            </div>
+            <button type="button" onclick="cerrarModalRequerimiento()" class="text-white hover:text-red-200 transition-colors p-2 hover:bg-slate-700/50 rounded-lg flex-shrink-0 ml-3">
+                <i class="fas fa-times text-lg md:text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Contenido Principal -->
+        <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950">
+            <form id="form-requerimiento" class="p-4 md:p-6 space-y-4 md:space-y-5">
+
+                <!-- Aviso: datos generados por la BD -->
+                <div class="flex items-start gap-2 rounded-lg border border-blue-200 dark:border-blue-900/60 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 text-xs text-blue-800 dark:text-blue-300">
+                    <i class="fas fa-database mt-0.5"></i>
+                    <p>El código y la fecha de registro se generan automáticamente en la base de datos al guardar. Los items y cantidades se toman del presupuesto seleccionado.</p>
+                </div>
+
+                <!-- SECCIÓN 1: Búsqueda -->
+                <div class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-4 md:p-5 rounded-lg shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-base md:text-lg font-semibold text-gray-900 dark:text-white">
+                            Buscar Presupuesto
+                        </h3>
+                        <span class="px-2.5 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold flex items-center gap-1">
+                            <i class="fas fa-check-circle text-xs"></i>Solo APROBADOS
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mb-3">Busca presupuestos que estén en estado APROBADO</p>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="text" id="buscar-presupuesto" class="flex-1 px-3 md:px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent" placeholder="Ingresa número (ej: PRES-001)">
+                        <button type="button" onclick="buscarPresupuesto()" class="px-4 md:px-6 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-medium text-sm flex items-center justify-center gap-1.5 flex-shrink-0 transition-colors">
+                            <i class="fas fa-search text-xs"></i><span>Buscar</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 2: Resultados -->
+                <div id="seccion-resultados" class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-4 md:p-5 rounded-lg shadow-sm">
+                    <h3 class="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                        Ítems del Presupuesto
+                    </h3>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                        Aquí ves todos los ítems del presupuesto aprobado. Solo los que tienen saldo disponible se pueden agregar.
+                    </p>
+                    <div id="contenido-resultados" class="space-y-3 max-h-48 md:max-h-56 overflow-y-auto">
+                        <p class="text-gray-500 dark:text-gray-400 text-sm text-center py-4">Realiza una búsqueda</p>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 3: Items Requerimiento -->
+                <div class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-4 md:p-5 rounded-lg shadow-sm">
+                    <h3 class="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                        Ítems Seleccionados
+                    </h3>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                        Estos son los ítems que ya agregaste a este requerimiento.
+                    </p>
+                    <div id="lista-requerimiento" class="space-y-2 bg-gray-50 dark:bg-slate-700/30 p-3 rounded-lg border border-gray-200 dark:border-slate-600 max-h-48 md:max-h-56 overflow-y-auto">
+                        <p class="text-gray-500 dark:text-gray-400 text-sm text-center py-4">Agrega items desde el presupuesto</p>
+                    </div>
+
+                    <!-- Resumen -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
+                        <div class="bg-gray-50 dark:bg-slate-700/50 p-3 rounded-lg text-xs border border-gray-200 dark:border-slate-600">
+                            <p class="text-gray-600 dark:text-gray-400 font-semibold text-xs uppercase">Items</p>
+                            <p id="total-items" class="font-bold text-lg text-gray-900 dark:text-white mt-1">0</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-slate-700/50 p-3 rounded-lg text-xs border border-gray-200 dark:border-slate-600">
+                            <p class="text-gray-600 dark:text-gray-400 font-semibold text-xs uppercase">Materiales</p>
+                            <p id="total-materiales" class="font-bold text-lg text-gray-900 dark:text-white mt-1">0</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-slate-700/50 p-3 rounded-lg text-xs border border-gray-200 dark:border-slate-600">
+                            <p class="text-gray-600 dark:text-gray-400 font-semibold text-xs uppercase">Servicios</p>
+                            <p id="total-servicios" class="font-bold text-lg text-gray-900 dark:text-white mt-1">0</p>
+                        </div>
+                    </div>
+
+                    <!-- Datos Requerimiento -->
+                    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-slate-600 space-y-3">
+                        <h4 class="font-bold text-gray-900 dark:text-white text-sm">Información del Requerimiento</h4>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Descripción <span class="text-red-500">*</span></label>
+                            <textarea id="descripcion" rows="2" class="w-full px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm resize-none" placeholder="Describe el requerimiento..." required></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Observaciones</label>
+                            <textarea id="observaciones" rows="2" class="w-full px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm resize-none" placeholder="Observaciones adicionales..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <input type="hidden" id="id_presupuesto_selected" value="">
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 px-4 md:px-6 py-3 md:py-4 flex flex-col sm:flex-row gap-2 justify-end shadow-lg flex-shrink-0">
+            <button type="button" onclick="cerrarModalRequerimiento()" class="order-2 sm:order-1 px-4 md:px-6 py-2 bg-gray-400 hover:bg-gray-500 text-white rounded-lg font-medium text-sm flex items-center justify-center gap-1.5">
+                <i class="fas fa-times text-sm"></i><span>Cancelar</span>
+            </button>
+            <button type="submit" form="form-requerimiento" class="order-1 sm:order-2 px-4 md:px-6 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-medium text-sm flex items-center justify-center gap-1.5">
+                <i class="fas fa-save text-sm"></i><span>Guardar</span>
+            </button>
+        </div>
+    </div>
+</div>

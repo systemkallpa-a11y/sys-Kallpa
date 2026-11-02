@@ -208,6 +208,7 @@ sys-Kallpa/
 - **Endpoint:** `/api/requerimientos/obtener` (usa SP sp_ObtenerRequerimientosConAprobadores)
 - **Funcionalidad:** CRUD completo con flujo de aprobación
 - **Archivos:** requerimientos.py (~900 líneas), requerimiento.html
+- **Crear (formato único):** `components/modal_crear_requerimiento.html` + `static/js/requerimiento_crear.js`. El Dashboard usa el mismo modal y la misma lógica; no hay un segundo formato.
 
 ### 6.4 Órdenes de Compra
 - **Ruta:** `/ordenes-compra`
