@@ -1390,7 +1390,14 @@ async function cargarPresupuestos() {
                         </span>
                     </td>
                     <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${p.creado_por || '-'}</td>
-                    <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${p.aprobado_rechazado_por || '-'}</td>
+                    <td class="px-4 py-3 text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="text-gray-600 dark:text-gray-400">${p.aprobado_rechazado_por || '-'}</span>
+                            <div id="flujo-${p.id_presupuesto}" class="flex items-center gap-1" data-id="${p.id_presupuesto}">
+                                <i class="fas fa-spinner fa-spin text-gray-400"></i>
+                            </div>
+                        </div>
+                    </td>
                     <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${p.comentario_rechazo || '-'}</td>
                     <td class="px-4 py-3 text-xs">
                         <div class="flex gap-1">
@@ -1411,6 +1418,11 @@ async function cargarPresupuestos() {
                 </tr>
             `;
         }).join('');
+        
+        // Cargar flujo de aprobación (círculos) para cada presupuesto
+        data.data.forEach(p => {
+            cargarFlujoAprobacion(p.id_presupuesto);
+        });
         
     } catch (error) {
         console.error('[CARGAR_PRESUPUESTOS] Error:', error);

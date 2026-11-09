@@ -307,6 +307,11 @@
 
                     </h3>
 
+                    <!-- Botón de falta: aparece en ambos casos (con o sin asistencias) -->
+                    <button id="btn-marcar-falta" onclick="marcarFaltaDia()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-md">
+                        <i class="fas fa-user-slash mr-2"></i>Marcar como falta
+                    </button>
+
                 </div>
 
                 <div class="overflow-x-auto">
@@ -404,8 +409,8 @@
                     <i class="fas fa-clock text-indigo-600 mr-1"></i>
                     Hora Actual de Marcación
                 </label>
-                <input type="text" id="edit-hora-actual" readonly 
-                       class="w-full px-4 py-3 bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-600 dark:text-gray-400 cursor-not-allowed">
+                <input type="time" id="edit-hora-actual"
+                       class="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-white">
             </div>
 
             <!-- Tipo de Marcación -->
@@ -434,6 +439,7 @@
             </div>
 
             <!-- O cambiar manualmente -->
+            <!--
             <div class="relative">
                 <div class="absolute inset-0 flex items-center">
                     <div class="w-full border-t border-gray-300 dark:border-slate-600"></div>
@@ -442,8 +448,10 @@
                     <span class="px-2 bg-white dark:bg-slate-900 text-gray-500">O cambiar manualmente</span>
                 </div>
             </div>
+            -->
 
-            <!-- Nueva Hora -->
+            <!-- Nueva Hora (comentado por ahora — se usa edit-hora-actual como input principal) -->
+            <!--
             <div>
                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     <i class="fas fa-clock text-indigo-600 mr-1"></i>
@@ -452,6 +460,7 @@
                 <input type="time" id="edit-nueva-hora" 
                        class="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 dark:text-white">
             </div>
+            -->
         </div>
 
         <!-- Footer -->
@@ -1550,15 +1559,7 @@ async function verDetalleDia(numDocumento, fecha, nombreCompleto) {
 
         
 
-        if (data.marcaciones.length === 0) {
-
-            alert(`No hay marcaciones registradas para ${nombreCompleto} en la fecha ${fecha}`);
-
-            return;
-
-        }
-
-        
+        // Sin marcaciones el modal se abre igual, vacío (sin alerta)
 
         detalleActual = { numDocumento: numDocumento, fecha: fecha, nombre: nombreCompleto };
 
@@ -1612,6 +1613,47 @@ async function verDetalleDia(numDocumento, fecha, nombreCompleto) {
 
 
 
+function marcarFaltaDia() {
+    // Usa los datos guardados al abrir el modal en detalleActual
+    if (!detalleActual.numDocumento || !detalleActual.fecha) {
+        alert('No hay un día seleccionado para marcar como falta');
+        return;
+    }
+    
+    const numDocumento = detalleActual.numDocumento;
+    const fechaSeleccionada = detalleActual.fecha;
+    const nombreCompleto = detalleActual.nombre;
+    
+    if (confirm('¿Eliminar TODAS las marcaciones de ' + nombreCompleto + ' para el día ' + fechaSeleccionada + '? Se perderán fotos y GPS.')) {
+        fetch('/api/marcacion/marcar-falta', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                num_documento: numDocumento,
+                fecha: fechaSeleccionada
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarMensaje('Se eliminaron ' + data.eliminadas + ' marcación(ones)', 'success');
+                // Recargar el detalle del día
+                if (numDocumento && fechaSeleccionada) {
+                    verDetalleDia(numDocumento, fechaSeleccionada, nombreCompleto);
+                }
+            } else {
+                mostrarMensaje(data.error || 'Error al marcar falta', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('[MARCAR_FALTA] Error:', error);
+            mostrarMensaje('Error de conexión', 'error');
+        });
+    }
+}
+
 function cerrarModalDetalle() {
 
     document.getElementById('modal-detalle-dia').classList.add('hidden');
@@ -1640,11 +1682,11 @@ let editarModalTurno = null; // turno del slot en edición (1=mañana, 2=tarde)
 function abrirModalEditarMarcacion(idMarcacion, hora, tipo, turno) {
     const esNuevo = !idMarcacion;
     editarModalTurno = turno || null;
+    console.log('[EDITAR] turno recibido:', turno, '→ editarModalTurno:', editarModalTurno);
     document.getElementById('modal-editar-marcacion').classList.remove('hidden');
     document.getElementById('edit-id-marcacion').value = idMarcacion || '';
-    document.getElementById('edit-hora-actual').value = esNuevo ? '--' : hora;
+    document.getElementById('edit-hora-actual').value = esNuevo ? '' : (hora && hora !== '--' ? hora.substring(0, 5) : '');
     document.getElementById('edit-tipo-marcacion').value = tipo;
-    document.getElementById('edit-nueva-hora').value = hora || '';
     document.getElementById('edit-modal-subtitulo').textContent = esNuevo
         ? 'Registrar marcación faltante'
         : 'Ajustar hora de marcación';
@@ -1655,23 +1697,76 @@ function cerrarModalEditarMarcacion() {
     document.getElementById('edit-id-marcacion').value = '';
     document.getElementById('edit-hora-actual').value = '';
     document.getElementById('edit-tipo-marcacion').value = '';
-    document.getElementById('edit-nueva-hora').value = '';
     document.getElementById('edit-modal-subtitulo').textContent = 'Ajustar hora de marcación';
     editarModalTurno = null;
 }
 
 function ajustarAHoraOficial() {
-    // Hora oficial de entrada (por defecto 08:00)
-    const horaOficial = '08:00';
-    document.getElementById('edit-nueva-hora').value = horaOficial;
+    let numDocumento = detalleActual?.numDocumento || document.getElementById('num-documento-seleccionado')?.value;
+    let fecha = detalleActual?.fecha || document.getElementById('fecha-seleccionada')?.value;
     
-    // Mostrar mensaje
-    mostrarMensajeTemp('Hora ajustada a hora oficial de entrada: ' + horaOficial, 'info');
+    if (!numDocumento || !fecha) {
+        mostrarMensajeTemp('No hay un día seleccionado', 'warning');
+        return;
+    }
+    
+    fetch(`/api/marcacion/detalle-dia?num_documento=${numDocumento}&fecha=${fecha}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            mostrarMensajeTemp('No se pudo obtener el horario', 'warning');
+            return;
+        }
+        
+        const horario = data.horario;
+        if (!horario || !horario.hora_entrada) {
+            mostrarMensajeTemp('El empleado no tiene horario de trabajo cargado', 'warning');
+            return;
+        }
+        
+        // Leer tipo (ENTRADA/SALIDA) y turno del modal actual
+        const tipoMarcacion = document.getElementById('edit-tipo-marcacion').value || 'ENTRADA';
+        const turnoActual = editarModalTurno || 1;
+        
+        console.log('[AJUSTAR] tipoMarcacion:', tipoMarcacion, 'turnoActual:', turnoActual);
+        console.log('[AJUSTAR] horario completo:', horario);
+        console.log('[AJUSTAR] hora_entrada2:', horario.hora_entrada2, 'hora_salida2:', horario.hora_salida2);
+        
+        let horaOfficial;
+        
+        if (tipoMarcacion === 'SALIDA') {
+            if (turnoActual === 2 && horario.hora_salida2) {
+                horaOfficial = horario.hora_salida2;
+            } else {
+                horaOfficial = horario.hora_salida || horario.hora_entrada;
+            }
+        } else {
+            if (turnoActual === 2 && horario.hora_entrada2) {
+                horaOfficial = horario.hora_entrada2;
+            } else {
+                horaOfficial = horario.hora_entrada;
+            }
+        }
+        
+        if (horaOfficial) {
+            document.getElementById('edit-hora-actual').value = horaOfficial.substring(0, 5);
+            mostrarMensajeTemp('Hora oficial cargada: ' + horaOfficial.substring(0, 5), 'info');
+        } else {
+            mostrarMensajeTemp('No hay horario definido para este turno', 'warning');
+        }
+    })
+    .catch(error => {
+        console.error('[AJUSTAR_HORA] Error:', error);
+        mostrarMensajeTemp('Error al cargar el horario', 'error');
+    });
 }
 
 function guardarMarcacionEditada() {
     const idMarcacion = document.getElementById('edit-id-marcacion').value;
-    const nuevaHora = document.getElementById('edit-nueva-hora').value;
+    const nuevaHora = document.getElementById('edit-hora-actual').value;
     const tipoMarcacion = document.getElementById('edit-tipo-marcacion').value;
     
     if (!nuevaHora) {

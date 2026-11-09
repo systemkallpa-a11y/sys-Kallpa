@@ -202,18 +202,8 @@
                 <!-- Tipo de Requerimiento (Hidden - Siempre Oficina) -->
                 <input type="hidden" id="tipoRequerimiento" value="OFICINA">
 
-                <!-- Fila 1: Código y Fecha -->
+                <!-- Fila 1: Fecha -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Código (Auto-generado) -->
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                            <i class="fas fa-hashtag text-orange-500 mr-1"></i>
-                            Código de Requerimiento
-                        </label>
-                        <input type="text" id="codigoRequerimiento" value="REQ-2026-001" readonly 
-                               class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600 rounded-lg text-gray-500 dark:text-gray-400 cursor-not-allowed">
-                    </div>
-
                     <!-- Fecha -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -238,10 +228,16 @@
 
                 <!-- Materiales (Buscador y Tabla) -->
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                        <i class="fas fa-boxes text-orange-500 mr-1"></i>
-                        Materiales Requeridos <span class="text-red-500">*</span>
-                    </label>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            <i class="fas fa-boxes text-orange-500 mr-1"></i>
+                            Materiales Requeridos <span class="text-red-500">*</span>
+                        </label>
+                        <button type="button" onclick="abrirModalNuevoItem()"
+                                class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm flex items-center gap-1.5">
+                            <i class="fas fa-plus text-xs"></i>Nuevo Material
+                        </button>
+                    </div>
                     
                     <!-- Buscador de Materiales -->
                     <div class="relative mb-3">
@@ -316,6 +312,9 @@
     </div>
 </div>
 
+<!-- Modal "Nuevo Material" (mismo modal de Inventario, reutilizado) -->
+{% include 'components/modal_nuevo_item_inventario.html' %}
+
 <style>
     .modal-show {
         transform: scale(1);
@@ -326,6 +325,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/inventario_nuevo_item.js', v=assets_version) }}"></script>
 <script>
     // =========================================================================
     // FUNCIONES DEL BUSCADOR DE MATERIALES
@@ -489,6 +489,15 @@
         }
     };
     
+    // Material creado desde el modal "Nuevo Material": se agrega directamente
+    // a la tabla de materiales del requerimiento (cantidad 1).
+    window.onItemInventarioCreado = function(item) {
+        agregarMaterialATabla(Object.assign({}, item, {
+            unidad_abrev: item.unidad || 'UND',
+            cantidad: 1
+        }));
+    };
+    
     // Agregar material a la tabla de requerimientos
     function agregarMaterialATabla(material) {
         // Verificar si ya está agregado
@@ -619,7 +628,6 @@
     // Función para crear el requerimiento
     function crearRequerimiento() {
         // Obtener datos del formulario
-        const codigo = document.getElementById('codigoRequerimiento').value;
         const fecha = document.getElementById('fechaSolicitud').value;
         const descripcion = document.getElementById('descripcionRequerimiento').value;
         const tipoRequerimiento = document.getElementById('tipoRequerimiento').value;
@@ -661,7 +669,6 @@
         
         // Preparar datos para enviar
         const datosRequerimiento = {
-            codigo: codigo,
             fecha: fecha,
             tipo: tipoRequerimiento,
             descripcion: descripcion,
