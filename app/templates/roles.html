@@ -1,19 +1,14 @@
 {% extends "base.html" %}
 
+{% block header_title %}Usuarios y Accesos{% endblock %}
+{% block header_subtitle %}Administra los accesos de usuarios a menús y submenús{% endblock %}
+
+
 {% block content %}
 <div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
-    <!-- Topbar -->
-    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
-        <div class="px-6 py-4 flex items-center justify-between">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Usuarios y Accesos</h1>
-                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Administra los accesos de usuarios a menús y submenús</p>
-            </div>
-        </div>
-    </div>
 
     <!-- Contenido Principal -->
-    <div class="p-6">
+    <div class="pt-4 md:p-6">
         <!-- Filtros -->
         <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md border border-gray-200 dark:border-slate-800 p-4 mb-4">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
@@ -54,7 +49,7 @@
         <!-- Tabla de Usuarios y Accesos -->
         <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full">
+            <table class="w-full" data-movil="tarjetas" data-paginar="20">
                 <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
                     <tr>
                         <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Usuario</th>

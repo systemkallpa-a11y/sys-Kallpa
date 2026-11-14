@@ -10,6 +10,7 @@ import mysql.connector
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from io import BytesIO
+from app.utils.horarios import cargar_horarios, horario_en_fecha, horario_del_periodo
 
 # Crear blueprint para marcacin
 marcacion_bp = Blueprint('marcacion', __name__)
@@ -1051,295 +1052,274 @@ def obtener_detalle_dia():
 @marcacion_bp.route('/api/marcacion/exportar-excel', methods=['GET'])
 @login_required
 def exportar_marcaciones_excel():
-    """Exportar marcaciones detalladas a Excel con turnos organizados"""
+    """Exportar marcaciones a Excel: refleja TblMarcacion tal como se registró.
+
+    Regla (la marca del usuario es la fuente de verdad, el Excel es su reflejo):
+      * Las marcas del día van en el ORDEN en que se hicieron:
+        1ra ENTRADA -> Entrada 1, la SALIDA siguiente -> Salida 1,
+        la ENTRADA siguiente -> Entrada 2, la SALIDA siguiente -> Salida 2.
+        Si falta una marca de la secuencia, su casilla queda vacía.
+        Ninguna marca se descarta: las que sobran van a "Marcas extra".
+      * El horario vigente ESE día (no el actual) solo se usa para evaluar:
+        tardanza y estado. Nunca decide dónde se muestra una marca.
+      * Sin límite de 64 días y sin filas con fecha vacía: hay una fila por
+        persona y día con marcas o con horario laborable.
+    """
     try:
-        # Obtener parmetros de filtro
         fecha_desde = request.args.get('fecha_desde')
         fecha_hasta = request.args.get('fecha_hasta')
         usuario_filtro = (request.args.get('usuario') or '').strip()
         empresa_filtro = (request.args.get('empresa') or '').strip()
-        
+
         if not fecha_desde or not fecha_hasta:
             return jsonify({'success': False, 'error': 'Fechas requeridas'}), 400
-        
-        print(f"[EXPORTAR_EXCEL] [...] Exportando marcaciones: {fecha_desde} a {fecha_hasta}")
-        print(f"[EXPORTAR_EXCEL] [...] Filtros: usuario='{usuario_filtro}', empresa='{empresa_filtro}'")
-        
+        try:
+            f_ini = datetime.strptime(fecha_desde, '%Y-%m-%d').date()
+            f_fin = datetime.strptime(fecha_hasta, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'success': False, 'error': 'Formato de fecha inválido (YYYY-MM-DD)'}), 400
+        if f_ini > f_fin:
+            f_ini, f_fin = f_fin, f_ini
+        if (f_fin - f_ini).days > 366:
+            return jsonify({'success': False, 'error': 'El rango máximo es de 1 año'}), 400
+
+        print(f"[EXPORTAR_EXCEL] [...] Exportando marcaciones: {f_ini} a {f_fin} "
+              f"(usuario='{usuario_filtro}', empresa='{empresa_filtro}')")
+
         connection = get_db_connection()
         if not connection:
             return jsonify({'success': False, 'error': 'Error de conexin'}), 500
-        
+
         try:
             cursor = connection.cursor(dictionary=True)
-            
-            # Llamar SP para obtener datos detallados
-            cursor.callproc('sp_ExportarMarcacionDetallada', (fecha_desde, fecha_hasta))
-            
-            # Obtener resultados
-            datos = []
-            for result in cursor.stored_results():
-                datos = result.fetchall()
-            
-            print(f"[EXPORTAR_EXCEL] [OK] {len(datos)} registros encontrados")
-            
-            # ====================================================================
-            # EMPRESA DE CADA EMPLEADO + FILTROS DE USUARIO Y EMPRESA
-            # (sp_ExportarMarcacionDetallada no trae empresa; se enriquece aqui)
-            # ====================================================================
-            if datos:
-                # Claves reales devueltas por el SP (evita depender de la codificacin)
-                clave_documento = next((k for k in datos[0] if 'documento' in str(k).lower()), None)
-                clave_nombre = next((k for k in datos[0] if 'nombre' in str(k).lower()), None)
-                
-                cursor.execute("""
-                    SELECT u.num_documento, p.documento_numero, e.nombre AS empresa
-                    FROM TblUsuario u
-                    LEFT JOIN TblPersona p ON u.num_documento = p.num_documento
-                    LEFT JOIN TblEmpresa e ON u.id_empresa = e.id_empresa
-                """)
-                empresas_map = {}
-                for fila in cursor.fetchall():
-                    nombre = fila['empresa'] or '-'
-                    if fila['num_documento'] is not None:
-                        empresas_map[str(fila['num_documento'])] = nombre
-                    if fila['documento_numero'] is not None:
-                        empresas_map[str(fila['documento_numero'])] = nombre
-                
-                if empresa_filtro:
-                    datos = [d for d in datos
-                             if empresas_map.get(str(d.get(clave_documento)), '-') == empresa_filtro]
-                    print(f"[EXPORTAR_EXCEL] [...] Tras filtro empresa: {len(datos)} registros")
-                
-                if usuario_filtro:
-                    usuario_lower = usuario_filtro.lower()
-                    datos = [d for d in datos
-                             if usuario_lower in str(d.get(clave_nombre) or '').lower()
-                             or usuario_lower in str(d.get(clave_documento) or '').lower()]
-                    print(f"[EXPORTAR_EXCEL] [...] Tras filtro usuario: {len(datos)} registros")
-            
+
+            # Personas: usuarios activos + cualquiera con marcas en el rango
+            cursor.execute("""
+                SELECT p.num_documento, p.documento_numero AS dni,
+                       CONCAT(COALESCE(p.nombres, ''), ' ', COALESCE(p.apellido_paterno, ''), ' ',
+                              COALESCE(p.apellido_materno, '')) AS nombre,
+                       IFNULL(e.nombre, '-') AS empresa,
+                       u.estado
+                  FROM TblUsuario u
+                 INNER JOIN TblPersona p ON p.num_documento = u.num_documento
+                  LEFT JOIN TblEmpresa e ON e.id_empresa = u.id_empresa
+                 WHERE u.estado = 'ACTIVO'
+                    OR EXISTS (SELECT 1 FROM TblMarcacion m
+                                WHERE m.num_documento = u.num_documento
+                                  AND m.fecha_marcacion >= %s
+                                  AND m.fecha_marcacion < %s + INTERVAL 1 DAY)
+            """, (f_ini, f_fin))
+            personas = cursor.fetchall()
+
+            # Marcas del rango, en el orden en que se registraron
+            cursor.execute("""
+                SELECT num_documento, tipo_marcacion, fecha_marcacion, tipo_ubicacion
+                  FROM TblMarcacion
+                 WHERE fecha_marcacion >= %s
+                   AND fecha_marcacion < %s + INTERVAL 1 DAY
+                 ORDER BY num_documento, fecha_marcacion, id_marcacion
+            """, (f_ini, f_fin))
+            marcas_dia = {}
+            for m in cursor.fetchall():
+                marcas_dia.setdefault((m['num_documento'], m['fecha_marcacion'].date()), []).append(m)
+
+            cursor.execute("""
+                SELECT num_documento, fecha_inicio, fecha_fin
+                  FROM TblVacaciones
+                 WHERE estado = 'APROBADO'
+                   AND fecha_inicio <= %s AND fecha_fin >= %s
+            """, (f_fin, f_ini))
+            vacaciones = cursor.fetchall()
+
+            horarios_vigencia = cargar_horarios(cursor)
+            cursor.execute("SELECT NOW() AS ahora")
+            ahora = cursor.fetchone()['ahora']
+
             cursor.close()
             connection.close()
-            
-            if not datos:
+
+            # Filtros de pantalla (mismos criterios que antes)
+            if empresa_filtro:
+                personas = [p for p in personas if p['empresa'] == empresa_filtro]
+            if usuario_filtro:
+                q = usuario_filtro.lower()
+                personas = [p for p in personas
+                            if q in (p['nombre'] or '').lower() or q in str(p['dni'] or '').lower()]
+
+            def hora_txt(m):
+                return m['fecha_marcacion'].strftime('%H:%M:%S') if m else ''
+
+            def segundos(valor):
+                return _time_a_segundos(valor)
+
+            registros = []
+            for p in personas:
+                dni = str(p['dni'] or '')
+                dia = f_ini
+                while dia <= f_fin:
+                    marcas = marcas_dia.get((p['num_documento'], dia), [])
+                    horario = horario_en_fecha(horarios_vigencia, dni, dia)
+                    if not marcas and not horario:
+                        dia += timedelta(days=1)
+                        continue
+
+                    # Secuencia: E1, S1, E2, S2 en el orden de registro
+                    slots = [None, None, None, None]
+                    extras = []
+                    idx = 0
+                    for m in marcas:
+                        if idx >= 4:
+                            extras.append(m)
+                            continue
+                        esperado = 'ENTRADA' if idx % 2 == 0 else 'SALIDA'
+                        if m['tipo_marcacion'] == esperado:
+                            slots[idx] = m
+                            idx += 1
+                        elif idx + 1 < 4:
+                            # Falta la marca esperada: su casilla queda vacía
+                            slots[idx + 1] = m
+                            idx += 2
+                        else:
+                            extras.append(m)
+
+                    # Evaluación con el horario vigente ese día
+                    tardanza_seg = 0
+                    if horario:
+                        for slot, prog in ((slots[0], horario['hora_entrada']),
+                                           (slots[2], horario['hora_entrada2'])):
+                            if slot and prog is not None:
+                                retraso = segundos(slot['fecha_marcacion'].time()) - segundos(prog)
+                                if retraso > 300:
+                                    tardanza_seg += retraso - 300
+
+                    en_vacaciones = any(v['num_documento'] == p['num_documento']
+                                        and v['fecha_inicio'] <= dia <= v['fecha_fin']
+                                        for v in vacaciones)
+                    if not marcas:
+                        ultima_salida = horario['hora_salida2'] if horario['hora_salida2'] is not None else horario['hora_salida']
+                        fin_jornada = datetime.combine(dia, datetime.min.time()) + timedelta(seconds=segundos(ultima_salida) or 0)
+                        if en_vacaciones:
+                            estado = 'VACACIONES'
+                        elif fin_jornada >= ahora:
+                            estado = '-'
+                        else:
+                            estado = 'FALTÓ'
+                    elif not horario:
+                        estado = 'SIN HORARIO'
+                    else:
+                        turnos = [(slots[0], slots[1])]
+                        if horario['hora_entrada2'] is not None:
+                            turnos.append((slots[2], slots[3]))
+                        completo = all(e and s for e, s in turnos)
+                        if not completo:
+                            estado = 'INCOMPLETO'
+                        elif tardanza_seg > 0:
+                            estado = 'TARDANZA'
+                        else:
+                            estado = 'ASISTENCIA'
+
+                    horario_txt = ''
+                    if horario:
+                        horario_txt = f"{_segundos_a_hhmm(segundos(horario['hora_entrada']))}-{_segundos_a_hhmm(segundos(horario['hora_salida']))}"
+                        if horario['hora_entrada2'] is not None:
+                            horario_txt += f" / {_segundos_a_hhmm(segundos(horario['hora_entrada2']))}-{_segundos_a_hhmm(segundos(horario['hora_salida2']))}"
+
+                    registros.append({
+                        'dni': dni,
+                        'nombre': (p['nombre'] or '').strip(),
+                        'empresa': p['empresa'],
+                        'fecha': dia,
+                        'slots': [hora_txt(s) for s in slots],
+                        'extras': ', '.join(f"{m['tipo_marcacion'][0]} {hora_txt(m)}" for m in extras),
+                        'horario': horario_txt,
+                        'tardanza': tardanza_seg // 60 if tardanza_seg else '',
+                        'estado': estado,
+                    })
+                    dia += timedelta(days=1)
+
+            registros.sort(key=lambda r: (r['nombre'], r['fecha']))
+            print(f"[EXPORTAR_EXCEL] [OK] {len(registros)} filas")
+
+            if not registros:
                 return jsonify({'success': False, 'error': 'No hay datos que coincidan con los filtros'}), 404
-            
+
             # ====================================================================
             # CREAR ARCHIVO EXCEL
             # ====================================================================
-            
             wb = openpyxl.Workbook()
             ws = wb.active
             ws.title = "Marcaciones"
-            
-            # Estilos
+
             header_fill = PatternFill(start_color="1F4788", end_color="1F4788", fill_type="solid")
             header_font = Font(color="FFFFFF", bold=True, size=11)
             header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-            
             cell_alignment = Alignment(horizontal="left", vertical="center")
             cell_alignment_center = Alignment(horizontal="center", vertical="center")
-            
             border_style = Border(
                 left=Side(style='thin', color='000000'),
                 right=Side(style='thin', color='000000'),
                 top=Side(style='thin', color='000000'),
                 bottom=Side(style='thin', color='000000')
             )
-            
-            # ====================================================================
-            # ENCABEZADOS
-            # ====================================================================
-            
-            headers = [
-                'Número Documento',
-                'Nombres Completos',
-                'Empresa',
-                'Fecha',
-                'Entrada 1',
-                'Salida 1',
-                'Entrada 2',
-                'Salida 2',
-                'Estado'
-            ]
-            
+
+            headers = ['DNI', 'Nombres Completos', 'Empresa', 'Fecha', 'Día',
+                       'Entrada 1', 'Salida 1', 'Entrada 2', 'Salida 2', 'Marcas extra',
+                       'Horario del día', 'Tardanza (min)', 'Estado']
             for col_num, header in enumerate(headers, 1):
-                cell = ws.cell(row=1, column=col_num)
-                cell.value = header
+                cell = ws.cell(row=1, column=col_num, value=header)
                 cell.fill = header_fill
                 cell.font = header_font
                 cell.alignment = header_alignment
                 cell.border = border_style
-            
-            # ====================================================================
-            # DATOS
-            # ====================================================================
-            
-            row_num = 2
-            for registro in datos:
-                # Nmero Documento
-                cell = ws.cell(row=row_num, column=1)
-                cell.value = registro.get(clave_documento)
-                cell.alignment = cell_alignment_center
-                cell.border = border_style
-                
-                # Nombres Completos
-                cell = ws.cell(row=row_num, column=2)
-                cell.value = registro.get(clave_nombre)
-                cell.alignment = cell_alignment
-                cell.border = border_style
-                
-                # Empresa
-                cell = ws.cell(row=row_num, column=3)
-                cell.value = empresas_map.get(str(registro.get(clave_documento)), '-')
-                cell.alignment = cell_alignment
-                cell.border = border_style
-                
-                # Fecha
-                cell = ws.cell(row=row_num, column=4)
-                fecha_val = registro.get('Fecha')
-                if isinstance(fecha_val, datetime):
-                    cell.value = fecha_val.strftime('%Y-%m-%d')
-                elif hasattr(fecha_val, 'strftime'):
-                    cell.value = fecha_val.strftime('%Y-%m-%d')
-                else:
-                    cell.value = str(fecha_val) if fecha_val else ''
-                cell.alignment = cell_alignment_center
-                cell.border = border_style
-                
-                # Entrada 1
-                cell = ws.cell(row=row_num, column=5)
-                entrada1 = registro.get('Entrada 1')
-                if entrada1:
-                    if hasattr(entrada1, 'total_seconds'):  # timedelta
-                        total_seconds = int(entrada1.total_seconds())
-                        hours = total_seconds // 3600
-                        minutes = (total_seconds % 3600) // 60
-                        seconds = total_seconds % 60
-                        cell.value = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-                    else:
-                        cell.value = str(entrada1)
-                else:
-                    cell.value = ''
-                cell.alignment = cell_alignment_center
-                cell.border = border_style
-                
-                # Salida 1
-                cell = ws.cell(row=row_num, column=6)
-                salida1 = registro.get('Salida 1')
-                if salida1:
-                    if hasattr(salida1, 'total_seconds'):
-                        total_seconds = int(salida1.total_seconds())
-                        hours = total_seconds // 3600
-                        minutes = (total_seconds % 3600) // 60
-                        seconds = total_seconds % 60
-                        cell.value = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-                    else:
-                        cell.value = str(salida1)
-                else:
-                    cell.value = ''
-                cell.alignment = cell_alignment_center
-                cell.border = border_style
-                
-                # Entrada 2
-                cell = ws.cell(row=row_num, column=7)
-                entrada2 = registro.get('Entrada 2')
-                if entrada2:
-                    if hasattr(entrada2, 'total_seconds'):
-                        total_seconds = int(entrada2.total_seconds())
-                        hours = total_seconds // 3600
-                        minutes = (total_seconds % 3600) // 60
-                        seconds = total_seconds % 60
-                        cell.value = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-                    else:
-                        cell.value = str(entrada2)
-                else:
-                    cell.value = ''
-                cell.alignment = cell_alignment_center
-                cell.border = border_style
-                
-                # Salida 2
-                cell = ws.cell(row=row_num, column=8)
-                salida2 = registro.get('Salida 2')
-                if salida2:
-                    if hasattr(salida2, 'total_seconds'):
-                        total_seconds = int(salida2.total_seconds())
-                        hours = total_seconds // 3600
-                        minutes = (total_seconds % 3600) // 60
-                        seconds = total_seconds % 60
-                        cell.value = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-                    else:
-                        cell.value = str(salida2)
-                else:
-                    cell.value = ''
-                cell.alignment = cell_alignment_center
-                cell.border = border_style
-                
-                # Estado
-                cell = ws.cell(row=row_num, column=9)
-                estado = registro.get('Estado', 'SIN MARCA')
-                cell.value = estado
-                cell.alignment = cell_alignment_center
-                cell.border = border_style
-                
-                # Aplicar color segn estado
-                if estado == 'ASISTIO':
-                    cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-                    cell.font = Font(color="006100", bold=True)
-                elif estado == 'TARDE':
-                    cell.fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
-                    cell.font = Font(color="9C6500", bold=True)
-                elif estado == 'ASISTIO +5':
-                    cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
-                    cell.font = Font(color="9C0006", bold=True)
-                elif estado == 'SIN MARCA':
-                    cell.fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
-                    cell.font = Font(color="7F7F7F", bold=True)
-                
-                row_num += 1
-            
-            # ====================================================================
-            # AJUSTAR ANCHO DE COLUMNAS
-            # ====================================================================
-            
-            ws.column_dimensions['A'].width = 18  # Nmero Documento
-            ws.column_dimensions['B'].width = 35  # Nombres Completos
-            ws.column_dimensions['C'].width = 28  # Empresa
-            ws.column_dimensions['D'].width = 12  # Fecha
-            ws.column_dimensions['E'].width = 12  # Entrada 1
-            ws.column_dimensions['F'].width = 12  # Salida 1
-            ws.column_dimensions['G'].width = 12  # Entrada 2
-            ws.column_dimensions['H'].width = 12  # Salida 2
-            ws.column_dimensions['I'].width = 15  # Estado
-            
-            # Fijar primera fila (encabezado)
+
+            colores_estado = {
+                'ASISTENCIA': ("C6EFCE", "006100"),
+                'TARDANZA': ("FFEB9C", "9C6500"),
+                'INCOMPLETO': ("FDE68A", "92400E"),
+                'FALTÓ': ("FFC7CE", "9C0006"),
+                'VACACIONES': ("EDE9FE", "5B21B6"),
+                'SIN HORARIO': ("F2F2F2", "7F7F7F"),
+            }
+
+            for row_num, reg in enumerate(registros, 2):
+                valores = [reg['dni'], reg['nombre'], reg['empresa'],
+                           reg['fecha'].strftime('%Y-%m-%d'), DIAS_SEMANA_ES[reg['fecha'].weekday()],
+                           *reg['slots'], reg['extras'], reg['horario'], reg['tardanza'], reg['estado']]
+                for col_num, valor in enumerate(valores, 1):
+                    cell = ws.cell(row=row_num, column=col_num, value=valor)
+                    cell.alignment = cell_alignment if col_num in (2, 3, 10) else cell_alignment_center
+                    cell.border = border_style
+                if reg['estado'] in colores_estado:
+                    fondo, letra = colores_estado[reg['estado']]
+                    cell = ws.cell(row=row_num, column=13)
+                    cell.fill = PatternFill(start_color=fondo, end_color=fondo, fill_type="solid")
+                    cell.font = Font(color=letra, bold=True)
+
+            from openpyxl.utils import get_column_letter
+            anchos = [12, 35, 28, 12, 11, 11, 11, 11, 11, 22, 24, 13, 14]
+            for i, ancho in enumerate(anchos):
+                ws.column_dimensions[get_column_letter(i + 1)].width = ancho
             ws.freeze_panes = 'A2'
-            
-            # ====================================================================
-            # GUARDAR EN MEMORIA Y ENVIAR
-            # ====================================================================
-            
+
             output = BytesIO()
             wb.save(output)
             output.seek(0)
-            
-            # Nombre del archivo
-            from datetime import datetime as dt
-            timestamp = dt.now().strftime('%Y%m%d_%H%M%S')
-            filename = f'Marcaciones_{fecha_desde}_a_{fecha_hasta}_{timestamp}.xlsx'
-            
+
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f'Marcaciones_{f_ini}_a_{f_fin}_{timestamp}.xlsx'
             print(f"[EXPORTAR_EXCEL] [OK] Archivo generado: {filename}")
-            
+
             return send_file(
                 output,
                 mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 as_attachment=True,
                 download_name=filename
             )
-        
+
         except Error as e:
             print(f"[EXPORTAR_EXCEL] [X] Error SQL: {e}")
             return jsonify({'success': False, 'error': f'Error en la base de datos: {str(e)}'}), 500
-    
+
     except Exception as e:
         print(f"[EXPORTAR_EXCEL] [X] Error general: {e}")
         import traceback
@@ -1507,24 +1487,9 @@ def exportar_control_asistencia_excel():
             for result in cursor.stored_results():
                 registros = result.fetchall()
             
-            cursor.execute("""
-                SELECT p.documento_numero AS dni,
-                       UPPER(h.dia_semana) AS dia,
-                       h.hora_entrada, h.hora_salida,
-                       h.hora_entrada2, h.hora_salida2
-                FROM TblHorarioTrabajo h
-                INNER JOIN TblPersona p ON p.num_documento = h.num_documento
-                WHERE h.es_activo = 1
-                  AND h.fecha_vigencia_fin IS NULL
-            """)
-            horarios_dia = {}
-            for r in cursor.fetchall():
-                clave = (str(r['dni']), (r['dia'] or '').upper())
-                horarios_dia.setdefault(clave, (
-                    r['hora_entrada'], r['hora_salida'],
-                    r['hora_entrada2'], r['hora_salida2']
-                ))
-            
+            # Horario vigente en la fecha de cada fila (no el actual)
+            horarios_vigencia = cargar_horarios(cursor)
+
             cursor.close()
             connection.close()
             
@@ -1648,11 +1613,14 @@ def exportar_control_asistencia_excel():
                 ws.cell(row=row_num, column=17, value=reg.get('H_SALIDA_CMP_T2', '')).alignment = cell_alignment_center
                 
                 # Minutos T1 (columna 18)
-                clave_horario = (
-                    str(reg.get('DNI_CE') or ''),
-                    (reg.get('DIA_SEMANA') or '').upper()
+                fila_horario = horario_en_fecha(
+                    horarios_vigencia,
+                    reg.get('DNI_CE'),
+                    date(int(reg['ANO']), int(reg['MES']), int(reg['DIA']))
                 )
-                horario = horarios_dia.get(clave_horario, (None, None, None, None))
+                horario = ((fila_horario['hora_entrada'], fila_horario['hora_salida'],
+                            fila_horario['hora_entrada2'], fila_horario['hora_salida2'])
+                           if fila_horario else (None, None, None, None))
                 entrada_t1 = reg.get('H_ENTRADA_OFI_T1') or reg.get('H_ENTRADA_CMP_T1')
                 salida_t1 = reg.get('H_SALIDA_OFI_T1') or reg.get('H_SALIDA_CMP_T1')
                 entrada_t2 = reg.get('H_ENTRADA_OFI_T2') or reg.get('H_ENTRADA_CMP_T2')
@@ -2022,31 +1990,18 @@ def exportar_tardanzas_excel():
                 filas = result.fetchall()
             
             cursor.execute("""
-                SELECT p.documento_numero AS dni, t.horario,
+                SELECT p.documento_numero AS dni,
                        CONCAT(p.apellido_paterno, ' ', p.apellido_materno, ', ', p.nombres) AS nombre_completo
-                FROM (
-                    SELECT g.num_documento, g.horario,
-                           ROW_NUMBER() OVER (
-                               PARTITION BY g.num_documento
-                               ORDER BY g.total DESC
-                           ) AS rn
-                    FROM (
-                        SELECT h.num_documento,
-                               CONCAT(h.hora_entrada, '-', h.hora_salida,
-                                      IF(h.hora_entrada2 IS NOT NULL,
-                                         CONCAT(' / ', h.hora_entrada2, '-', h.hora_salida2), '')) AS horario,
-                               COUNT(*) AS total
-                        FROM TblHorarioTrabajo h
-                        WHERE h.es_activo = 1 AND h.fecha_vigencia_fin IS NULL
-                        GROUP BY h.num_documento, h.hora_entrada, h.hora_salida,
-                                 h.hora_entrada2, h.hora_salida2
-                    ) g
-                ) t
-                INNER JOIN TblPersona p ON p.num_documento = t.num_documento
-                WHERE t.rn = 1
+                FROM TblPersona p
             """)
             datos_persona = {str(r['dni']): r for r in cursor.fetchall()}
-            
+
+            # Horario del periodo pedido (el que rigió más días del rango),
+            # no el horario actual
+            horarios_vigencia = cargar_horarios(cursor)
+            periodo_ini = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+            periodo_fin = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
+
             cursor.close()
             connection.close()
             
@@ -2086,7 +2041,7 @@ def exportar_tardanzas_excel():
                     'dni_ce': dni,
                     'nombres': reg['nombres'],
                     'cargo': reg['cargo'],
-                    'horario': (datos_persona.get(dni) or {}).get('horario') or '',
+                    'horario': horario_del_periodo(horarios_vigencia, dni, periodo_ini, periodo_fin),
                     'total_minutos_tarde': reg['segundos'] // 60,
                     'total_horas_tarde': _segundos_a_hhmm(reg['segundos']),
                 })
@@ -2275,25 +2230,12 @@ def exportar_horas_laboradas_excel():
                 if persona:
                     dni_filtro = str(persona['documento_numero'])
                 
-                cursor.execute("""
-                    SELECT g.horario
-                    FROM (
-                        SELECT h.num_documento,
-                               CONCAT(h.hora_entrada, '-', h.hora_salida,
-                                      IF(h.hora_entrada2 IS NOT NULL,
-                                         CONCAT(' / ', h.hora_entrada2, '-', h.hora_salida2), '')) AS horario,
-                               COUNT(*) AS total
-                        FROM TblHorarioTrabajo h
-                        WHERE h.es_activo = 1 AND h.fecha_vigencia_fin IS NULL AND h.num_documento = %s
-                        GROUP BY h.hora_entrada, h.hora_salida,
-                                 h.hora_entrada2, h.hora_salida2
-                    ) g
-                    ORDER BY g.total DESC
-                    LIMIT 1
-                """, (int(num_documento),))
-                horario_reg = cursor.fetchone()
-                if horario_reg:
-                    horario_empleado = horario_reg['horario']
+                # Horario del periodo pedido (el que rigió más días del rango)
+                horario_empleado = horario_del_periodo(
+                    cargar_horarios(cursor), dni_filtro,
+                    datetime.strptime(fecha_inicio, '%Y-%m-%d').date(),
+                    datetime.strptime(fecha_fin, '%Y-%m-%d').date()
+                )
             
             cursor.close()
             connection.close()

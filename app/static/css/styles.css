@@ -21,10 +21,8 @@ html.dark {
   --border-light: #374151;
 }
 
-/* Smooth transitions */
-* {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-}
+/* No se usa una transición global en todos los elementos (*)
+   porque hacía lento el render de tablas con muchas filas. */
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {

@@ -44,23 +44,25 @@ document.addEventListener('DOMContentLoaded', function() {
     // Ensure sidebar has position fixed for mobile view
     function updateSidebarPosition() {
         if (window.innerWidth < 768) {
-            // Mobile: make sidebar fixed with inline styles
+            // Móvil: cajón lateral fijo a la izquierda (ancho en responsive.css)
             sidebar.style.position = 'fixed';
-            sidebar.style.inset = '0';
+            sidebar.style.top = '0';
+            sidebar.style.bottom = '0';
+            sidebar.style.left = '0';
             sidebar.style.zIndex = '40';
             sidebar.classList.add('md:relative');
-            console.log('✓ Sidebar en modo MOBILE (fixed)');
         } else {
             // Desktop: make sidebar normal
             sidebar.style.position = '';
-            sidebar.style.inset = '';
+            sidebar.style.top = '';
+            sidebar.style.bottom = '';
+            sidebar.style.left = '';
             sidebar.style.zIndex = '';
             sidebar.classList.add('md:relative');
             sidebar.classList.remove('hidden');
             sidebarOverlay.classList.add('hidden');
             mobileMenuBtn.setAttribute('aria-expanded', 'false');
             mobileMenuBtn.setAttribute('aria-label', 'Abrir menú');
-            console.log('✓ Sidebar en modo DESKTOP (relative)');
         }
     }
     

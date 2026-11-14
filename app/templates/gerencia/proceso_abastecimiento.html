@@ -1,15 +1,14 @@
 {% extends "base.html" %}
 
+{% block header_title %}Proceso de Abastecimiento{% endblock %}
+{% block header_subtitle %}Gestiona el flujo completo de compras y suministros{% endblock %}
+
 {% block content %}
 <div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
     <!-- Topbar -->
-    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
-        <div class="px-6 py-4">
-            <div class="flex items-center justify-between mb-2">
-                <div>
-                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Proceso de Abastecimiento</h1>
-                    <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Gestiona el flujo completo de compras y suministros</p>
-                </div>
+    <div class="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800">
+        <div class="px-4 md:px-6 py-3">
+            <div class="k-barra-acciones flex flex-wrap items-center justify-end gap-2">
                 <button class="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
                     <i class="fas fa-plus"></i>
                     <span>Nueva Solicitud</span>
@@ -19,7 +18,7 @@
     </div>
 
     <!-- Contenido Principal -->
-    <div class="p-6 space-y-6">
+    <div class="pt-4 md:p-6 space-y-6">
         
         <!-- TARJETAS DE ESTADÍSTICAS -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">

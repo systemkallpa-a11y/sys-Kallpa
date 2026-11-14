@@ -410,6 +410,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('filtro-empresa').addEventListener('change', filtrarYRenderizar);
     document.getElementById('filtro-area').addEventListener('change', filtrarYRenderizar);
     document.getElementById('filtro-empleado').addEventListener('input', filtrarYRenderizar);
+    // Las fechas consultan al servidor: se aplican con el botón o con Enter
+    ['filtro-fecha-inicio', 'filtro-fecha-fin'].forEach(function(id) {
+        document.getElementById(id).addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') aplicarFiltrosControl();
+        });
+    });
 
     // Cargar datos iniciales
     aplicarFiltrosControl();

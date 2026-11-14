@@ -1,17 +1,14 @@
 {% extends "base.html" %}
 
+{% block header_title %}Expediente Técnico{% endblock %}
+{% block header_subtitle %}Gestiona los expedientes técnicos de las órdenes de trabajo{% endblock %}
+
+
 {% block content %}
 <div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
     <!-- Topbar -->
-    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
-        <div class="px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                    <i class="fas fa-folder-open text-[#4D148C]"></i>
-                    Expediente Técnico
-                </h1>
-                <p class="text-gray-600 dark:text-gray-400 mt-1">Gestiona los expedientes técnicos de las órdenes de trabajo</p>
-            </div>
+    <div class="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800">
+        <div class="k-barra-acciones px-4 md:px-6 py-3 flex flex-wrap items-center justify-end gap-2">
             <button onclick="abrirModalCrear()" class="bg-[#4D148C] hover:bg-[#3D0F6F] text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2">
                 <i class="fas fa-plus"></i>
                 Crear Expediente
@@ -20,7 +17,7 @@
     </div>
 
     <!-- Contenido Principal -->
-    <div class="p-6">
+    <div class="pt-4 md:p-6">
         <!-- Filtros -->
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6 mb-6">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -53,7 +50,7 @@
         <!-- Tabla de Expedientes -->
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="w-full">
+                <table class="w-full" data-movil="tarjetas" data-paginar="20">
                     <thead class="bg-gradient-to-r from-[#4D148C] to-[#6B21A8] text-white">
                         <tr>
                             <th class="px-6 py-4 text-left text-sm font-semibold">Código OT</th>

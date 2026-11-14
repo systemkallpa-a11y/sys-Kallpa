@@ -6,9 +6,9 @@
         <div class="flex items-center justify-center space-x-4">
             <!-- Logo con efecto de brillo -->
             <div class="relative">
-                <div class="absolute -inset-2 bg-gradient-to-r from-slate-600 to-slate-400 rounded-2xl opacity-75 group-hover:opacity-100 blur group-hover:blur-lg transition-all animate-pulse"></div>
-                <div class="relative bg-gradient-to-br from-white via-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800 p-3 rounded-2xl shadow-xl group-hover:shadow-2xl transition-all">
-                    <img src="{{ url_for('static', filename='images/Logo Kallpa.png') }}" alt="Kallpa Logo" width="64" height="64" class="w-16 h-16 transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                <div class="absolute -inset-1 bg-gradient-to-r from-slate-500 to-slate-300 rounded-2xl opacity-40 group-hover:opacity-70 transition-opacity duration-300"></div>
+                <div class="relative bg-gradient-to-br from-white via-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800 p-3 rounded-2xl shadow-md group-hover:shadow-lg transition-shadow duration-300">
+                    <img src="{{ url_for('static', filename='images/Logo Kallpa.png') }}" alt="Kallpa Logo" width="64" height="64" class="w-12 h-12 md:w-16 md:h-16 transition-transform duration-300 group-hover:scale-105">
                 </div>
             </div>
             <!-- Nombre -->
@@ -48,12 +48,7 @@
     </div>
 </aside>
 
-<!-- Mobile Menu Button (visible only on mobile) -->
-<div class="md:hidden fixed top-4 left-4 z-50">
-    <button type="button" id="mobile-menu-btn" aria-label="Abrir menú" aria-controls="sidebar" aria-expanded="false" class="p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-colors">
-        <i class="fas fa-bars text-xl" aria-hidden="true"></i>
-    </button>
-</div>
+<!-- El botón para abrir el menú en móvil (#mobile-menu-btn) está en el header de base.html -->
 
 <!-- Mobile Sidebar Overlay -->
 <div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/50 z-30 md:hidden"></div>

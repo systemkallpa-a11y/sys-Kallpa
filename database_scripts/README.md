@@ -7,7 +7,7 @@ ejecuta la aplicación: son para correr a mano (MySQL Workbench) o como referenc
 |---|---|---|
 | `estado_actual/` | Definición **vigente** de todos los SP, funciones y vistas, exportada de la BD (`sps_vistas_triggers_AAAAMMDD.sql`). | Referencia principal. Volver a exportar tras cambios grandes. |
 | `esquema/` | `CREATE TABLE` de tablas en uso (proveedores de inventario, entregas a personal). | Referencia. |
-| `asistencia/` | SP de horas laboradas. | Referencia. |
+| `asistencia/` | SP de horas laboradas (referencia). `01_sp_CrearUsuarioCompleto_vigencia.sql`: el alta de usuario guarda la vigencia del horario. `02_reparar_vigencia_horarios.sql`: da inicio de vigencia a los horarios que no lo tienen (usuarios 76 y 78 desde el 14/11/2026) y limpia versiones solapadas (opcional); con respaldo y verificación, termina en COMMIT/ROLLBACK manual. | 01 **aplicado** el 14/11/2026 19:06. 02: paso A **aplicado** el 14/11/2026 (UPDATE de las 14 filas de 76 y 78); pasos B y C (limpieza de solapes) **pendientes, opcionales**. |
 | `requerimientos/` | Corrección del SP de crear requerimiento de obra (cantidades). | Aplicado. |
 | `movimiento_requerimiento/` | Movió *Requerimiento* del menú Logística a O.T. | Aplicado. |
 | `requerimiento_administrativo/` | Tipo de documento 7, flujo (cargo 65) y SP del requerimiento administrativo. | Aplicado; `03_...` es la fuente de esos SP. |

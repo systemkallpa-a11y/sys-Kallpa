@@ -11,7 +11,7 @@
     <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4">
         <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <!-- Búsqueda -->
-            <div class="relative flex-1 min-w-[300px]">
+            <div class="relative w-full sm:w-auto sm:flex-1 sm:min-w-[300px]">
                 <input type="text" id="filtro-busqueda" placeholder="Buscar por DNI, nombre, cargo o área..."
                        class="w-full px-4 py-2 pl-10 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white">
                 <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
@@ -19,10 +19,6 @@
 
             <!-- Botones -->
             <div class="flex gap-2">
-                <button onclick="aplicarFiltros()" 
-                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
-                    <i class="fas fa-search mr-2"></i>Buscar
-                </button>
                 <button onclick="abrirModalNuevaEntrega()" 
                         class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium">
                     <i class="fas fa-plus mr-2"></i>Nueva Entrega
@@ -38,7 +34,7 @@
     <!-- TABLA DE PERSONAL -->
     <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700">
         <div class="overflow-x-auto">
-            <table class="w-full">
+            <table class="w-full" data-movil="tarjetas" data-paginar="20">
                 <thead class="bg-gray-50 dark:bg-slate-700 border-b border-gray-200 dark:border-slate-600">
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
@@ -350,6 +346,20 @@ document.addEventListener('DOMContentLoaded', function() {
     cargarPersonal();
     cargarPersonalSelect();
     cargarMaterialesSelect();
+
+    // Búsqueda automática: espera 300 ms tras la última tecla (Enter aplica al instante)
+    const campoBusqueda = document.getElementById('filtro-busqueda');
+    let temporizadorBusqueda;
+    campoBusqueda.addEventListener('input', function() {
+        clearTimeout(temporizadorBusqueda);
+        temporizadorBusqueda = setTimeout(aplicarFiltros, 300);
+    });
+    campoBusqueda.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            clearTimeout(temporizadorBusqueda);
+            aplicarFiltros();
+        }
+    });
 });
 
 // ============================================================================

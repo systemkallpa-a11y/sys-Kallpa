@@ -24,6 +24,19 @@ let porcentajes_pdf = {
 
 // Inicializar cuando carga la página
 document.addEventListener('DOMContentLoaded', function() {
+    // Filtros avanzados: Enter en cualquier campo equivale al botón Aplicar
+    ['filtro-numero', 'filtro-creador', 'filtro-fecha-desde', 'filtro-fecha-hasta',
+     'filtro-monto-desde', 'filtro-monto-hasta'].forEach(function(id) {
+        const campo = document.getElementById(id);
+        if (!campo) return;
+        campo.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && typeof aplicarFiltros === 'function') {
+                e.preventDefault();
+                aplicarFiltros();
+            }
+        });
+    });
+
     // ⭐ CONFIGURAR EVENT LISTENERS PARA CAMPOS EDITABLES DEL DESGLOSE
     const campos_desglose = ['gastos-generales', 'utilidad', 'supervision-obra'];
     

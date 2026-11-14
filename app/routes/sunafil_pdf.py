@@ -7,7 +7,7 @@ Fecha: 07 Octubre 2026
 
 from flask import Blueprint, request
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, date
 import base64
 import io
 import os
@@ -17,6 +17,7 @@ from mysql.connector import Error
 from jinja2 import Template
 
 from app.config import DatabaseConfig
+from app.utils.horarios import cargar_horarios, horario_en_fecha
 
 try:
     from xhtml2pdf import pisa
@@ -160,6 +161,18 @@ def _construir_fila(registro, nro, horario):
     }
 
 
+def _jornada(horario):
+    """Fila de horario (o None) -> {'jornada': segundos programados del día}"""
+    if not horario:
+        return None
+    jornada = 0
+    if horario.get('hora_entrada') is not None and horario.get('hora_salida') is not None:
+        jornada += int((horario['hora_salida'] - horario['hora_entrada']).total_seconds())
+    if horario.get('hora_entrada2') is not None and horario.get('hora_salida2') is not None:
+        jornada += int((horario['hora_salida2'] - horario['hora_entrada2']).total_seconds())
+    return {'jornada': max(jornada, 0)}
+
+
 def _paginar(filas):
     """Divide las filas en hojas de 20 registros (rellena con filas vacias)"""
     total = len(filas)
@@ -287,37 +300,16 @@ def exportar_sunafil_pdf():
 
             registros = [r for r in registros if str(r.get('EMPRESA') or '') == datos_empresa['nombre']]
 
-            cursor.execute("""
-                SELECT p.documento_numero,
-                       UPPER(h.dia_semana) AS dia_semana,
-                       h.hora_entrada, h.hora_salida,
-                       h.hora_entrada2, h.hora_salida2
-                  FROM TblHorarioTrabajo h
-                 INNER JOIN TblPersona p ON p.num_documento = h.num_documento
-                 WHERE h.es_activo = 1
-                   AND h.fecha_vigencia_fin IS NULL
-            """)
-            horarios = {}
-            for horario in cursor.fetchall():
-                entrada = horario.get('hora_entrada')
-                salida = horario.get('hora_salida')
-                entrada2 = horario.get('hora_entrada2')
-                salida2 = horario.get('hora_salida2')
-                jornada = 0
-                if entrada is not None and salida is not None:
-                    jornada += int((salida - entrada).total_seconds())
-                if entrada2 is not None and salida2 is not None:
-                    jornada += int((salida2 - entrada2).total_seconds())
-                horarios[(str(horario.get('documento_numero') or '').strip(),
-                          str(horario.get('dia_semana') or '').strip())] = {'jornada': max(jornada, 0)}
+            # Horario vigente en la fecha de cada fila (no el actual)
+            horarios_vigencia = cargar_horarios(cursor)
 
             cursor.close()
 
             filas = []
             for indice, registro in enumerate(registros, start=1):
-                clave = (str(registro.get('DNI_CE') or '').strip(),
-                         str(registro.get('DIA_SEMANA') or '').strip().upper())
-                filas.append(_construir_fila(registro, indice, horarios.get(clave)))
+                fecha_fila = date(int(registro['ANO']), int(registro['MES']), int(registro['DIA']))
+                fila_horario = horario_en_fecha(horarios_vigencia, registro.get('DNI_CE'), fecha_fila)
+                filas.append(_construir_fila(registro, indice, _jornada(fila_horario)))
 
             print(f"[SUNAFIL_PDF] [OK] empresa={datos_empresa['nombre']} "
                   f"rango={fecha_inicio}..{fecha_fin} filas={len(filas)}")

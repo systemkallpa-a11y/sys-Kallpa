@@ -1,28 +1,27 @@
 {% extends "base.html" %}
 
+{% block header_title %}Gestión de O.T (Órdenes de Trabajo){% endblock %}
+{% block header_subtitle %}Administra las órdenes de trabajo del proyecto{% endblock %}
+
+
 {% block content %}
 <div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
     <!-- Topbar -->
-    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
-        <div class="px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Gestión de O.T (Órdenes de Trabajo)</h1>
-                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Administra las órdenes de trabajo del proyecto</p>
-            </div>
+    <div class="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800">
+        <div class="k-barra-acciones px-4 md:px-6 py-3 flex flex-wrap items-center justify-end gap-2">
             <button id="btn-crear-ot" class="flex items-center gap-2 px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg">
                 <i class="fas fa-plus"></i>
                 <span>Crear O.T</span>
             </button>
         </div>
-    </button>
     </div>
 
     <!-- Contenido Principal -->
-    <div class="p-6">
+    <div class="pt-4 md:p-6">
         <!-- Tabla de O.T -->
         <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
             <div class="overflow-x-auto">
-                <table id="tabla-ot" class="w-full">
+                <table id="tabla-ot" class="w-full" data-movil="tarjetas" data-paginar="20">
                     <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
                         <tr>
                             <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">ID</th>

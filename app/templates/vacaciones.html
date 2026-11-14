@@ -1,20 +1,15 @@
 {% extends "base.html" %}
 
+{% block header_title %}Gestión de Vacaciones{% endblock %}
+{% block header_subtitle %}Administra las solicitudes y periodos de vacaciones del personal{% endblock %}
+
+
 {% block content %}
 <div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
-    <!-- Topbar -->
-    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
-            <div class="px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Gestión de Vacaciones</h1>
-                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Administra las solicitudes y periodos de vacaciones del personal</p>
-            </div>
-        </div>
-    </div>
 
     <!-- Filtros -->
-    <div class="px-6 py-4 bg-gray-100 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800">
-        <div class="flex flex-col md:flex-row items-center gap-3">
+    <div class="px-4 md:px-6 py-4 bg-gray-100 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800">
+        <div class="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center gap-3">
             <input type="text" id="filtro-empleado" placeholder="Buscar empleado..." 
                    class="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 w-full md:w-64">
             
@@ -34,10 +29,6 @@
                 <option value="2024">2024</option>
             </select>
 
-            <button onclick="aplicarFiltros()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
-                <i class="fas fa-search mr-2"></i>Buscar
-            </button>
-
             <button onclick="limpiarFiltros()" class="px-4 py-2 bg-gray-400 hover:bg-gray-500 text-white rounded-lg text-sm font-medium transition-colors">
                 <i class="fas fa-redo mr-2"></i>Limpiar
             </button>
@@ -45,7 +36,7 @@
     </div>
 
     <!-- Contenido Principal -->
-    <div class="p-6">
+    <div class="pt-4 md:p-6">
         <!-- Estadísticas rápidas -->
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md p-4 border-l-4 border-blue-500">
@@ -100,7 +91,7 @@
         <!-- Tabla de Solicitudes -->
         <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
             <div class="overflow-x-auto">
-                <table id="tabla-vacaciones" class="w-full">
+                <table id="tabla-vacaciones" class="w-full" data-movil="tarjetas">
                     <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
                         <tr>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase">#</th>

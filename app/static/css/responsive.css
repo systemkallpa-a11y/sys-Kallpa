@@ -1,0 +1,330 @@
+/* ==========================================================================
+   Kallpa - Capa responsiva y animaciones del layout
+   - Se carga en base.html después de styles.css.
+   - Las animaciones solo usan opacity/transform (no recalculan layout)
+     y se desactivan con prefers-reduced-motion.
+   ========================================================================== */
+
+:root {
+    --k-ease: cubic-bezier(0.2, 0, 0, 1);
+    --k-dur-corta: 160ms;
+    --k-dur-media: 220ms;
+    --k-borde: #e5e7eb;
+    --k-fondo-tarjeta: #ffffff;
+    --k-texto-etiqueta: #6b7280;
+}
+
+html.dark {
+    --k-borde: #334155;
+    --k-fondo-tarjeta: #0f172a;
+    --k-texto-etiqueta: #94a3b8;
+}
+
+/* Alto real del viewport en móviles (evita el salto por la barra del navegador) */
+.k-alto-pantalla {
+    height: 100vh;
+}
+@supports (height: 100dvh) {
+    .k-alto-pantalla {
+        height: 100dvh;
+    }
+}
+
+/* ==========================================================================
+   Animaciones
+   ========================================================================== */
+
+@keyframes k-aparecer {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes k-fundido {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes k-escala {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes k-desplegar {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes k-cajon {
+    from { transform: translateX(-100%); }
+    to   { transform: none; }
+}
+
+/* Entrada del contenido de la página (los modales tienen su propia animación) */
+#main-content > *:not(.fixed):not(script):not(style) {
+    animation: k-aparecer var(--k-dur-media) var(--k-ease) both;
+}
+
+/* Filas de tablas: se animan al insertarse (al cargar o refrescar datos).
+   Solo las primeras filas tienen retardo para no demorar listas largas. */
+#main-content tbody > tr {
+    animation: k-fundido var(--k-dur-media) ease-out both;
+}
+#main-content tbody > tr:nth-child(2)  { animation-delay: 15ms; }
+#main-content tbody > tr:nth-child(3)  { animation-delay: 30ms; }
+#main-content tbody > tr:nth-child(4)  { animation-delay: 45ms; }
+#main-content tbody > tr:nth-child(5)  { animation-delay: 60ms; }
+#main-content tbody > tr:nth-child(6)  { animation-delay: 75ms; }
+#main-content tbody > tr:nth-child(7)  { animation-delay: 90ms; }
+#main-content tbody > tr:nth-child(n+8) { animation-delay: 100ms; }
+
+/* Modales: fondo con fundido y panel con escala sutil */
+.fixed.inset-0.items-center.justify-center:not(.hidden) {
+    animation: k-fundido var(--k-dur-corta) ease-out both;
+}
+.fixed.inset-0.items-center.justify-center:not(.hidden) > * {
+    animation: k-escala var(--k-dur-media) var(--k-ease) both;
+}
+
+/* Menús desplegables del header */
+#notifications-dropdown:not(.hidden),
+#user-menu:not(.hidden) {
+    animation: k-desplegar var(--k-dur-corta) var(--k-ease) both;
+}
+
+/* SweetAlert2: entrada más corta y sobria */
+.swal2-popup.swal2-show {
+    animation: k-escala var(--k-dur-media) var(--k-ease) both !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #main-content > *:not(.fixed),
+    #main-content tbody > tr,
+    .fixed.inset-0.items-center.justify-center:not(.hidden),
+    .fixed.inset-0.items-center.justify-center:not(.hidden) > *,
+    #notifications-dropdown:not(.hidden),
+    #user-menu:not(.hidden),
+    #sidebar:not(.hidden) {
+        animation: none !important;
+    }
+}
+
+/* ==========================================================================
+   Sidebar en móvil (cajón lateral)
+   ========================================================================== */
+
+@media (max-width: 767.98px) {
+    #sidebar:not(.hidden) {
+        display: flex;
+        width: min(18rem, 85vw);
+        animation: k-cajon var(--k-dur-media) var(--k-ease) both;
+    }
+    #sidebar-overlay:not(.hidden) {
+        animation: k-fundido var(--k-dur-media) ease-out both;
+    }
+    /* El logo del sidebar ocupa menos alto en móvil */
+    #sidebar > a:first-child {
+        padding: 1.25rem;
+    }
+}
+
+/* ==========================================================================
+   Header en móvil
+   ========================================================================== */
+
+@media (max-width: 639.98px) {
+    /* El dropdown de notificaciones ocupa el ancho de la pantalla */
+    #notifications-dropdown {
+        position: fixed;
+        left: 0.5rem;
+        right: 0.5rem;
+        top: 4.25rem;
+        width: auto;
+        max-height: calc(100vh - 5rem);
+    }
+    #user-menu {
+        position: fixed;
+        right: 0.5rem;
+        top: 4.25rem;
+        min-width: 0;
+        width: min(18rem, calc(100vw - 1rem));
+    }
+}
+
+/* ==========================================================================
+   Barra de acciones de cada página (botones Crear / Exportar / etc.)
+   ========================================================================== */
+
+@media (max-width: 639.98px) {
+    .k-barra-acciones button,
+    .k-barra-acciones > a {
+        flex: 1 1 auto;
+        justify-content: center;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+/* ==========================================================================
+   Tablas
+   ========================================================================== */
+
+/* Contenedor con scroll horizontal: desplazamiento suave en táctil */
+#main-content .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+}
+
+/* Indicador de que hay más columnas (lo activa tablas-responsivas.js) */
+.k-scroll-der {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+}
+.k-scroll-izq {
+    -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent);
+    mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent);
+}
+.k-scroll-izq.k-scroll-der {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+}
+
+/* Encabezados en una línea: evita columnas angostas con texto partido */
+#main-content .overflow-x-auto > table th {
+    white-space: nowrap;
+}
+
+/* Celdas con texto corto (códigos, montos, fechas): sin corte de línea.
+   La clase la pone tablas-responsivas.js; los textos largos siguen ajustándose. */
+#main-content .overflow-x-auto > table td.k-sin-corte {
+    white-space: nowrap;
+}
+
+/* Algunas celdas de acciones traen la clase "flex" en el propio <td>, lo que
+   las saca del modelo de tabla y descuadra los anchos. En tabla normal se
+   devuelven a table-cell con los botones en una sola fila.
+   (En móvil con modo tarjetas se usa la regla de más abajo.) */
+@media (min-width: 640px) {
+    #main-content .overflow-x-auto > table td.flex {
+        display: table-cell;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+    #main-content .overflow-x-auto > table td.flex > * + * {
+        margin-left: 0.5rem;
+    }
+}
+
+/* Tablets, laptops y móviles: celdas más compactas */
+@media (max-width: 1535.98px) {
+    #main-content .overflow-x-auto > table th,
+    #main-content .overflow-x-auto > table td {
+        padding: 0.75rem 0.875rem;
+    }
+}
+@media (max-width: 1023.98px) {
+    #main-content .overflow-x-auto > table th,
+    #main-content .overflow-x-auto > table td {
+        padding: 0.625rem 0.75rem;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Modo tarjetas en móvil: <table data-movil="tarjetas">
+   Cada fila se muestra como tarjeta con "Etiqueta: valor".
+   Las etiquetas (data-label) las pone tablas-responsivas.js desde el thead.
+   -------------------------------------------------------------------------- */
+@media (max-width: 639.98px) {
+    table[data-movil="tarjetas"] {
+        min-width: 0 !important;
+    }
+    table[data-movil="tarjetas"] thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+    table[data-movil="tarjetas"],
+    table[data-movil="tarjetas"] > tbody {
+        display: block;
+        width: 100%;
+    }
+    table[data-movil="tarjetas"] > tbody {
+        padding: 0.75rem;
+    }
+    table[data-movil="tarjetas"] > tbody > tr {
+        display: block;
+        background: var(--k-fondo-tarjeta);
+        border: 1px solid var(--k-borde) !important;
+        border-radius: 0.75rem;
+        padding: 0.5rem 0.875rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    }
+    table[data-movil="tarjetas"] > tbody > tr + tr {
+        margin-top: 0.75rem;
+    }
+    table[data-movil="tarjetas"] > tbody > tr > td:not(.hidden) {
+        display: grid;
+        grid-template-columns: minmax(6.5rem, 38%) minmax(0, 1fr);
+        align-items: center;
+        gap: 0.75rem;
+        width: auto;
+        padding: 0.5rem 0 !important;
+        text-align: left !important;
+        white-space: normal;
+        word-break: break-word;
+        border: 0;
+    }
+    table[data-movil="tarjetas"] > tbody > tr > td + td {
+        border-top: 1px dashed var(--k-borde);
+    }
+    table[data-movil="tarjetas"] > tbody > tr > td::before {
+        content: attr(data-label);
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        color: var(--k-texto-etiqueta);
+    }
+    /* Celda de acciones con clase flex en el <td>: botones en fila junto a la etiqueta */
+    table[data-movil="tarjetas"] > tbody > tr > td.flex:not(.hidden) {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    table[data-movil="tarjetas"] > tbody > tr > td.flex::before {
+        flex: 0 0 max(6.5rem, 38%);
+        margin-right: 0.25rem;
+    }
+    table[data-movil="tarjetas"] > tbody > tr > td:last-child > div {
+        flex-wrap: wrap;
+    }
+    table[data-movil="tarjetas"] > tbody > tr > td button {
+        min-height: 2.25rem;
+        min-width: 2.25rem;
+    }
+    /* Filas de mensaje (Cargando..., No hay datos) */
+    table[data-movil="tarjetas"] > tbody > tr > td[colspan] {
+        display: block;
+        text-align: center !important;
+        padding: 1.5rem 0.5rem !important;
+    }
+    table[data-movil="tarjetas"] > tbody > tr > td[colspan]::before,
+    table[data-movil="tarjetas"] > tbody > tr > td:not([data-label])::before {
+        content: none;
+    }
+    table[data-movil="tarjetas"] > tbody > tr > td:not([data-label]):not([colspan]) {
+        display: block;
+    }
+}
+
+/* ==========================================================================
+   Paginación común (static/js/paginacion.js)
+   Va con !important para ganarle al display:block del modo tarjetas.
+   ========================================================================== */
+tr.k-pag-oculta {
+    display: none !important;
+}

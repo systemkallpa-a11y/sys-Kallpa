@@ -8,12 +8,8 @@
 {% block content %}
 <div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
     <!-- Topbar -->
-    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
-        <div class="px-4 md:px-6 py-3 md:py-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Gestión de Requerimiento General</h1>
-                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Todos los requerimientos: obras (solo consulta) y administrativos</p>
-            </div>
+    <div class="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800">
+        <div class="k-barra-acciones px-4 md:px-6 py-3 flex flex-wrap items-center justify-end gap-2">
             <button type="button" disabled
                     title="Los requerimientos administrativos se crean desde el Dashboard (botón Nuevo Requerimiento)"
                     class="flex items-center gap-2 px-6 py-2 bg-slate-400 dark:bg-slate-600 text-white rounded-lg font-medium shadow-md cursor-not-allowed opacity-70">
@@ -54,7 +50,7 @@
         <!-- Tabla -->
         <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
             <div class="overflow-x-auto">
-                <table id="tabla-requerimiento-general" class="w-full">
+                <table id="tabla-requerimiento-general" class="w-full" data-movil="tarjetas" data-paginar="20">
                     <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
                         <tr>
                             <th class="px-4 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">ID</th>
