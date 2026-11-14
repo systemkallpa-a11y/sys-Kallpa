@@ -232,6 +232,7 @@
     <script src="{{ url_for('static', filename='js/theme.js', v=assets_version) }}"></script>
     <script src="{{ url_for('static', filename='js/sidebar.js', v=assets_version) }}"></script>
     <script src="{{ url_for('static', filename='js/sidebar-accesos.js', v=assets_version) }}"></script>
+    <script src="{{ url_for('static', filename='js/requerimiento_administrativo.js', v=assets_version) }}"></script>
     
     <!-- Script para generar iniciales del usuario -->
     <script>
@@ -495,8 +496,8 @@
                             <th class="px-4 py-3 text-center font-semibold text-gray-700 dark:text-gray-300">PDF</th>
                             <th class="px-4 py-3 text-center font-semibold text-gray-700 dark:text-gray-300">Acción</th>
                     `;
-                } else if (idTipoDocumento === 2) {
-                    // REQUERIMIENTOS
+                } else if (idTipoDocumento === 2 || idTipoDocumento === 7) {
+                    // REQUERIMIENTOS (2 = Obra, 7 = Administrativo)
                     html += `
                             <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Código</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Descripción</th>
@@ -557,8 +558,11 @@
                                 </td>
                             </tr>
                         `;
-                    } else if (idTipoDocumento === 2) {
-                        // REQUERIMIENTOS
+                    } else if (idTipoDocumento === 2 || idTipoDocumento === 7) {
+                        // REQUERIMIENTOS (2 = Obra, 7 = Administrativo con su propio detalle)
+                        const accionVer = idTipoDocumento === 7
+                            ? `RQA.verDetalle(${doc.id_documento})`
+                            : `mostrarDetalleRequerimiento(${doc.id_documento}, true)`;
                         const responsable = doc.responsable || 'Sin asignar';
                         const descripcion = doc.descripcion || 'Sin descripción';
                         const items = doc.cantidad_items || 0;
@@ -584,7 +588,7 @@
                                     <p class="text-gray-700 dark:text-gray-300">${responsable}</p>
                                 </td>
                                 <td class="px-4 py-3 text-center">
-                                    <button onclick="mostrarDetalleRequerimiento(${doc.id_documento}, true)" 
+                                    <button onclick="${accionVer}"
                                             class="inline-flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded font-medium text-xs transition-colors">
                                         <i class="fas fa-eye"></i>
                                         Ver

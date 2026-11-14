@@ -120,251 +120,107 @@ def obtener_asignados(id_personal):
 @entregas_personal_bp.route('/api/entregas-personal/guardar', methods=['POST'])
 @login_required
 def guardar_entrega():
-    """Guarda cabecera + detalle y descuenta stock en una transacción"""
+    """Guarda cabecera + detalle y descuenta stock en UNA transacción.
+
+    Cada material se descuenta con sp_registrar_movimiento_stock (Parte 5):
+    baja stock_actual y deja su SALIDA en el kardex con tipo de documento
+    ENTREGA_PERSONAL. Valida stock suficiente con la fila bloqueada, así dos
+    entregas simultáneas no pueden dejar el stock negativo.
+    Si un material falla, no se guarda nada de la entrega.
+    """
+    data = request.get_json(silent=True) or {}
+    id_personal = data.get('id_personal')
+    materiales = data.get('materiales', [])
+    observaciones = data.get('observaciones', '')
+    creado_por = str(session.get('user_documento', ''))
     try:
-        data        = request.get_json()
-        id_personal = data.get('id_personal')
-        materiales  = data.get('materiales', [])
-        observaciones = data.get('observaciones', '')
-        creado_por  = str(session.get('user_documento', ''))
+        realizado_por = int(session.get('user_documento'))
+    except (TypeError, ValueError):
+        realizado_por = None
 
-        if not id_personal or not materiales:
-            return jsonify({'success': False, 'error': 'Datos incompletos'}), 400
+    if not id_personal or not materiales:
+        return jsonify({'success': False, 'error': 'Datos incompletos'}), 400
 
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
 
-        try:
-            cursor = connection.cursor()
+    try:
+        cursor = connection.cursor()
 
-            # 1. Crear cabecera via SP
-            args = [id_personal, observaciones, creado_por, 0, '', 0, '']
-            result = cursor.callproc('sp_guardar_entrega_personal', args)
-            p_success    = result[3]
-            p_message    = result[4]
-            p_id_entrega = result[5]
-
-            if not p_success:
-                connection.rollback()
-                cursor.close()
-                connection.close()
-                return jsonify({'success': False, 'error': p_message}), 400
-
-            # 2. Insertar detalle y descontar stock por cada material
-            for mat in materiales:
-                id_inv   = int(mat['id_inventario'])
-                cantidad = float(mat['cantidad'])
-                serie    = mat.get('serie') or None
-                estado_b = mat.get('estado_bien', 'BUENO')
-
-                # Verificar stock suficiente
-                cursor.execute(
-                    "SELECT stock_actual FROM TblInventario WHERE id_inventario = %s",
-                    (id_inv,)
-                )
-                row = cursor.fetchone()
-                if not row or float(row[0]) < cantidad:
-                    connection.rollback()
-                    cursor.close()
-                    connection.close()
-                    return jsonify({
-                        'success': False,
-                        'error': f'Stock insuficiente para el material id={id_inv}'
-                    }), 400
-
-                # Insertar detalle
-                cursor.execute("""
-                    INSERT INTO TblEntregaPersonalDetalle
-                        (id_entrega, id_inventario, cantidad, serie, estado_bien)
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (p_id_entrega, id_inv, cantidad, serie, estado_b))
-
-                # Descontar stock
-                cursor.execute("""
-                    UPDATE TblInventario
-                    SET stock_actual = stock_actual - %s,
-                        fecha_actualizacion = NOW()
-                    WHERE id_inventario = %s
-                """, (cantidad, id_inv))
-
-            connection.commit()
-            cursor.close()
-            connection.close()
-
-            return jsonify({
-                'success': True,
-                'message': p_message,
-                'id_entrega': int(p_id_entrega)
-            }), 201
-
-        except Error as e:
+        # 1. Cabecera (sp_guardar_entrega_personal no hace COMMIT propio)
+        result = cursor.callproc('sp_guardar_entrega_personal',
+                                 [id_personal, observaciones, creado_por, 0, '', 0, ''])
+        p_success, p_message, p_id_entrega = result[3], result[4], result[5]
+        if not p_success:
             connection.rollback()
-            print(f"[GUARDAR ENTREGA] Error SQL: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return jsonify({'success': False, 'error': p_message}), 400
 
-    except Exception as e:
-        print(f"[GUARDAR ENTREGA] Error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-    """Obtener historial de entregas de una persona"""
-    try:
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
-        
-        try:
-            cursor = connection.cursor(dictionary=True)
-            
-            # Información del personal
+        cursor.execute("SELECT codigo_entrega FROM TblEntregaPersonal WHERE id_entrega = %s",
+                       (p_id_entrega,))
+        fila = cursor.fetchone()
+        codigo_entrega = fila[0] if fila else str(p_id_entrega)
+
+        # 2. Detalle + salida de stock con su movimiento, por cada material
+        for mat in materiales:
+            id_inv = int(mat['id_inventario'])
+            cantidad = float(mat['cantidad'])
+
+            mov = cursor.callproc('sp_registrar_movimiento_stock', [
+                id_inv, 'SALIDA', cantidad,
+                None,                         # almacén del ítem
+                'ENTREGA_PERSONAL', int(p_id_entrega),
+                f'Entrega al personal {codigo_entrega}',
+                observaciones or None,
+                realizado_por,
+                0, '', 0.0, 0                 # OUT: success, message, nuevo_stock, id_movimiento
+            ])
+            if not mov[9]:
+                connection.rollback()
+                return jsonify({'success': False, 'error': mov[10]}), 400
+
             cursor.execute("""
-                SELECT 
-                    num_documento,
-                    CONCAT(primer_nombre, ' ', apellido_paterno, ' ', apellido_materno) AS nombre_completo,
-                    email,
-                    telefono,
-                    g.nombre_gerencia AS area
-                FROM TblUsuarios u
-                LEFT JOIN TblGerencias g ON u.id_gerencia = g.id_gerencia
-                WHERE num_documento = %s
-            """, (num_documento,))
-            
-            personal = cursor.fetchone()
-            
-            if not personal:
-                return jsonify({'success': False, 'message': 'Personal no encontrado'}), 404
-            
-            # Historial de entregas
-            cursor.execute("""
-                SELECT 
-                    m.id_movimiento,
-                    m.codigo_movimiento,
-                    m.fecha_movimiento,
-                    i.codigo AS codigo_material,
-                    i.nombre AS material,
-                    m.cantidad,
-                    u.abreviatura AS unidad,
-                    m.destino,
-                    m.documento_referencia,
-                    m.observaciones,
-                    CONCAT(entregador.primer_nombre, ' ', entregador.apellido_paterno) AS entregado_por
-                FROM TblMovimientoInventario m
-                INNER JOIN TblInventario i ON m.id_inventario = i.id_inventario
-                LEFT JOIN TblUnidadMedida u ON i.id_unidad = u.id_unidad
-                LEFT JOIN TblUsuarios entregador ON m.creado_por = entregador.num_documento
-                WHERE m.responsable_destino = %s
-                    AND m.tipo_movimiento = 'SALIDA'
-                ORDER BY m.fecha_movimiento DESC
-            """, (num_documento,))
-            
-            entregas = cursor.fetchall()
-            
-            cursor.close()
-            connection.close()
-            
-            return jsonify({
-                'success': True,
-                'data': {
-                    'personal': personal,
-                    'entregas': entregas
-                }
-            }), 200
-        
-        except Error as e:
-            print(f"[HISTORIAL] Error SQL: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    except Exception as e:
-        print(f"[HISTORIAL] Error: {e}")
-        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+                INSERT INTO TblEntregaPersonalDetalle
+                    (id_entrega, id_inventario, cantidad, serie, estado_bien)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (p_id_entrega, id_inv, cantidad, mat.get('serie') or None,
+                  mat.get('estado_bien', 'BUENO')))
+
+        connection.commit()
+        cursor.close()
+
+        return jsonify({
+            'success': True,
+            'message': p_message,
+            'id_entrega': int(p_id_entrega)
+        }), 201
+
+    except Error as e:
+        connection.rollback()
+        print(f"[GUARDAR ENTREGA] Error SQL: {e}")
+        return jsonify({'success': False, 'error': f'Error de base de datos: {e.msg}'}), 500
+    except (KeyError, TypeError, ValueError) as e:
+        connection.rollback()
+        return jsonify({'success': False, 'error': f'Datos de material inválidos: {e}'}), 400
+    finally:
+        connection.close()
 
 
 # ============================================================================
-# API: REGISTRAR NUEVA ENTREGA
+# API: REGISTRAR NUEVA ENTREGA (obsoleto)
 # ============================================================================
 
 @entregas_personal_bp.route('/api/entregas-personal/registrar', methods=['POST'])
 @login_required
 def registrar_entrega():
-    """Registrar una nueva entrega de material a personal"""
-    try:
-        data = request.get_json()
-        
-        # Validar campos requeridos
-        required_fields = ['num_documento_personal', 'id_inventario', 'cantidad', 'destino']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'success': False, 'message': f'Campo requerido: {field}'}), 400
-        
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
-        
-        try:
-            cursor = connection.cursor(dictionary=True)
-            
-            # Obtener usuario actual
-            creado_por = session.get('user_documento')
-            
-            # Generar código de movimiento
-            cursor.execute("""
-                SELECT CONCAT('ENT-', LPAD(COALESCE(MAX(CAST(SUBSTRING(codigo_movimiento, 5) AS UNSIGNED)), 0) + 1, 6, '0')) AS codigo
-                FROM TblMovimientoInventario
-                WHERE codigo_movimiento LIKE 'ENT-%'
-            """)
-            
-            result = cursor.fetchone()
-            codigo_movimiento = result['codigo'] if result else 'ENT-000001'
-            
-            # Registrar movimiento de salida
-            cursor.execute("""
-                INSERT INTO TblMovimientoInventario (
-                    codigo_movimiento,
-                    id_inventario,
-                    tipo_movimiento,
-                    cantidad,
-                    destino,
-                    responsable_destino,
-                    documento_referencia,
-                    observaciones,
-                    fecha_movimiento,
-                    creado_por
-                ) VALUES (%s, %s, 'SALIDA', %s, %s, %s, %s, %s, NOW(), %s)
-            """, (
-                codigo_movimiento,
-                int(data['id_inventario']),
-                float(data['cantidad']),
-                data['destino'],
-                data['num_documento_personal'],
-                data.get('documento_referencia', ''),
-                data.get('observaciones', ''),
-                creado_por
-            ))
-            
-            # Actualizar stock
-            cursor.execute("""
-                UPDATE TblInventario
-                SET stock_actual = stock_actual - %s
-                WHERE id_inventario = %s
-            """, (float(data['cantidad']), int(data['id_inventario'])))
-            
-            connection.commit()
-            cursor.close()
-            connection.close()
-            
-            return jsonify({
-                'success': True,
-                'message': 'Entrega registrada correctamente',
-                'codigo': codigo_movimiento
-            }), 201
-        
-        except Error as e:
-            connection.rollback()
-            print(f"[REGISTRAR ENTREGA] Error SQL: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    except Exception as e:
-        print(f"[REGISTRAR ENTREGA] Error: {e}")
-        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+    """Obsoleto: insertaba en columnas que no existen en TblMovimientoInventario
+    (destino, responsable_destino, documento_referencia, creado_por) y siempre
+    fallaba. Las entregas se registran con /api/entregas-personal/guardar
+    (opción "Asignar materiales"), que sí descuenta stock y deja el kardex."""
+    return jsonify({
+        'success': False,
+        'message': 'Esta opción ya no está disponible. Use "Asignar materiales" para registrar la entrega.'
+    }), 410
 
 
 # ============================================================================

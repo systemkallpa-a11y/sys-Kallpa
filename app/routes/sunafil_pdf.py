@@ -295,6 +295,7 @@ def exportar_sunafil_pdf():
                   FROM TblHorarioTrabajo h
                  INNER JOIN TblPersona p ON p.num_documento = h.num_documento
                  WHERE h.es_activo = 1
+                   AND h.fecha_vigencia_fin IS NULL
             """)
             horarios = {}
             for horario in cursor.fetchall():

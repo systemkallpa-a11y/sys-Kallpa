@@ -306,12 +306,8 @@
                             </label>
                             <select id="edit_tipo_inventario" name="tipo_inventario" required onchange="cambiarTipoEditar()"
                                     class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
-                                <option value="MATERIAL">🏗️ Material</option>
-                                <option value="HERRAMIENTA">🔧 Herramienta</option>
-                                <option value="EQUIPO">⚙️ Equipo/Maquinaria</option>
-                                <option value="TECNOLOGIA">💻 Tecnología</option>
-                                <option value="ROPA">👕 Ropa/EPP</option>
-                                <option value="CONSUMIBLE">📄 Consumible/Oficina</option>
+                                <!-- Se llena desde la BD (GET /api/inventario/tipos) -->
+                                <option value="">Cargando...</option>
                             </select>
                         </div>
 
@@ -329,7 +325,7 @@
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                                 Categoría <span class="text-red-500">*</span>
                             </label>
-                            <select id="edit_id_categoria" name="id_categoria" required
+                            <select id="edit_id_categoria" name="id_categoria" required onchange="cambiarCategoriaEditar()"
                                     class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
                                 <option value="">Seleccione...</option>
                             </select>
@@ -875,9 +871,15 @@ async function verDetalle(idInventario) {
             const item = (data.data && data.data.item) ? data.data.item : data.data;
             const ficha = (data.data && data.data.ficha) ? data.data.ficha : {};
 
-            // Ficha propia del tipo: solo se muestran los campos con valor
-            const camposFicha = (FICHA_CAMPOS[item.tipo_inventario] || []).filter(c =>
-                ficha[c.nombre] !== null && ficha[c.nombre] !== undefined && ficha[c.nombre] !== ''
+            // Ficha propia del tipo: etiquetas desde la BD; solo los campos con valor
+            let camposSeccion = [];
+            try {
+                camposSeccion = await obtenerCamposSeccion(item.tipo_inventario);
+            } catch (e) {
+                console.error('Error al cargar campos de la sección:', e);
+            }
+            const camposFicha = camposSeccion.filter(c =>
+                ficha[c.columna] !== null && ficha[c.columna] !== undefined && ficha[c.columna] !== ''
             );
 
             let especificacionesHtml = '';
@@ -886,8 +888,8 @@ async function verDetalle(idInventario) {
                 camposFicha.forEach(campo => {
                     especificacionesHtml += `
                         <div class="bg-gray-50 dark:bg-slate-700 rounded p-3">
-                            <p class="text-xs text-gray-600 dark:text-gray-400">${campo.label}</p>
-                            <p class="font-semibold text-gray-900 dark:text-white">${escProv(ficha[campo.nombre])}</p>
+                            <p class="text-xs text-gray-600 dark:text-gray-400">${escProv(campo.etiqueta)}</p>
+                            <p class="font-semibold text-gray-900 dark:text-white">${escProv(ficha[campo.columna])}</p>
                         </div>
                     `;
                 });
@@ -1209,18 +1211,9 @@ async function editarMaterial(idInventario) {
         document.getElementById('edit_id_inventario').value = item.id_inventario;
         document.getElementById('edit_codigo').value = item.codigo;
 
-        // El select de edición solo lista los tipos con ficha; si el item es
-        // SERVICIO o PARTIDA se agrega la opción para poder visualizarlo.
-        const selectTipo = document.getElementById('edit_tipo_inventario');
-        Array.from(selectTipo.options).forEach(op => {
-            if (op.value === 'SERVICIO' || op.value === 'PARTIDA') {
-                op.remove();
-            }
-        });
-        if (!Array.from(selectTipo.options).some(op => op.value === item.tipo_inventario)) {
-            selectTipo.add(new Option(item.tipo_inventario, item.tipo_inventario));
-        }
-        selectTipo.value = item.tipo_inventario;
+        // Tipos desde la BD (solo físicos). Si el ítem es SERVICIO o PARTIDA,
+        // cargarTiposEnSelect agrega su tipo para poder visualizarlo.
+        await cargarTiposEnSelect(document.getElementById('edit_tipo_inventario'), item.tipo_inventario);
         document.getElementById('edit_nombre').value = item.nombre;
         document.getElementById('edit_descripcion').value = item.descripcion || '';
         document.getElementById('edit_stock_minimo').value = item.stock_minimo || 0;
@@ -1232,23 +1225,11 @@ async function editarMaterial(idInventario) {
         
         console.log('[DEBUG] Campos básicos llenados');
         
-        // Cargar categorías según tipo
-        try {
-            await cargarCategoriasEditar();
-            document.getElementById('edit_id_categoria').value = item.id_categoria;
-            console.log('[DEBUG] Categorías cargadas');
-        } catch (error) {
-            console.error('Error al cargar categorías:', error);
-        }
-        
-        // Cargar unidades de medida
-        try {
-            await cargarUnidadesEditar();
-            document.getElementById('edit_id_unidad').value = item.id_unidad;
-            console.log('[DEBUG] Unidades cargadas');
-        } catch (error) {
-            console.error('Error al cargar unidades:', error);
-        }
+        // Categorías del tipo (agrupadas) y unidades permitidas en la categoría
+        await cargarCategoriasEnSelect(document.getElementById('edit_id_categoria'),
+                                       item.tipo_inventario, item.id_categoria);
+        await cargarUnidadesEnSelect(document.getElementById('edit_id_unidad'),
+                                     item.id_categoria, item.id_unidad);
         
         // Cargar almacenes
         try {
@@ -1259,26 +1240,10 @@ async function editarMaterial(idInventario) {
             console.error('Error al cargar almacenes:', error);
         }
         
-        // Cargar ficha técnica del tipo y, si no hay ficha, los atributos legados
-        const containerAtributos = document.getElementById('edit_atributos_dinamicos');
-        const tieneFicha = Object.values(ficha).some(v => v !== null && v !== '' && v !== undefined);
-
-        if (tieneFicha || !atributos.length) {
-            containerAtributos.innerHTML = generarCamposEspecificos(item.tipo_inventario, ficha);
-        } else {
-            containerAtributos.innerHTML = '';
-            atributos.forEach(attr => {
-                const div = document.createElement('div');
-                div.innerHTML = `
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 capitalize">
-                        ${escProv(attr.nombre_atributo)}
-                    </label>
-                    <input type="text" name="attr_${escProv(attr.nombre_atributo)}" value="${escProv(attr.valor_atributo || '')}"
-                           class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
-                `;
-                containerAtributos.appendChild(div);
-            });
-        }
+        // Ficha técnica del tipo: campos desde la BD con los valores actuales.
+        // (Todos los ítems físicos tienen su fila de sección desde la Parte 3.)
+        await renderCamposEspecificos(document.getElementById('edit_atributos_dinamicos'),
+                                      item.tipo_inventario, ficha);
 
         console.log('[DEBUG] Ficha cargada');
         
@@ -1363,52 +1328,26 @@ function cerrarModalEditarItem() {
     document.getElementById('formEditarItem').reset();
 }
 
-async function cargarCategoriasEditar() {
-    const tipo = document.getElementById('edit_tipo_inventario').value;
-    const selectCategoria = document.getElementById('edit_id_categoria');
-    
-    if (!tipo) {
-        selectCategoria.innerHTML = '<option value="">Primero seleccione un tipo</option>';
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/inventario/categorias?tipo=${tipo}`);
-        const result = await response.json();
-        
-        selectCategoria.innerHTML = '<option value="">Seleccione...</option>';
-        result.categorias.forEach(cat => {
-            selectCategoria.innerHTML += `<option value="${cat.id_categoria}">${cat.nombre}</option>`;
-        });
-    } catch (error) {
-        console.error('Error al cargar categorías:', error);
-    }
-}
-
-// Al cambiar el tipo en edición: recarga categorías y redibuja la ficha del tipo nuevo.
-// Los valores del tipo anterior se descartan (la ficha vieja se elimina al guardar).
+// Al cambiar el tipo en edición: recarga categorías (del tipo nuevo) y redibuja
+// la ficha vacía. Los valores del tipo anterior se descartan (la ficha vieja se
+// elimina al guardar). Las funciones compartidas están en inventario_nuevo_item.js.
 async function cambiarTipoEditar() {
     const tipo = document.getElementById('edit_tipo_inventario').value;
-    const container = document.getElementById('edit_atributos_dinamicos');
-
-    container.innerHTML = generarCamposEspecificos(tipo, {});
-    await cargarCategoriasEditar();
+    document.getElementById('edit_id_unidad').innerHTML =
+        '<option value="">Primero seleccione una categoría</option>';
+    await Promise.all([
+        cargarCategoriasEnSelect(document.getElementById('edit_id_categoria'), tipo),
+        renderCamposEspecificos(document.getElementById('edit_atributos_dinamicos'), tipo, {})
+    ]);
 }
 
-async function cargarUnidadesEditar() {
+// Al cambiar la categoría en edición: solo sus unidades permitidas.
+// Si la unidad actual sigue permitida se conserva; si no, se elige la predeterminada.
+async function cambiarCategoriaEditar() {
     const selectUnidad = document.getElementById('edit_id_unidad');
-    
-    try {
-        const response = await fetch('/api/inventario/unidades');
-        const result = await response.json();
-        
-        selectUnidad.innerHTML = '<option value="">Seleccione...</option>';
-        result.unidades.forEach(u => {
-            selectUnidad.innerHTML += `<option value="${u.id_unidad}">${u.nombre} (${u.abreviatura})</option>`;
-        });
-    } catch (error) {
-        console.error('Error al cargar unidades:', error);
-    }
+    await cargarUnidadesEnSelect(selectUnidad,
+                                 document.getElementById('edit_id_categoria').value,
+                                 selectUnidad.value);
 }
 
 async function cargarAlmacenesEditar() {
@@ -1473,14 +1412,8 @@ async function guardarEdicion() {
         }
     }
     
-    // Recopilar la ficha técnica del tipo (campos ficha_*) y los atributos legados (attr_*)
-    for (let [key, value] of formData.entries()) {
-        if (key.startsWith('ficha_')) {
-            data.ficha[key.replace('ficha_', '')] = value;
-        } else if (key.startsWith('attr_') && value) {
-            data.atributos[key.replace('attr_', '')] = value;
-        }
-    }
+    // Ficha técnica del tipo (campos ficha_*); el servidor la valida contra la BD
+    data.ficha = leerFichaFormulario(formData);
     
 
     try {

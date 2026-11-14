@@ -65,6 +65,8 @@ BEGIN
                  WHEN 7 THEN 'SÁBADO'
              END
         WHERE h.es_activo = 1
+          AND h.fecha_vigencia_inicio <= fe.f
+          AND (h.fecha_vigencia_fin IS NULL OR h.fecha_vigencia_fin >= fe.f)
         UNION
         SELECT DISTINCT mm.num_documento, DATE(mm.fecha_marcacion)
         FROM TblMarcacion mm
@@ -101,6 +103,8 @@ BEGIN
                 WHEN 7 THEN 'SÁBADO'
             END
             AND hh.es_activo = 1
+            AND hh.fecha_vigencia_inicio <= DATE(a.fecha_marcacion)
+            AND (hh.fecha_vigencia_fin IS NULL OR hh.fecha_vigencia_fin >= DATE(a.fecha_marcacion))
     ),
     dias AS (
         SELECT
@@ -155,6 +159,8 @@ BEGIN
                 WHEN 7 THEN 'SÁBADO'
             END
             AND h.es_activo = 1
+            AND h.fecha_vigencia_inicio <= g.gf
+            AND (h.fecha_vigencia_fin IS NULL OR h.fecha_vigencia_fin >= g.gf)
         GROUP BY g.gdoc, g.gf, h.hora_entrada, h.hora_entrada2
     )
     SELECT
@@ -182,6 +188,7 @@ BEGIN
                              CONCAT(' / ', h2.hora_entrada2, '-', h2.hora_salida2), ''))
              FROM TblHorarioTrabajo h2
              WHERE h2.num_documento = p.num_documento AND h2.es_activo = 1
+               AND h2.fecha_vigencia_fin IS NULL
              GROUP BY h2.hora_entrada, h2.hora_salida, h2.hora_entrada2, h2.hora_salida2
              ORDER BY COUNT(*) DESC LIMIT 1) AS horario,
             (SUM(d.seg_t1) + SUM(d.seg_t2)) DIV 60 AS total_minutos_tarde,

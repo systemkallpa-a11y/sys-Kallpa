@@ -594,9 +594,20 @@ def registrar_marcacion_manual():
                         WHEN 6 THEN 'VIERNES'
                         WHEN 7 THEN 'SÁBADO'
                    END
+                   AND fecha_vigencia_inicio <= %s
+                   AND (fecha_vigencia_fin IS NULL OR fecha_vigencia_fin >= %s)
+                 ORDER BY fecha_vigencia_inicio DESC
                  LIMIT 1
-            """, (num_documento, fecha))
+            """, (num_documento, fecha, fecha_dt, fecha_dt))
             horario = cursor.fetchone()
+
+# Determinar horas oficiales según el turno (usado después en el modal de edición)
+            if horario:
+                _hora_oficial_turno_1 = horario.get('hora_entrada')
+                _hora_oficial_turno_2 = horario.get('hora_entrada2')
+            else:
+                _hora_oficial_turno_1 = None
+                _hora_oficial_turno_2 = None
 
             def hora_segundos(valor):
                 partes = str(valor).split(':')
@@ -892,7 +903,7 @@ def obtener_detalle_dia():
             
             # Horario del empleado ese dia (para clasificar turno como el SP v9)
             cursor.execute("""
-                SELECT hora_entrada, hora_salida, hora_entrada2
+                SELECT hora_entrada, hora_salida, hora_entrada2, hora_salida2
                   FROM TblHorarioTrabajo
                  WHERE num_documento = %s
                    AND es_activo = 1
@@ -905,9 +916,13 @@ def obtener_detalle_dia():
                         WHEN 6 THEN 'VIERNES'
                         WHEN 7 THEN 'SÁBADO'
                    END
+                   AND fecha_vigencia_inicio <= %s
+                   AND (fecha_vigencia_fin IS NULL OR fecha_vigencia_fin >= %s)
+                 ORDER BY fecha_vigencia_inicio DESC
                  LIMIT 1
-            """, (num_documento, fecha))
+            """, (num_documento, fecha, fecha, fecha))
             horario = cursor.fetchone()
+            print(f"[DETALLE_DIA] Horario: {horario}")
 
             def hora_segundos(valor):
                 partes = str(valor).split(':')
@@ -990,13 +1005,34 @@ def obtener_detalle_dia():
             cursor.close()
             connection.close()
             
+            # Serializar horario para enviarlo al frontend
+            horario_json = None
+            if horario:
+                import datetime as _dt
+                def _serial_time(v):
+                    if v is None:
+                        return None
+                    if isinstance(v, _dt.timedelta):
+                        total_seg = int(v.total_seconds())
+                        return f"{total_seg // 3600:02d}:{(total_seg % 3600) // 60:02d}:00"
+                    if isinstance(v, _dt.time):
+                        return v.strftime('%H:%M:%S')
+                    return str(v)
+                horario_json = {
+                    'hora_entrada':  _serial_time(horario.get('hora_entrada')),
+                    'hora_salida':   _serial_time(horario.get('hora_salida')),
+                    'hora_entrada2': _serial_time(horario.get('hora_entrada2')),
+                    'hora_salida2':  _serial_time(horario.get('hora_salida2')),
+                }
+
             return jsonify({
                 'success': True,
                 'usuario': usuario,
                 'fecha': fecha,
                 'marcaciones': marcaciones,
                 'slots': slots_detalle,
-                'total_marcaciones': len(marcaciones)
+                'total_marcaciones': len(marcaciones),
+                'horario': horario_json
             }), 200
         
         except Error as e:
@@ -1479,6 +1515,7 @@ def exportar_control_asistencia_excel():
                 FROM TblHorarioTrabajo h
                 INNER JOIN TblPersona p ON p.num_documento = h.num_documento
                 WHERE h.es_activo = 1
+                  AND h.fecha_vigencia_fin IS NULL
             """)
             horarios_dia = {}
             for r in cursor.fetchall():
@@ -2000,7 +2037,7 @@ def exportar_tardanzas_excel():
                                          CONCAT(' / ', h.hora_entrada2, '-', h.hora_salida2), '')) AS horario,
                                COUNT(*) AS total
                         FROM TblHorarioTrabajo h
-                        WHERE h.es_activo = 1
+                        WHERE h.es_activo = 1 AND h.fecha_vigencia_fin IS NULL
                         GROUP BY h.num_documento, h.hora_entrada, h.hora_salida,
                                  h.hora_entrada2, h.hora_salida2
                     ) g
@@ -2247,7 +2284,7 @@ def exportar_horas_laboradas_excel():
                                          CONCAT(' / ', h.hora_entrada2, '-', h.hora_salida2), '')) AS horario,
                                COUNT(*) AS total
                         FROM TblHorarioTrabajo h
-                        WHERE h.es_activo = 1 AND h.num_documento = %s
+                        WHERE h.es_activo = 1 AND h.fecha_vigencia_fin IS NULL AND h.num_documento = %s
                         GROUP BY h.hora_entrada, h.hora_salida,
                                  h.hora_entrada2, h.hora_salida2
                     ) g
@@ -2638,3 +2675,33 @@ def obtener_empleados_activos():
     except Exception as e:
         print(f"[EMPLEADOS_ACTIVOS] [X] Error general: {e}")
         return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+
+@marcacion_bp.route('/api/marcacion/marcar-falta', methods=['POST'])
+@login_required
+def marcar_falta():
+    """Eliminar TODAS las marcaciones de un empleado en un día dado.
+    Al borrárselas, el reporte de control de asistencia marcará FALTÓ
+    según la lógica automática existente."""
+    data = request.get_json()
+    num_documento = data.get('num_documento')
+    fecha         = data.get('fecha')          # YYYY-MM-DD
+
+    conexion = get_db_connection()
+    if not conexion:
+        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+
+    try:
+        cursor = conexion.cursor()
+        cursor.execute("""
+            DELETE FROM TblMarcacion
+            WHERE num_documento = %s
+              AND DATE(fecha_marcacion) = %s
+        """, (num_documento, fecha))
+        conexion.commit()
+        eliminadas = cursor.rowcount
+        cursor.close()
+        conexion.close()
+        return jsonify({'success': True, 'eliminadas': eliminadas})
+    except Exception as e:
+        conexion.close()
+        return jsonify({'success': False, 'error': str(e)}), 500

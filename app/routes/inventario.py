@@ -3,6 +3,8 @@ Rutas para el módulo de Inventario
 """
 from flask import Blueprint, render_template, request, session, jsonify
 from functools import wraps
+import json
+import re
 from mysql.connector import Error
 from app.config import DatabaseConfig
 import mysql.connector
@@ -26,164 +28,205 @@ def get_db_connection():
 
 
 # ============================================================================
-# FICHAS POR TIPO DE INVENTARIO
+# SECCIONES POR TIPO DE INVENTARIO (todo se lee de la BD)
 # ============================================================================
-# Cada tipo físico tiene una tabla hija 1 a 1 con TblInventario.
-# Se usan para los datos propios del tipo (talla, marca, dimensiones, etc.).
-FICHAS = {
-    'ROPA': {
-        'tabla': 'TblInventarioRopa',
-        'campos': ['talla', 'color', 'genero', 'material_tela',
-                   'norma_certificacion', 'tipo_proteccion'],
-    },
-    'MATERIAL': {
-        'tabla': 'TblInventarioMaterial',
-        'campos': ['presentacion', 'marca', 'tipo', 'norma', 'medida',
-                   'color', 'resistencia', 'lote', 'peso_unitario_kg',
-                   'largo_cm', 'ancho_cm', 'alto_cm'],
-    },
-    'HERRAMIENTA': {
-        'tabla': 'TblInventarioHerramienta',
-        'campos': ['marca', 'modelo', 'tipo_herramienta', 'potencia',
-                   'voltaje', 'numero_serie', 'peso_kg',
-                   'largo_cm', 'ancho_cm', 'alto_cm'],
-    },
-    'EQUIPO': {
-        'tabla': 'TblInventarioEquipo',
-        'campos': ['marca', 'modelo', 'capacidad', 'potencia',
-                   'numero_serie', 'anio_fabricacion', 'placa', 'peso_kg',
-                   'largo_cm', 'ancho_cm', 'alto_cm'],
-    },
-    'TECNOLOGIA': {
-        'tabla': 'TblInventarioTecnologia',
-        'campos': ['marca', 'modelo', 'procesador', 'ram', 'almacenamiento',
-                   'pantalla', 'sistema_operativo', 'numero_serie',
-                   'garantia_meses', 'peso_kg', 'largo_cm', 'ancho_cm', 'alto_cm'],
-    },
-    'CONSUMIBLE': {
-        'tabla': 'TblInventarioConsumible',
-        'campos': ['marca', 'presentacion', 'tamano', 'gramaje', 'color',
-                   'unidades_paquete', 'blancura_pct'],
-    },
-}
+# Cada tipo físico tiene una tabla de sección 1 a 1 con TblInventario
+# (TblInventarioRopa, TblInventarioMaterial, ...). La tabla, sus campos, el
+# tipo de dato, el largo máximo y las opciones de las listas se leen de la BD:
+#   sp_obtener_tabla_seccion(tipo)   -> nombre de la tabla de sección
+#   sp_listar_campos_seccion(tipo)   -> campos + etiqueta + control + opciones
+# Agregar una columna a una sección NO requiere tocar este archivo.
+# Ver database_scripts/items_inventario/ (Partes 3 y 4).
 
-CAMPOS_NUMERICOS = {
-    'peso_unitario_kg', 'peso_kg', 'largo_cm', 'ancho_cm', 'alto_cm',
-    'gramaje', 'blancura_pct', 'garantia_meses', 'anio_fabricacion',
-    'unidades_paquete',
-}
-
-CAMPOS_ENTEROS = {'garantia_meses', 'anio_fabricacion', 'unidades_paquete'}
-
-LARGOS_FICHA = {
-    'talla': 20, 'color': 30, 'material_tela': 50, 'norma_certificacion': 100,
-    'tipo_proteccion': 50, 'presentacion': 50, 'marca': 50, 'tipo': 50,
-    'norma': 100, 'medida': 50, 'resistencia': 50, 'lote': 50,
-    'modelo': 100, 'tipo_herramienta': 20, 'potencia': 50, 'voltaje': 50,
-    'numero_serie': 80, 'capacidad': 50, 'placa': 20, 'procesador': 100,
-    'ram': 50, 'almacenamiento': 50, 'pantalla': 50, 'sistema_operativo': 50,
-    'tamano': 50,
-}
-
-GENEROS_VALIDOS = {'HOMBRE', 'MUJER', 'UNISEX', 'OTRO'}
-TIPOS_HERRAMIENTA_VALIDOS = {'MANUAL', 'ELECTRICA', 'BATERIA', 'NEUMATICA', 'OTRO'}
+RE_ENTERO = re.compile(r'^[0-9]+$')
+RE_DECIMAL = re.compile(r'^[0-9]+(\.[0-9]+)?$')
 
 
-def normalizar_ficha(tipo, ficha):
-    """Filtra y castea los campos de la ficha según el tipo de inventario."""
-    config = FICHAS.get(tipo)
-    if not config or not isinstance(ficha, dict):
-        return {}
+def _texto(valor):
+    """Los SPs que leen information_schema devuelven bytes en algunas columnas."""
+    if isinstance(valor, (bytes, bytearray)):
+        return valor.decode('utf-8')
+    return valor
 
+
+def _filas_sp(cursor):
+    """Filas de los result sets de un SP como lista de dicts."""
+    filas = []
+    for resultado in cursor.stored_results():
+        columnas = resultado.column_names
+        for fila in resultado.fetchall():
+            if isinstance(fila, dict):
+                filas.append({k: _texto(v) for k, v in fila.items()})
+            else:
+                filas.append({c: _texto(v) for c, v in zip(columnas, fila)})
+    return filas
+
+
+def usuario_actual():
+    """Documento del usuario logueado como entero (convención de realizado_por)."""
+    try:
+        return int(session.get('user_documento'))
+    except (TypeError, ValueError):
+        return None
+
+
+def numero(valor, etiqueta, defecto=0.0):
+    """Convierte un valor del formulario a float; '' o None -> defecto."""
+    if valor is None or (isinstance(valor, str) and not valor.strip()):
+        return defecto
+    try:
+        return float(valor)
+    except (TypeError, ValueError):
+        raise ValueError(f'{etiqueta} debe ser un número')
+
+
+def entero_o_none(valor):
+    if valor is None or (isinstance(valor, str) and not valor.strip()):
+        return None
+    return int(valor)
+
+
+def tabla_seccion(conn, tipo):
+    """Tabla de sección del tipo (None para SERVICIO / PARTIDA)."""
+    if not tipo:
+        return None
+    cur = conn.cursor()
+    try:
+        res = cur.callproc('sp_obtener_tabla_seccion', [tipo, None])
+        return _texto(res[1])
+    finally:
+        cur.close()
+
+
+def campos_seccion(conn, tipo):
+    """Campos visibles de la sección del tipo, con su estructura real."""
+    cur = conn.cursor()
+    try:
+        cur.callproc('sp_listar_campos_seccion', [tipo])
+        campos = _filas_sp(cur)
+    finally:
+        cur.close()
+    for c in campos:
+        opciones = c.get('opciones')
+        c['opciones'] = opciones.strip("'").split("','") if opciones else []
+        for clave in ('largo_maximo', 'decimales', 'minimo', 'orden'):
+            if c.get(clave) is not None:
+                c[clave] = int(c[clave])
+    return campos
+
+
+def validar_ficha(campos, ficha):
+    """Valida los datos técnicos contra la estructura de la sección.
+
+    Mismas reglas que sp_guardar_item: lista -> una de sus opciones;
+    entero / decimal -> número no negativo; texto -> largo máximo.
+    Devuelve {columna: valor normalizado}; claves desconocidas se ignoran.
+    """
+    if not isinstance(ficha, dict):
+        raise ValueError('Las especificaciones técnicas deben enviarse como objeto')
     datos = {}
-    for campo in config['campos']:
-        if campo not in ficha:
+    for c in campos:
+        col = c['columna']
+        if col not in ficha:
             continue
-        valor = ficha.get(campo)
-        if valor is None or (isinstance(valor, str) and not valor.strip()):
-            datos[campo] = None
+        valor = ficha.get(col)
+        texto = '' if valor is None else str(valor).strip()
+        if texto == '':
+            datos[col] = None
             continue
-
-        if campo in CAMPOS_NUMERICOS:
-            try:
-                datos[campo] = int(float(valor)) if campo in CAMPOS_ENTEROS else float(valor)
-            except (TypeError, ValueError):
-                raise ValueError(f"Valor numérico inválido en '{campo}': {valor}")
+        if c['control'] == 'select':
+            coincidencia = next((o for o in c['opciones'] if o.upper() == texto.upper()), None)
+            if coincidencia is None:
+                raise ValueError(f'Valor no válido en "{c["etiqueta"]}": {texto} '
+                                 f'(opciones: {", ".join(c["opciones"])})')
+            datos[col] = coincidencia
+        elif c['control'] == 'numero':
+            if c.get('decimales') == 0:
+                if not RE_ENTERO.match(texto):
+                    raise ValueError(f'Valor no válido en "{c["etiqueta"]}": {texto} (debe ser un número entero)')
+                datos[col] = int(texto)
+            else:
+                if not RE_DECIMAL.match(texto):
+                    raise ValueError(f'Valor no válido en "{c["etiqueta"]}": {texto} (debe ser un número)')
+                datos[col] = float(texto)
         else:
-            texto = str(valor).strip()
-            datos[campo] = texto[:LARGOS_FICHA.get(campo, 255)]
-
-    if 'genero' in datos and datos['genero'] and datos['genero'].upper() not in GENEROS_VALIDOS:
-        raise ValueError(f"Género inválido: {datos['genero']}")
-    if 'genero' in datos and datos['genero']:
-        datos['genero'] = datos['genero'].upper()
-
-    if 'tipo_herramienta' in datos and datos['tipo_herramienta']:
-        tipo_herr = datos['tipo_herramienta'].upper()
-        if tipo_herr not in TIPOS_HERRAMIENTA_VALIDOS:
-            raise ValueError(f"Tipo de herramienta inválido: {datos['tipo_herramienta']}")
-        datos['tipo_herramienta'] = tipo_herr
-
+            largo = c.get('largo_maximo')
+            if largo and len(texto) > largo:
+                raise ValueError(f'Valor no válido en "{c["etiqueta"]}": {texto} (máximo {largo} caracteres)')
+            datos[col] = texto
     return datos
 
 
-def guardar_ficha(cursor, id_inventario, tipo, datos):
-    """Inserta o actualiza la ficha del producto.
-
-    Si todos los campos llegan vacíos no se crea una ficha nueva, pero sí se
-    actualiza una existente (permite borrar los datos desde el formulario).
-    """
-    config = FICHAS.get(tipo)
-    if not config or not datos:
+def guardar_ficha(conn, id_inventario, tipo, datos):
+    """Actualiza la fila de sección del ítem (la crea si falta)."""
+    tabla = tabla_seccion(conn, tipo)
+    if not tabla:
         return
-
-    if not any(v is not None for v in datos.values()):
-        cursor.execute(
-            f"SELECT 1 FROM `{config['tabla']}` WHERE id_inventario = %s",
-            (id_inventario,),
-        )
-        if cursor.fetchone() is None:
-            return
-
-    columnas = ['id_inventario'] + list(datos.keys())
-    valores = [id_inventario] + list(datos.values())
-    placeholders = ', '.join(['%s'] * len(columnas))
-    actualizaciones = ', '.join(f"`{c}` = VALUES(`{c}`)" for c in datos.keys())
-
-    cursor.execute(
-        f"INSERT INTO `{config['tabla']}` ({', '.join(f'`{c}`' for c in columnas)}) "
-        f"VALUES ({placeholders}) ON DUPLICATE KEY UPDATE {actualizaciones}",
-        valores,
-    )
+    cur = conn.cursor()
+    try:
+        cur.callproc('sp_asegurar_seccion_inventario', [id_inventario])
+        if datos:
+            # Las columnas vienen de validar_ficha (estructura real de la BD)
+            asignaciones = ', '.join(f'`{col}` = %s' for col in datos)
+            cur.execute(f'UPDATE `{tabla}` SET {asignaciones} WHERE id_inventario = %s',
+                        list(datos.values()) + [id_inventario])
+    finally:
+        cur.close()
 
 
-def eliminar_ficha(cursor, id_inventario, tipo):
-    """Elimina la ficha de un producto (necesario antes de cambiar de tipo)."""
-    config = FICHAS.get(tipo)
-    if not config:
+def eliminar_ficha(conn, id_inventario, tipo):
+    """Elimina la fila de sección (necesario antes de cambiar de tipo)."""
+    tabla = tabla_seccion(conn, tipo)
+    if not tabla:
         return
-    cursor.execute(
-        f"DELETE FROM `{config['tabla']}` WHERE id_inventario = %s",
-        (id_inventario,),
-    )
+    cur = conn.cursor()
+    try:
+        cur.execute(f'DELETE FROM `{tabla}` WHERE id_inventario = %s', (id_inventario,))
+    finally:
+        cur.close()
 
 
-def leer_ficha(cursor, id_inventario, tipo):
-    """Devuelve los datos de la ficha como dict (sin columnas técnicas)."""
-    config = FICHAS.get(tipo)
-    if not config:
+def leer_ficha(conn, id_inventario, tipo):
+    """Datos de la sección del ítem como dict (sin columnas técnicas)."""
+    tabla = tabla_seccion(conn, tipo)
+    if not tabla:
         return {}
-    cursor.execute(
-        f"SELECT * FROM `{config['tabla']}` WHERE id_inventario = %s",
-        (id_inventario,),
-    )
-    fila = cursor.fetchone()
+    cur = conn.cursor(dictionary=True)
+    try:
+        cur.execute(f'SELECT * FROM `{tabla}` WHERE id_inventario = %s', (id_inventario,))
+        fila = cur.fetchone()
+    finally:
+        cur.close()
     if not fila:
         return {}
-    datos = dict(fila)
     for clave in ('id_inventario', 'tipo_inventario', 'fecha_actualizacion'):
-        datos.pop(clave, None)
-    return datos
+        fila.pop(clave, None)
+    return fila
+
+
+def validar_clasificacion(conn, tipo, id_categoria, id_unidad):
+    """Categoría activa y del mismo tipo + unidad permitida en la categoría.
+    Devuelve un mensaje de error o None. Mismas reglas que sp_guardar_item."""
+    cur = conn.cursor(dictionary=True)
+    try:
+        cur.execute('SELECT tipo_aplicable, nombre, estado FROM TblCategoriaInventario '
+                    'WHERE id_categoria = %s', (id_categoria,))
+        cat = cur.fetchone()
+    finally:
+        cur.close()
+    if not cat or cat['estado'] != 'ACTIVO':
+        return 'La categoría no existe o está inactiva'
+    if cat['tipo_aplicable'] != tipo:
+        return f'La categoría "{cat["nombre"]}" no corresponde al tipo {tipo}'
+    cur = conn.cursor()
+    try:
+        cur.callproc('sp_listar_unidades_categoria', [id_categoria])
+        permitidas = {u['id_unidad'] for u in _filas_sp(cur)}
+    finally:
+        cur.close()
+    if int(id_unidad) not in permitidas:
+        return f'La unidad elegida no está permitida para la categoría "{cat["nombre"]}"'
+    return None
 
 
 def login_required(f):
@@ -270,33 +313,34 @@ def listar_inventario():
 @inventario_bp.route('/api/inventario/categorias', methods=['GET'])
 @login_required
 def obtener_categorias():
-    """Obtener lista de categorías de inventario (nuevo sistema)"""
+    """Categorías de inventario.
+
+    ?tipo=ROPA -> categorías seleccionables de ese tipo (sp_listar_categorias_tipo):
+                  subcategorías agrupadas por su padre (campo `grupo`).
+    sin tipo   -> todas las activas (filtro del listado de Inventario).
+    """
     try:
         tipo = request.args.get('tipo', '')  # Filtro opcional por tipo
-        
+
         connection = get_db_connection()
         if not connection:
             return jsonify({'success': False, 'error': 'Error de conexión'}), 500
-        
+
         try:
             cursor = connection.cursor(dictionary=True)
-            
-            query = """
-                SELECT id_categoria, codigo, nombre, descripcion, nivel, tipo_aplicable
-                FROM TblCategoriaInventario
-                WHERE estado = 'ACTIVO'
-            """
-            
-            params = []
+
             if tipo:
-                query += " AND tipo_aplicable = %s"
-                params.append(tipo)
-            
-            query += " ORDER BY nivel, orden ASC"
-            
-            cursor.execute(query, params)
-            categorias = cursor.fetchall()
-            
+                cursor.callproc('sp_listar_categorias_tipo', [tipo])
+                categorias = _filas_sp(cursor)
+            else:
+                cursor.execute("""
+                    SELECT id_categoria, codigo, nombre, descripcion, nivel, tipo_aplicable
+                    FROM TblCategoriaInventario
+                    WHERE estado = 'ACTIVO'
+                    ORDER BY nivel, orden ASC
+                """)
+                categorias = cursor.fetchall()
+
             cursor.close()
             connection.close()
             
@@ -312,6 +356,52 @@ def obtener_categorias():
     except Exception as e:
         print(f"[CATEGORIAS] Error: {e}")
         return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+
+
+# ============================================================================
+# API: TIPOS DE INVENTARIO Y CAMPOS DE SU SECCIÓN (desde la BD)
+# ============================================================================
+
+@inventario_bp.route('/api/inventario/tipos', methods=['GET'])
+@login_required
+def obtener_tipos():
+    """Tipos de inventario = categorías de nivel 1 (sp_listar_tipos_inventario).
+    ?solo_fisicos=1 (por defecto) oculta SERVICIO y PARTIDA."""
+    solo_fisicos = 0 if request.args.get('solo_fisicos') == '0' else 1
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+    try:
+        cursor = connection.cursor()
+        cursor.callproc('sp_listar_tipos_inventario', [solo_fisicos])
+        tipos = _filas_sp(cursor)
+        cursor.close()
+        return jsonify({'success': True, 'tipos': tipos}), 200
+    except Error as e:
+        print(f"[TIPOS] Error SQL: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        connection.close()
+
+
+@inventario_bp.route('/api/inventario/campos', methods=['GET'])
+@login_required
+def obtener_campos_seccion():
+    """Campos de la sección de un tipo (?tipo=ROPA), con su estructura real:
+    control (texto/numero/select/fecha), opciones, largo máximo y decimales."""
+    tipo = request.args.get('tipo', '')
+    if not tipo:
+        return jsonify({'success': False, 'message': 'Parámetro requerido: tipo'}), 400
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'success': False, 'error': 'Error de conexión'}), 500
+    try:
+        return jsonify({'success': True, 'campos': campos_seccion(connection, tipo)}), 200
+    except Error as e:
+        print(f"[CAMPOS] Error SQL: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        connection.close()
 
 
 # ============================================================================
@@ -366,23 +456,32 @@ def obtener_estadisticas():
 @inventario_bp.route('/api/inventario/unidades', methods=['GET'])
 @login_required
 def obtener_unidades():
-    """Obtener lista de unidades de medida"""
+    """Unidades de medida.
+
+    ?id_categoria=N -> solo las permitidas en esa categoría (propias o heredadas
+                       del padre), la predeterminada primero (campo `predeterminada`).
+    sin parámetro   -> todas las activas.
+    """
     try:
+        id_categoria = request.args.get('id_categoria', '')
         connection = get_db_connection()
         if not connection:
             return jsonify({'success': False, 'error': 'Error de conexión'}), 500
-        
+
         try:
             cursor = connection.cursor(dictionary=True)
-            
-            cursor.execute("""
-                SELECT id_unidad, codigo, nombre, abreviatura
-                FROM TblUnidadMedida
-                WHERE estado = 'ACTIVO'
-                ORDER BY nombre ASC
-            """)
-            
-            unidades = cursor.fetchall()
+
+            if id_categoria:
+                cursor.callproc('sp_listar_unidades_categoria', [int(id_categoria)])
+                unidades = _filas_sp(cursor)
+            else:
+                cursor.execute("""
+                    SELECT id_unidad, codigo, nombre, abreviatura
+                    FROM TblUnidadMedida
+                    WHERE estado = 'ACTIVO'
+                    ORDER BY nombre ASC
+                """)
+                unidades = cursor.fetchall()
             
             cursor.close()
             connection.close()
@@ -450,117 +549,77 @@ def obtener_almacenes():
 @inventario_bp.route('/api/inventario/crear', methods=['POST'])
 @login_required
 def crear_item():
-    """Crear nuevo item de inventario con código automático (usando SP)"""
+    """Crea un ítem nuevo con sp_guardar_item, en UNA transacción:
+    TblInventario (código PREFIJO-001) + su sección (ficha técnica) + stock
+    inicial con su movimiento en el kardex. Si algo falla no se guarda nada.
+
+    Las validaciones (categoría del mismo tipo, unidad permitida, mínimo <=
+    máximo, nombre repetido, valores de la ficha) las hace el SP y devuelve
+    un mensaje claro en `message`.
+    """
+    data = request.get_json(silent=True) or {}
+
+    for field in ('nombre', 'tipo_inventario', 'id_categoria', 'id_unidad'):
+        if not data.get(field):
+            return jsonify({'success': False, 'message': f'Campo requerido: {field}'}), 400
+
     try:
-        data = request.get_json()
-        
-        # Validar campos requeridos (código ya NO es requerido)
-        required_fields = ['nombre', 'tipo_inventario', 'id_categoria', 'id_unidad']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'success': False, 'message': f'Campo requerido: {field}'}), 400
+        id_categoria = int(data['id_categoria'])
+        id_unidad = int(data['id_unidad'])
+        id_almacen = entero_o_none(data.get('id_almacen'))
+        stock_minimo = numero(data.get('stock_minimo'), 'El stock mínimo')
+        stock_maximo = numero(data.get('stock_maximo'), 'El stock máximo')
+        precio_compra = numero(data.get('precio_compra'), 'El precio de compra')
+        stock_inicial = numero(data.get('stock_inicial'), 'El stock inicial')
+    except ValueError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
 
-        try:
-            ficha = normalizar_ficha(data['tipo_inventario'], data.get('ficha') or {})
-        except ValueError as e:
-            return jsonify({'success': False, 'message': str(e)}), 400
-        
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
-        
-        try:
-            cursor = connection.cursor()
-            
-            # Obtener usuario actual (debe ser INT)
-            num_usuario = session.get('user_documento')
-            if num_usuario:
-                try:
-                    num_usuario = int(num_usuario)
-                except:
-                    num_usuario = 0
-            else:
-                num_usuario = 0
-            
-            # Preparar parámetros para el SP
-            args = [
-                data['nombre'],
-                data.get('descripcion', ''),
-                data['tipo_inventario'],
-                int(data['id_categoria']),
-                int(data.get('id_subcategoria')) if data.get('id_subcategoria') else None,
-                int(data['id_unidad']),
-                float(data.get('stock_minimo', 0)),
-                float(data.get('stock_maximo', 0)),
-                float(data.get('precio_compra', 0)),
-                int(data.get('id_almacen')) if data.get('id_almacen') else None,
-                data.get('ubicacion_fisica', ''),
-                None,  # atributos_json (se procesarán después)
-                num_usuario,
-                0,  # @p_success OUT
-                '',  # @p_message OUT
-                0,  # @p_id_inventario OUT
-                ''   # @p_codigo OUT
-            ]
-            
-            print(f"[DEBUG] Llamando a sp_crear_inventario con args: {args[:13]}")
-            
-            # Llamar al SP
-            result = cursor.callproc('sp_crear_inventario', args)
-            
-            print(f"[DEBUG] Resultado del SP: {result}")
-            
-            # Obtener valores OUT
-            p_success = result[13]  # índice 13 = p_success
-            p_message = result[14]  # índice 14 = p_message
-            p_id_inventario = result[15]  # índice 15 = p_id_inventario
-            p_codigo = result[16]  # índice 16 = p_codigo
-            
-            print(f"[DEBUG] success={p_success}, message={p_message}, id={p_id_inventario}, codigo={p_codigo}")
-            
-            if p_success:
-                # Guardar la ficha propia del tipo (talla, marca, dimensiones, etc.)
-                if ficha:
-                    guardar_ficha(cursor, p_id_inventario, data['tipo_inventario'], ficha)
+    ficha = data.get('ficha') or {}
+    if not isinstance(ficha, dict):
+        return jsonify({'success': False, 'message': 'Las especificaciones técnicas deben enviarse como objeto'}), 400
+    ficha_json = json.dumps(ficha, ensure_ascii=False) if ficha else None
 
-                # Compatibilidad: atributos dinámicos legados
-                atributos = data.get('atributos', {})
-                if atributos and p_id_inventario:
-                    for nombre, valor in atributos.items():
-                        if valor:  # Solo insertar si tiene valor
-                            cursor.execute("""
-                                INSERT INTO TblInventarioAtributos (id_inventario, nombre_atributo, valor_atributo, tipo_dato)
-                                VALUES (%s, %s, %s, 'TEXTO')
-                            """, (p_id_inventario, nombre, valor))
-                
-                connection.commit()
-                cursor.close()
-                connection.close()
-                
-                return jsonify({
-                    'success': True,
-                    'message': p_message,
-                    'id_inventario': int(p_id_inventario),
-                    'codigo': p_codigo
-                }), 201
-            else:
-                connection.rollback()
-                cursor.close()
-                connection.close()
-                
-                return jsonify({
-                    'success': False,
-                    'message': p_message
-                }), 400
-        
-        except Error as e:
-            connection.rollback()
-            print(f"[CREAR ITEM] Error SQL: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    except Exception as e:
-        print(f"[CREAR ITEM] Error: {e}")
-        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'success': False, 'message': 'Error de conexión'}), 500
+
+    try:
+        cursor = connection.cursor()
+        res = cursor.callproc('sp_guardar_item', [
+            data['nombre'],
+            data.get('descripcion') or None,
+            data['tipo_inventario'],
+            id_categoria,
+            id_unidad,
+            stock_minimo,
+            stock_maximo,
+            precio_compra,
+            id_almacen,
+            data.get('ubicacion_fisica') or None,
+            ficha_json,
+            stock_inicial,
+            usuario_actual(),
+            0, '', 0, ''          # OUT: success, message, id_inventario, codigo
+        ])
+        cursor.close()
+        ok, mensaje, id_inventario, codigo = res[13], res[14], res[15], res[16]
+
+        if not ok:
+            return jsonify({'success': False, 'message': mensaje}), 400
+
+        return jsonify({
+            'success': True,
+            'message': mensaje,
+            'id_inventario': int(id_inventario),
+            'codigo': codigo,
+            'stock_actual': stock_inicial
+        }), 201
+
+    except Error as e:
+        print(f"[CREAR ITEM] Error SQL: {e}")
+        return jsonify({'success': False, 'message': f'Error de base de datos: {e.msg}'}), 500
+    finally:
+        connection.close()
 
 
 # ============================================================================
@@ -619,8 +678,8 @@ def detalle_item(id_inventario):
             cursor.execute(query_atributos, (id_inventario,))
             atributos = cursor.fetchall()
 
-            # Ficha propia del tipo (1 a 1)
-            ficha = leer_ficha(cursor, id_inventario, item.get('tipo_inventario'))
+            # Ficha propia del tipo (1 a 1): tabla y columnas leídas de la BD
+            ficha = leer_ficha(connection, id_inventario, item.get('tipo_inventario'))
             
             print(f"[DEBUG] Atributos encontrados: {len(atributos)}")
             
@@ -657,52 +716,76 @@ def detalle_item(id_inventario):
 @inventario_bp.route('/api/inventario/actualizar', methods=['PUT'])
 @login_required
 def actualizar_item():
-    """Actualizar un item de inventario con sus atributos"""
+    """Actualiza los datos generales del ítem y su ficha técnica.
+
+    - Valida categoría (del mismo tipo) y unidad permitida, igual que el alta.
+    - Valida la ficha contra la estructura real de la sección (BD).
+    - Si cambia el tipo: borra la ficha vieja, actualiza y crea la nueva fila
+      de sección (sp_asegurar_seccion_inventario).
+    - El stock NO se edita aquí: solo con movimientos (kardex).
+    """
+    data = request.get_json(silent=True) or {}
+
+    for field in ('id_inventario', 'nombre', 'tipo_inventario', 'id_categoria', 'id_unidad'):
+        if not data.get(field):
+            return jsonify({'success': False, 'message': f'Campo requerido: {field}'}), 400
+
     try:
-        data = request.get_json()
-        
-        # Validar campos requeridos
-        required_fields = ['id_inventario', 'nombre', 'tipo_inventario', 'id_categoria', 'id_unidad']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'success': False, 'message': f'Campo requerido: {field}'}), 400
-        
+        id_inventario = int(data['id_inventario'])
+        id_categoria = int(data['id_categoria'])
+        id_unidad = int(data['id_unidad'])
+        id_almacen = entero_o_none(data.get('id_almacen'))
+        stock_minimo = numero(data.get('stock_minimo'), 'El stock mínimo')
+        stock_maximo = numero(data.get('stock_maximo'), 'El stock máximo')
+        precio_compra = numero(data.get('precio_compra'), 'El precio de compra')
+    except ValueError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+    if stock_minimo < 0 or stock_maximo < 0 or precio_compra < 0:
+        return jsonify({'success': False, 'message': 'Stock y precio no pueden ser negativos'}), 400
+    if stock_maximo > 0 and stock_minimo > stock_maximo:
+        return jsonify({'success': False, 'message': 'El stock mínimo no puede ser mayor que el stock máximo'}), 400
+
+    tipo_nuevo = data['tipo_inventario']
+    estado = data.get('estado') or 'ACTIVO'
+
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'success': False, 'message': 'Error de conexión'}), 500
+
+    try:
+        error = validar_clasificacion(connection, tipo_nuevo, id_categoria, id_unidad)
+        if error:
+            return jsonify({'success': False, 'message': error}), 400
+
         try:
-            ficha = normalizar_ficha(data['tipo_inventario'], data.get('ficha') or {})
+            ficha = validar_ficha(campos_seccion(connection, tipo_nuevo), data.get('ficha') or {})
         except ValueError as e:
             return jsonify({'success': False, 'message': str(e)}), 400
 
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
-        
-        try:
-            cursor = connection.cursor(dictionary=True)
-            id_inventario = int(data['id_inventario'])
+        cursor = connection.cursor(dictionary=True)
 
-            # Bloquea la fila para que el cambio de tipo sea consistente
-            cursor.execute(
-                "SELECT tipo_inventario FROM TblInventario WHERE id_inventario = %s FOR UPDATE",
-                (id_inventario,)
-            )
-            fila = cursor.fetchone()
-            if not fila:
-                connection.rollback()
-                cursor.close()
-                connection.close()
-                return jsonify({'success': False, 'message': 'El item no existe'}), 404
+        # Bloquea la fila para que el cambio de tipo sea consistente
+        cursor.execute(
+            "SELECT tipo_inventario FROM TblInventario WHERE id_inventario = %s FOR UPDATE",
+            (id_inventario,)
+        )
+        fila = cursor.fetchone()
+        if not fila:
+            connection.rollback()
+            return jsonify({'success': False, 'message': 'El item no existe'}), 404
 
-            tipo_anterior = fila['tipo_inventario']
-            tipo_nuevo = data['tipo_inventario']
-            cambio_tipo = tipo_anterior != tipo_nuevo
+        tipo_anterior = fila['tipo_inventario']
 
-            # La ficha vieja se elimina antes de tocar el tipo (si no, la FK falla)
-            if cambio_tipo:
-                eliminar_ficha(cursor, id_inventario, tipo_anterior)
+        # La ficha vieja se elimina antes de cambiar el tipo (si no, la FK lo impide)
+        if tipo_anterior != tipo_nuevo:
+            eliminar_ficha(connection, id_inventario, tipo_anterior)
 
-            campos = """
-                nombre = %s,
+        cursor.execute("""
+            UPDATE TblInventario
+            SET nombre = %s,
                 descripcion = %s,
+                tipo_inventario = %s,
                 id_categoria = %s,
                 id_unidad = %s,
                 stock_minimo = %s,
@@ -712,67 +795,31 @@ def actualizar_item():
                 ubicacion_fisica = %s,
                 estado = %s,
                 fecha_actualizacion = NOW()
-            """
-            valores = [
-                data['nombre'],
-                data.get('descripcion', ''),
-                int(data['id_categoria']),
-                int(data['id_unidad']),
-                float(data.get('stock_minimo', 0)),
-                float(data.get('stock_maximo', 0)),
-                float(data.get('precio_compra', 0)),
-                int(data.get('id_almacen')) if data.get('id_almacen') else None,
-                data.get('ubicacion_fisica', ''),
-                data.get('estado', 'ACTIVO'),
-            ]
+            WHERE id_inventario = %s
+        """, [
+            data['nombre'].strip(),
+            (data.get('descripcion') or '').strip() or None,
+            tipo_nuevo, id_categoria, id_unidad,
+            stock_minimo, stock_maximo, precio_compra,
+            id_almacen,
+            (data.get('ubicacion_fisica') or '').strip() or None,
+            estado,
+            id_inventario,
+        ])
+        cursor.close()
 
-            if cambio_tipo:
-                cursor.execute(
-                    f"UPDATE TblInventario SET {campos}, tipo_inventario = %s "
-                    "WHERE id_inventario = %s",
-                    valores + [tipo_nuevo, id_inventario]
-                )
-            else:
-                cursor.execute(
-                    f"UPDATE TblInventario SET {campos} WHERE id_inventario = %s",
-                    valores + [id_inventario]
-                )
+        # Fila de sección del tipo actual (aunque la ficha venga vacía) + sus datos
+        guardar_ficha(connection, id_inventario, tipo_nuevo, ficha)
 
-            # Inserta o actualiza la ficha del tipo nuevo
-            guardar_ficha(cursor, id_inventario, tipo_nuevo, ficha)
+        connection.commit()
+        return jsonify({'success': True, 'message': 'Item actualizado correctamente'}), 200
 
-            # Compatibilidad: atributos dinámicos legados
-            atributos = data.get('atributos') or {}
-            if atributos:
-                cursor.execute(
-                    "DELETE FROM TblInventarioAtributos WHERE id_inventario = %s",
-                    (id_inventario,)
-                )
-                for nombre_attr, valor_attr in atributos.items():
-                    if valor_attr:
-                        cursor.execute("""
-                            INSERT INTO TblInventarioAtributos 
-                            (id_inventario, nombre_atributo, valor_atributo, tipo_dato)
-                            VALUES (%s, %s, %s, 'TEXTO')
-                        """, (id_inventario, nombre_attr, valor_attr))
-            
-            connection.commit()
-            cursor.close()
-            connection.close()
-            
-            return jsonify({
-                'success': True,
-                'message': 'Item actualizado correctamente'
-            }), 200
-        
-        except Error as e:
-            connection.rollback()
-            print(f"[ACTUALIZAR ITEM] Error SQL: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    except Exception as e:
-        print(f"[ACTUALIZAR ITEM] Error: {e}")
-        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+    except Error as e:
+        connection.rollback()
+        print(f"[ACTUALIZAR ITEM] Error SQL: {e}")
+        return jsonify({'success': False, 'message': f'Error de base de datos: {e.msg}'}), 500
+    finally:
+        connection.close()
 
 
 # ============================================================================
@@ -782,78 +829,48 @@ def actualizar_item():
 @inventario_bp.route('/api/inventario/movimiento', methods=['POST'])
 @login_required
 def registrar_movimiento():
-    """Registrar movimiento de inventario (entrada/salida/ajuste) usando SP"""
+    """Entrada / salida / ajuste manual con sp_ajustar_stock (Parte 5):
+    cambia stock_actual y deja su movimiento en el kardex."""
+    data = request.get_json(silent=True) or {}
+
+    for field in ('id_inventario', 'tipo_movimiento', 'cantidad', 'motivo'):
+        if data.get(field) in (None, ''):
+            return jsonify({'success': False, 'message': f'Campo requerido: {field}'}), 400
+
     try:
-        data = request.get_json()
-        
-        # Validar campos
-        required_fields = ['id_inventario', 'tipo_movimiento', 'cantidad', 'motivo']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'success': False, 'message': f'Campo requerido: {field}'}), 400
-        
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'error': 'Error de conexión'}), 500
-        
-        try:
-            cursor = connection.cursor()
-            
-            # Obtener el usuario actual
-            num_usuario = session.get('user_documento') or session.get('user_email')
-            
-            # Preparar parámetros para el SP
-            id_inventario = int(data['id_inventario'])
-            tipo_movimiento = data['tipo_movimiento']
-            cantidad = float(data['cantidad'])
-            motivo = data['motivo']
-            documento_ref = data.get('documento_referencia', '')
-            
-            # Llamar al stored procedure con parámetros OUT
-            args = [
-                id_inventario,
-                tipo_movimiento,
-                cantidad,
-                motivo,
-                documento_ref,
-                num_usuario,
-                0,  # @p_success OUT
-                '',  # @p_message OUT
-                0.0  # @p_nuevo_stock OUT
-            ]
-            
-            result = cursor.callproc('sp_ajustar_stock', args)
-            
-            # Obtener los valores OUT
-            p_success = result[6]  # índice 6 = p_success
-            p_message = result[7]  # índice 7 = p_message
-            p_nuevo_stock = result[8]  # índice 8 = p_nuevo_stock
-            
-            connection.commit()
-            cursor.close()
-            connection.close()
-            
-            # Retornar respuesta
-            if p_success:
-                return jsonify({
-                    'success': True,
-                    'message': p_message,
-                    'nuevo_stock': float(p_nuevo_stock)
-                }), 200
-            else:
-                return jsonify({
-                    'success': False,
-                    'message': p_message
-                }), 400
-        
-        except Error as e:
-            connection.rollback()
-            print(f"[MOVIMIENTO] Error SQL: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    except Exception as e:
-        print(f"[MOVIMIENTO] Error: {e}")
-        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+        id_inventario = int(data['id_inventario'])
+        cantidad = numero(data['cantidad'], 'La cantidad')
+    except ValueError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'success': False, 'message': 'Error de conexión'}), 500
+
+    try:
+        cursor = connection.cursor()
+        res = cursor.callproc('sp_ajustar_stock', [
+            id_inventario,
+            data['tipo_movimiento'],
+            cantidad,
+            data['motivo'],
+            data.get('documento_referencia') or '',
+            usuario_actual(),          # documento del usuario (entero), nunca el email
+            0, '', 0.0                 # OUT: success, message, nuevo_stock
+        ])
+        cursor.close()
+        ok, mensaje, nuevo_stock = res[6], res[7], res[8]
+
+        if ok:
+            return jsonify({'success': True, 'message': mensaje,
+                            'nuevo_stock': float(nuevo_stock or 0)}), 200
+        return jsonify({'success': False, 'message': mensaje}), 400
+
+    except Error as e:
+        print(f"[MOVIMIENTO] Error SQL: {e}")
+        return jsonify({'success': False, 'message': f'Error de base de datos: {e.msg}'}), 500
+    finally:
+        connection.close()
 
 
 # ============================================================================

@@ -91,6 +91,8 @@ BEGIN
                          WHEN 7 THEN 'SÁBADO'
                      END
                      AND hh.es_activo = 1
+                     AND hh.fecha_vigencia_inicio <= p_fecha
+                     AND (hh.fecha_vigencia_fin IS NULL OR hh.fecha_vigencia_fin >= p_fecha)
              ) mt
              WHERE mt.tipo_marcacion = 'ENTRADA' AND mt.turno = 1
              ORDER BY mt.fecha_marcacion ASC LIMIT 1) AS id_t1_entrada,
@@ -128,6 +130,8 @@ BEGIN
                          WHEN 7 THEN 'SÁBADO'
                      END
                      AND hh.es_activo = 1
+                     AND hh.fecha_vigencia_inicio <= p_fecha
+                     AND (hh.fecha_vigencia_fin IS NULL OR hh.fecha_vigencia_fin >= p_fecha)
              ) mt
              WHERE mt.tipo_marcacion = 'SALIDA' AND mt.turno = 1
              ORDER BY mt.fecha_marcacion DESC LIMIT 1) AS id_t1_salida,
@@ -165,6 +169,8 @@ BEGIN
                          WHEN 7 THEN 'SÁBADO'
                      END
                      AND hh.es_activo = 1
+                     AND hh.fecha_vigencia_inicio <= p_fecha
+                     AND (hh.fecha_vigencia_fin IS NULL OR hh.fecha_vigencia_fin >= p_fecha)
              ) mt
              WHERE mt.tipo_marcacion = 'ENTRADA' AND mt.turno = 2
              ORDER BY mt.fecha_marcacion ASC LIMIT 1) AS id_t2_entrada,
@@ -202,6 +208,8 @@ BEGIN
                          WHEN 7 THEN 'SÁBADO'
                      END
                      AND hh.es_activo = 1
+                     AND hh.fecha_vigencia_inicio <= p_fecha
+                     AND (hh.fecha_vigencia_fin IS NULL OR hh.fecha_vigencia_fin >= p_fecha)
              ) mt
              WHERE mt.tipo_marcacion = 'SALIDA' AND mt.turno = 2
              ORDER BY mt.fecha_marcacion DESC LIMIT 1) AS id_t2_salida,
@@ -240,6 +248,8 @@ BEGIN
                          WHEN 7 THEN 'SÁBADO'
                      END
                      AND hh.es_activo = 1
+                     AND hh.fecha_vigencia_inicio <= p_fecha
+                     AND (hh.fecha_vigencia_fin IS NULL OR hh.fecha_vigencia_fin >= p_fecha)
              ) mt
              WHERE mt.tipo_marcacion = 'ENTRADA' AND mt.turno = 1
              ORDER BY mt.fecha_marcacion ASC LIMIT 1) AS tipo_ubi_t1_ent,
@@ -277,6 +287,8 @@ BEGIN
                          WHEN 7 THEN 'SÁBADO'
                      END
                      AND hh.es_activo = 1
+                     AND hh.fecha_vigencia_inicio <= p_fecha
+                     AND (hh.fecha_vigencia_fin IS NULL OR hh.fecha_vigencia_fin >= p_fecha)
              ) mt
              WHERE mt.tipo_marcacion = 'SALIDA' AND mt.turno = 1
              ORDER BY mt.fecha_marcacion DESC LIMIT 1) AS tipo_ubi_t1_sal,
@@ -314,6 +326,8 @@ BEGIN
                          WHEN 7 THEN 'SÁBADO'
                      END
                      AND hh.es_activo = 1
+                     AND hh.fecha_vigencia_inicio <= p_fecha
+                     AND (hh.fecha_vigencia_fin IS NULL OR hh.fecha_vigencia_fin >= p_fecha)
              ) mt
              WHERE mt.tipo_marcacion = 'ENTRADA' AND mt.turno = 2
              ORDER BY mt.fecha_marcacion ASC LIMIT 1) AS tipo_ubi_t2_ent,
@@ -351,6 +365,8 @@ BEGIN
                          WHEN 7 THEN 'SÁBADO'
                      END
                      AND hh.es_activo = 1
+                     AND hh.fecha_vigencia_inicio <= p_fecha
+                     AND (hh.fecha_vigencia_fin IS NULL OR hh.fecha_vigencia_fin >= p_fecha)
              ) mt
              WHERE mt.tipo_marcacion = 'SALIDA' AND mt.turno = 2
              ORDER BY mt.fecha_marcacion DESC LIMIT 1) AS tipo_ubi_t2_sal;

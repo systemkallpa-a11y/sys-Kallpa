@@ -2,6 +2,7 @@
   Componente único: modal "Nuevo Material" (Item de Inventario).
   Se usa en el módulo Inventario y en el Dashboard (modal de Requerimiento de Oficina).
   La lógica vive en static/js/inventario_nuevo_item.js
+  Tipos, categorías, unidades y campos técnicos se cargan desde la BD.
 -->
 <div id="modalNuevoItem" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
     <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col">
@@ -62,13 +63,8 @@
                             </label>
                             <select id="tipo_inventario" name="tipo_inventario" required onchange="cambiarTipoInventario()"
                                     class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
-                                <option value="">Seleccione un tipo...</option>
-                                <option value="MATERIAL">📦 Material de Construcción</option>
-                                <option value="HERRAMIENTA">🔧 Herramienta</option>
-                                <option value="EQUIPO">⚙️ Equipo/Maquinaria</option>
-                                <option value="TECNOLOGIA">💻 Tecnología</option>
-                                <option value="ROPA">👕 Ropa y EPP</option>
-                                <option value="CONSUMIBLE">📄 Consumible/Oficina</option>
+                                <!-- Se llena desde la BD (GET /api/inventario/tipos) -->
+                                <option value="">Cargando...</option>
                             </select>
                         </div>
 
@@ -86,7 +82,7 @@
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                                 Categoría <span class="text-red-500">*</span>
                             </label>
-                            <select id="id_categoria" name="id_categoria" required
+                            <select id="id_categoria" name="id_categoria" required onchange="cambiarCategoriaNuevoItem()"
                                     class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
                                 <option value="">Primero seleccione un tipo</option>
                             </select>
@@ -99,7 +95,8 @@
                             </label>
                             <select id="id_unidad" name="id_unidad" required
                                     class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
-                                <option value="">Seleccione...</option>
+                                <!-- Solo las unidades permitidas en la categoría (la predeterminada queda elegida) -->
+                                <option value="">Primero seleccione una categoría</option>
                             </select>
                         </div>
 
@@ -121,7 +118,17 @@
                         Control de Stock y Precio
                     </h4>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- Stock Inicial (se registra como movimiento ENTRADA) -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Stock Inicial
+                            </label>
+                            <input type="number" id="stock_inicial" name="stock_inicial" step="0.01" value="0" min="0"
+                                   class="w-full px-4 py-2.5 bg-white dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-white">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Cantidad disponible hoy en almacén</p>
+                        </div>
+
                         <!-- Stock Mínimo -->
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">

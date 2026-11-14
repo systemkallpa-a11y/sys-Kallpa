@@ -31,6 +31,28 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def _es_requerimiento_administrativo(id_requerimiento):
+    """True si el requerimiento es Administrativo (tipo 1).
+
+    Los administrativos se gestionan con sus propios endpoints
+    (requerimiento_logistica.py) porque al editar/eliminar deben reponer stock.
+    """
+    connection = get_db_connection()
+    if not connection:
+        return False
+    try:
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT id_tipo_requerimiento FROM TblRequerimiento WHERE id_requerimiento = %s",
+            (id_requerimiento,)
+        )
+        fila = cursor.fetchone()
+        cursor.close()
+        return bool(fila) and fila[0] == 1
+    finally:
+        connection.close()
+
+
 @main_bp.route('/requerimiento')
 @login_required
 def requerimiento():
@@ -38,7 +60,7 @@ def requerimiento():
     # Validar que el usuario tenga acceso a Gestin de Requerimientos
     num_documento = session.get('user_documento')
     
-    if not validar_acceso_usuario(num_documento, id_menu=2, id_submenu=4):
+    if not validar_acceso_usuario(num_documento, id_menu=5, id_submenu=4):
         flash('No tienes acceso a Gestin de Requerimientos', 'danger')
         return redirect(url_for('main.dashboard'))
     
@@ -389,6 +411,9 @@ def actualizar_requerimiento(id_requerimiento):
     print(f"[ACTUALIZAR_REQUERIMIENTO] === INICIANDO ===")
     print(f"{'='*80}")
     
+    if _es_requerimiento_administrativo(id_requerimiento):
+        return jsonify({'success': False, 'error': 'Los requerimientos administrativos se editan desde Logística › Requerimiento General'}), 400
+
     try:
         data = request.get_json()
         print(f"[ACTUALIZAR_REQUERIMIENTO] Request recibido")
@@ -514,7 +539,10 @@ def eliminar_requerimiento(id_requerimiento):
     print(f"\n{'='*80}")
     print(f"[ELIMINAR_REQUERIMIENTO] [!] FUNCIN LLAMADA - ID: {id_requerimiento}")
     print(f"{'='*80}")
-    
+
+    if _es_requerimiento_administrativo(id_requerimiento):
+        return jsonify({'success': False, 'error': 'Los requerimientos administrativos se eliminan desde Logística › Requerimiento General'}), 400
+
     connection = get_db_connection()
     if not connection:
         print(f"[ELIMINAR_REQUERIMIENTO] [ERROR] No hay conexin a BD")

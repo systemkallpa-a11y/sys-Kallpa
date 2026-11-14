@@ -25,16 +25,18 @@ def guardar_horarios_usuario(connection, num_documento, horarios):
     try:
         cursor = connection.cursor()
         
-        # Primero, eliminar horarios existentes
-        print(f"[HORARIOS] [DEL] Eliminando horarios previos para documento {num_documento}")
+        # Cerrar vigencia del horario actual (NO eliminar — se conserva como historial)
+        print(f"[HORARIOS] [UPD] Cerrando vigencia de horarios previos para documento {num_documento}")
         cursor.execute("""
-            DELETE FROM TblHorarioTrabajo
+            UPDATE TblHorarioTrabajo
+            SET fecha_vigencia_fin = CURDATE()
             WHERE num_documento = %s
+              AND fecha_vigencia_fin IS NULL
         """, (num_documento,))
         
-        print(f"[HORARIOS] [OK] Horarios previos eliminados")
+        print(f"[HORARIOS] [OK] Vigencia cerrada en horarios previos")
         
-        # Insertar nuevos horarios
+        # Insertar nuevos horarios con vigencia desde hoy
         print(f"[HORARIOS] [ADD] Insertando horarios nuevos")
         for horario in horarios:
             es_activo = horario['es_activo']
@@ -52,8 +54,10 @@ def guardar_horarios_usuario(connection, num_documento, horarios):
                         hora_entrada2,
                         hora_salida2,
                         es_activo,
-                        estado
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, 'ACTIVO')
+                        estado,
+                        fecha_vigencia_inicio,
+                        fecha_vigencia_fin
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, 'ACTIVO', CURDATE(), NULL)
                 """, (
                     num_documento,
                     dia_semana,
@@ -73,8 +77,10 @@ def guardar_horarios_usuario(connection, num_documento, horarios):
                         hora_entrada,
                         hora_salida,
                         es_activo,
-                        estado
-                    ) VALUES (%s, %s, %s, %s, %s, 'ACTIVO')
+                        estado,
+                        fecha_vigencia_inicio,
+                        fecha_vigencia_fin
+                    ) VALUES (%s, %s, %s, %s, %s, 'ACTIVO', CURDATE(), NULL)
                 """, (
                     num_documento,
                     dia_semana,

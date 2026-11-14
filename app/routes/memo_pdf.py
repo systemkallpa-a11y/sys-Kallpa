@@ -418,8 +418,10 @@ def generar_memo():
                     cur_marc.execute('''
                         SELECT hora_entrada FROM TblHorarioTrabajo 
                         WHERE num_documento = %s AND dia_semana = %s AND es_activo = 1
+                          AND fecha_vigencia_inicio <= %s
+                          AND (fecha_vigencia_fin IS NULL OR fecha_vigencia_fin >= %s)
                         LIMIT 1
-                    ''', (num_documento, dia_semana))
+                    ''', (num_documento, dia_semana, fecha_incidente, fecha_incidente))
                     horario = cur_marc.fetchone()
                     if horario and horario.get('hora_entrada'):
                         hora_horario_prog = horario['hora_entrada']

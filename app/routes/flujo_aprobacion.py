@@ -1367,7 +1367,7 @@ def obtener_detalles_pendientes(id_tipo_documento):
             
             print(f"[DETALLES_PENDIENTES] [OK] Presupuestos encontrados para cargo {id_cargo}: {len(documentos)}")
             
-        elif id_tipo_documento == 2:  # REQUERIMIENTO
+        elif id_tipo_documento in (2, 7):  # REQUERIMIENTO (2 = Obra, 7 = Administrativo)
             print(f"[DETALLES_PENDIENTES] Rama: REQUERIMIENTOS - Usando SP genrico")
             
             # Llamar SP genrico que filtra por cargo

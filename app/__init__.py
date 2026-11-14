@@ -43,7 +43,7 @@ def create_app():
     app.config['TEMPLATES_CACHE_DIR'] = None
     
     # VERSION DE ASSETS - Incrementar este nmero cuando se actualicen archivos estticos
-    app.config['ASSETS_VERSION'] = '20261102_2'
+    app.config['ASSETS_VERSION'] = '20261113_1'
 
     # Configurar logging
     if not app.debug:

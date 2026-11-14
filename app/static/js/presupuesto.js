@@ -1082,45 +1082,6 @@ function limpiarForm() {
     });
 }
 
-function abrirModalNuevoMaterial() {
-    console.log('[NUEVO_MATERIAL] Abriendo formulario...');
-    
-    // Crear un modal simple para agregar material manualmente
-    const nombre = prompt('Nombre del material:');
-    if (!nombre) return;
-    
-    const codigo = prompt('Código del material (opcional):');
-    const cantidad = prompt('Cantidad:', '1');
-    const precio = prompt('Precio unitario:', '0');
-    
-    if (!cantidad || isNaN(cantidad) || !precio || isNaN(precio)) {
-        mostrarError('Cantidad y precio deben ser números válidos');
-        return;
-    }
-    
-    // Agregar material manual (sin id_inventario, se guardará como MATERIAL sin vínculo)
-    id_contador_material++;
-    const subtotal = parseFloat(cantidad) * parseFloat(precio);
-    
-    materiales_agregados.push({
-        id_temporal: id_contador_material,
-        id_inventario: null,
-        tipo_item: 'MATERIAL',
-        nombre: nombre,
-        codigo: codigo || '',
-        categoria: 'Manual',
-        unidad: 'Unidad',
-        cantidad: parseFloat(cantidad),
-        precio_unitario: parseFloat(precio),
-        subtotal: subtotal
-    });
-    
-    console.log('[NUEVO_MATERIAL] Material agregado:', materiales_agregados[materiales_agregados.length - 1]);
-    
-    renderizarMateriales();
-    actualizarTotales();
-    mostrarExito('Material agregado exitosamente');
-}
 
 // ============================================================================
 // MODAL: ABRIR Y CERRAR
@@ -1748,16 +1709,31 @@ function cerrarModalNuevoMaterial() {
     document.getElementById('form-nuevo-material').reset();
 }
 
+// Categorías agrupadas por tipo de inventario (nombres de tipo desde la BD).
+// El tipo del material nuevo sale de la categoría elegida (lo resuelve el servidor).
 async function cargarCategoriasParaMaterial() {
     try {
-        const response = await fetch('/api/presupuestos/combo/categorias');
-        const data = await response.json();
-        
+        const [respCat, respTipos] = await Promise.all([
+            fetch('/api/presupuestos/combo/categorias'),
+            fetch('/api/inventario/tipos?solo_fisicos=0', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        ]);
+        const data = await respCat.json();
+        const tipos = await respTipos.json();
+        const nombreTipo = {};
+        (tipos.tipos || []).forEach(t => { nombreTipo[t.tipo_inventario] = t.nombre; });
+
         if (data.success) {
             const select = document.getElementById('nuevo-categoria');
-            select.innerHTML = '<option value="">Sin categoría</option>';
+            select.innerHTML = '<option value="">Sin categoría (Otros materiales)</option>';
+            const grupos = {};
             data.data.forEach(c => {
-                select.innerHTML += `<option value="${c.id_categoria}">${c.nombre}</option>`;
+                const tipo = c.tipo_aplicable || '';
+                if (!grupos[tipo]) {
+                    grupos[tipo] = document.createElement('optgroup');
+                    grupos[tipo].label = nombreTipo[tipo] || tipo;
+                    select.appendChild(grupos[tipo]);
+                }
+                grupos[tipo].appendChild(new Option(c.nombre, c.id_categoria));
             });
         }
     } catch (error) {
@@ -1765,33 +1741,33 @@ async function cargarCategoriasParaMaterial() {
     }
 }
 
-async function cargarUnidadesMedida() {
+// Unidades del modal: con categoría -> solo las permitidas (predeterminada elegida);
+// sin categoría -> todas (el servidor valida contra "Otros materiales").
+async function cargarUnidadesMedida(idCategoria = '') {
+    const select = document.getElementById('nuevo-unidad');
+    if (!select) return;
     try {
-        console.log('[UNIDADES] Cargando unidades de medida...');
-        const response = await fetch('/api/presupuestos/combo/unidades');
-        console.log('[UNIDADES] Response status:', response.status);
-        
+        const url = idCategoria
+            ? `/api/inventario/unidades?id_categoria=${encodeURIComponent(idCategoria)}`
+            : '/api/presupuestos/combo/unidades';
+        const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
         const data = await response.json();
-        console.log('[UNIDADES] Data recibida:', data);
-        
-        if (data.success) {
-            const select = document.getElementById('nuevo-unidad');
-            if (!select) {
-                console.error('[UNIDADES] ❌ Elemento nuevo-unidad NO encontrado');
-                return;
-            }
-            
-            select.innerHTML = '<option value="">Seleccionar...</option>';
-            data.data.forEach(u => {
-                select.innerHTML += `<option value="${u.id_unidad}">${u.nombre}</option>`;
-            });
-            console.log('[UNIDADES] ✓ Cargadas', data.data.length, 'unidades');
-        } else {
-            console.error('[UNIDADES] ❌ Error:', data.error);
+        if (!data.success) {
+            console.error('[UNIDADES] Error:', data.error);
+            return;
         }
+        const unidades = data.unidades || data.data || [];
+        select.innerHTML = '<option value="">Seleccionar...</option>';
+        unidades.forEach(u => select.add(new Option(u.nombre, u.id_unidad)));
+        const pred = unidades.find(u => Number(u.predeterminada) === 1);
+        if (pred) select.value = String(pred.id_unidad);
     } catch (error) {
-        console.error('[UNIDADES] ❌ Error al cargar unidades:', error);
+        console.error('[UNIDADES] Error al cargar unidades:', error);
     }
+}
+
+function cambiarCategoriaNuevoMaterial() {
+    cargarUnidadesMedida(document.getElementById('nuevo-categoria').value);
 }
 
 async function guardarNuevoMaterial() {

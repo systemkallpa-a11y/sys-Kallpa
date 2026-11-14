@@ -57,6 +57,8 @@ BEGIN
                  WHEN 7 THEN 'SÁBADO'
              END
         WHERE h.es_activo = 1
+          AND h.fecha_vigencia_inicio <= fe.f
+          AND (h.fecha_vigencia_fin IS NULL OR h.fecha_vigencia_fin >= fe.f)
         UNION
         -- Persona-dia CON marcas: conserva filas sin horario.
         SELECT DISTINCT mm.num_documento, DATE(mm.fecha_marcacion)
@@ -80,6 +82,8 @@ BEGIN
                 WHEN 7 THEN 'SÁBADO'
              END
          AND h.es_activo = 1
+         AND h.fecha_vigencia_inicio <= g.gf
+         AND (h.fecha_vigencia_fin IS NULL OR h.fecha_vigencia_fin >= g.gf)
     ),
     marcas_base AS (
         SELECT mm.id_marcacion,

@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Requerimiento General - Kallpa{% endblock %}
+
+{% block header_title %}Requerimiento General{% endblock %}
+{% block header_subtitle %}Logística - requerimientos de obras y administrativos{% endblock %}
+
+{% block content %}
+<div class="flex-1 overflow-auto bg-gray-50 dark:bg-slate-950">
+    <!-- Topbar -->
+    <div class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm">
+        <div class="px-4 md:px-6 py-3 md:py-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Gestión de Requerimiento General</h1>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Todos los requerimientos: obras (solo consulta) y administrativos</p>
+            </div>
+            <button type="button" disabled
+                    title="Los requerimientos administrativos se crean desde el Dashboard (botón Nuevo Requerimiento)"
+                    class="flex items-center gap-2 px-6 py-2 bg-slate-400 dark:bg-slate-600 text-white rounded-lg font-medium shadow-md cursor-not-allowed opacity-70">
+                <i class="fas fa-plus"></i>
+                <span>Crear Requerimiento</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="p-4 md:p-6 space-y-4">
+        <!-- Filtros -->
+        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-800 p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div class="md:col-span-2">
+                <label for="filtro-texto" class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Buscar</label>
+                <input type="text" id="filtro-texto" placeholder="Código, descripción o solicitante..."
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-500">
+            </div>
+            <div>
+                <label for="filtro-tipo" class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Tipo</label>
+                <select id="filtro-tipo" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm">
+                    <option value="">Todos</option>
+                    <option value="1">Administrativo</option>
+                    <option value="2">Obra</option>
+                </select>
+            </div>
+            <div>
+                <label for="filtro-estado" class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Estado</label>
+                <select id="filtro-estado" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm">
+                    <option value="">Todos</option>
+                    <option value="PENDIENTE">Pendiente</option>
+                    <option value="APROBADO">Aprobado</option>
+                    <option value="RECHAZADO">Rechazado</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table id="tabla-requerimiento-general" class="w-full">
+                    <thead class="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+                        <tr>
+                            <th class="px-4 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">ID</th>
+                            <th class="px-4 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Código</th>
+                            <th class="px-4 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Tipo</th>
+                            <th class="px-4 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Descripción</th>
+                            <th class="px-4 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Cantidad</th>
+                            <th class="px-4 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Solicitante</th>
+                            <th class="px-4 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Estado</th>
+                            <th class="px-4 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Aprobado/Rechazado por</th>
+                            <th class="px-4 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Comentario Rechazo</th>
+                            <th class="px-4 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Fecha</th>
+                            <th class="px-4 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requerimiento-general-lista" class="divide-y divide-gray-200 dark:divide-slate-700">
+                        <tr>
+                            <td colspan="11" class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Cargando requerimientos...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="requerimiento-general-resumen" class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-slate-700"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+
+    let requerimientos = [];
+    const esc = RQA.esc;
+
+    async function cargar() {
+        const tbody = document.getElementById('requerimiento-general-lista');
+        try {
+            const response = await fetch('/api/requerimientos/logistica/obtener', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+            if (!data.success) throw new Error(data.error || 'Error al cargar');
+            requerimientos = data.data || [];
+            renderizar();
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="11" class="px-6 py-10 text-center text-red-600 dark:text-red-400">
+                <i class="fas fa-exclamation-triangle mr-2"></i>${esc(e.message)}</td></tr>`;
+        }
+    }
+
+    function filtrados() {
+        const texto = document.getElementById('filtro-texto').value.trim().toLowerCase();
+        const tipo = document.getElementById('filtro-tipo').value;
+        const estado = document.getElementById('filtro-estado').value;
+        return requerimientos.filter(r =>
+            (!tipo || String(r.id_tipo_requerimiento) === tipo) &&
+            (!estado || r.estado === estado) &&
+            (!texto || [r.codigo, r.descripcion, r.solicitante].some(v => (v || '').toLowerCase().includes(texto)))
+        );
+    }
+
+    function boton(clase, icono, titulo, accion) {
+        return `<button type="button" onclick="${accion}" title="${titulo}" aria-label="${titulo}"
+                    class="px-3 py-1 ${clase} text-white rounded text-xs font-medium"><i class="fas ${icono}"></i></button>`;
+    }
+
+    function renderizar() {
+        const tbody = document.getElementById('requerimiento-general-lista');
+        const lista = filtrados();
+        const admin = requerimientos.filter(r => r.id_tipo_requerimiento === 1).length;
+        document.getElementById('requerimiento-general-resumen').textContent =
+            `Mostrando ${lista.length} de ${requerimientos.length} · Administrativos: ${admin} · Obras: ${requerimientos.length - admin}`;
+
+        if (lista.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="11" class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
+                <i class="fas fa-inbox text-3xl mb-3 block opacity-50"></i>Sin requerimientos</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = lista.map(r => {
+            const esAdmin = r.id_tipo_requerimiento === 1;
+            const pendiente = r.estado === 'PENDIENTE';
+            const id = r.id_requerimiento;
+
+            let acciones = boton('bg-orange-500 hover:bg-orange-600', 'fa-file-pdf', 'Descargar PDF', `RQA.descargarPDF(${id})`);
+            if (esAdmin) {
+                acciones += boton('bg-green-500 hover:bg-green-600', 'fa-eye', 'Ver detalle', `RQA.verDetalle(${id})`);
+                if (pendiente) {
+                    acciones += boton('bg-blue-500 hover:bg-blue-600', 'fa-edit', 'Editar', `RQA.editar(${id})`);
+                    acciones += boton('bg-red-500 hover:bg-red-600', 'fa-trash', 'Eliminar', `RQA.eliminar(${id}, '${esc(r.codigo)}')`);
+                }
+            } else {
+                acciones += boton('bg-slate-500 hover:bg-slate-600', 'fa-eye', 'Ver detalle (solo consulta)', `RQA.verDetalleObra(${id})`);
+            }
+
+            const comentario = r.comentario_rechazo
+                ? `<span class="text-red-600 dark:text-red-400 font-medium" title="${esc(r.comentario_rechazo)}"><i class="fas fa-exclamation-circle mr-1"></i>${esc(r.comentario_rechazo.substring(0, 30))}${r.comentario_rechazo.length > 30 ? '…' : ''}</span>`
+                : '<span class="text-gray-400">-</span>';
+
+            return `
+                <tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td class="px-4 py-4 text-sm text-gray-900 dark:text-gray-100">${id}</td>
+                    <td class="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">${esc(r.codigo)}</td>
+                    <td class="px-4 py-4 text-sm">
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold text-white whitespace-nowrap" style="background-color:${esc(r.tipo_color)}">${esc(r.tipo_requerimiento)}</span>
+                    </td>
+                    <td class="px-4 py-4 text-sm text-gray-900 dark:text-gray-100">${esc(r.descripcion)}</td>
+                    <td class="px-4 py-4 text-sm text-gray-900 dark:text-gray-100">${esc(r.cantidad)}</td>
+                    <td class="px-4 py-4 text-sm text-gray-900 dark:text-gray-100">${esc(r.solicitante || '-')}</td>
+                    <td class="px-4 py-4 text-sm">${RQA.badge(r.estado)}</td>
+                    <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">${esc(r.aprobado_rechazado_por || '-')}</td>
+                    <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">${comentario}</td>
+                    <td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">${RQA.fecha(r.fecha_creacion)}</td>
+                    <td class="px-4 py-4 text-sm"><div class="flex gap-2">${acciones}</div></td>
+                </tr>`;
+        }).join('');
+    }
+
+    ['filtro-texto', 'filtro-tipo', 'filtro-estado'].forEach(id => {
+        document.getElementById(id).addEventListener(id === 'filtro-texto' ? 'input' : 'change', renderizar);
+    });
+    document.addEventListener('rqa:actualizado', cargar);
+
+    // ------------------------------------------------ filtro automático por cargo
+    // Lo calcula el backend según el flujo de aprobación del cargo del usuario:
+    // '2' = Obra, '1' = Administrativo, '' = Todos (el usuario puede cambiarlo).
+    document.getElementById('filtro-tipo').value = {{ filtro_tipo_inicial | default('') | tojson }};
+
+    cargar();
+})();
+</script>
+{% endblock %}
