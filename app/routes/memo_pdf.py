@@ -462,19 +462,22 @@ def generar_memo():
                 else:
                     h_prog_legible = f"{h_horas - 12}:{h_min:02d} p. m."
                 
-                # Hora l\u00edmite de tolerancia (programada + 5 min)
-                h_limite_total = total_seg + 300  # 5 min en segundos
-                h_lim_h = h_limite_total // 3600
-                h_lim_m = (h_limite_total % 3600) // 60
-                if h_lim_h < 12:
-                    hora_tolerancia = f"{h_lim_h}:{h_lim_m:02d} a. m."
-                elif h_lim_h == 12:
-                    hora_tolerancia = f"12:{h_lim_m:02d} p. m."
-                else:
-                    hora_tolerancia = f"{h_lim_h - 12}:{h_lim_m:02d} p. m."
+                def _hora_legible(seg):
+                    h, m = seg // 3600, (seg % 3600) // 60
+                    if h < 12:
+                        return f"{h}:{m:02d} a. m."
+                    if h == 12:
+                        return f"12:{m:02d} p. m."
+                    return f"{h - 12}:{m:02d} p. m."
+
+                # Tolerancia por minuto entero: puntual hasta programada + 5 min
+                # (ej. 8:05); tardanza desde programada + 6 min (ej. 8:06)
+                hora_tolerancia = _hora_legible(total_seg + 300)
+                hora_inicio_tardanza = _hora_legible(total_seg + 360)
             else:
                 h_prog_legible = 'N/D'
                 hora_tolerancia = 'N/D'
+                hora_inicio_tardanza = 'N/D'
             
             body_text = (
                 f"Por medio del presente, se deja constancia que el d\u00eda <b>{fecha_formateada}</b>, "
@@ -486,7 +489,7 @@ def generar_memo():
                 f"Se recuerda que el horario establecido de ingreso a labores es a las <b>{h_prog_legible}</b>, "
                 f"contando el personal con una <b>tolerancia m\u00e1xima de cinco (05) minutos</b>, "
                 f"hasta las <b>{hora_tolerancia}</b>. En consecuencia, "
-                f"<b>todo ingreso registrado a partir de las {hora_tolerancia} ser\u00e1 considerado tardanza</b>."
+                f"<b>todo ingreso registrado a partir de las {hora_inicio_tardanza} ser\u00e1 considerado tardanza</b>."
             )
             story.append(Paragraph(body_text2, body_style))
             

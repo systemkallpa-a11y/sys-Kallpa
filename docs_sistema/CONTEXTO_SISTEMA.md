@@ -184,8 +184,7 @@ mismo estilo que `sp_RechazarRequerimientoAdministrativo`):
    `TblPresupuesto.cantidad_consumida` (lo inverso de
    `sp_CrearRequerimientoCompleto`).
 6. Todo en una transacción; errores de negocio con `SIGNAL SQLSTATE '45000'`.
-7. Prueba manual dentro de `START TRANSACTION … ROLLBACK` (como
-   `items_inventario/parte5_prueba_manual.sql`).
+7. Prueba manual dentro de `START TRANSACTION … ROLLBACK`.
 
 **Detalle técnico a resolver:** `TblRequerimientoDetalle` guarda
 `id_inventario`, pero no la línea del presupuesto de la que salió. El saldo se

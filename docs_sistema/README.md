@@ -21,7 +21,6 @@ estructura, menús y rutas, flujos de aprobación y pendientes conocidos.
 - [guias/EJECUCION_LOCAL.md](guias/EJECUCION_LOCAL.md): `.env`, venv y arranque.
 - [guias/SOLUCION_PROBLEMAS.md](guias/SOLUCION_PROBLEMAS.md): túnel SSH,
   errores JSON, puerto ocupado, SP con varios result sets.
-- [pruebas/PRUEBA_HORARIO_HISTORICO.md](pruebas/PRUEBA_HORARIO_HISTORICO.md).
 - [historial/MIGRACION_MATERIALES_A_INVENTARIO.md](historial/MIGRACION_MATERIALES_A_INVENTARIO.md).
 
 Scripts de base de datos: [`../database_scripts/README.md`](../database_scripts/README.md).

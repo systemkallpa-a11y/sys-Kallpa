@@ -197,7 +197,9 @@
 
         <!-- Body - Formulario -->
         <div class="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
-            <form id="formNuevoRequerimiento" class="space-y-5">
+            <!-- El guardado lo hace crearRequerimiento(); el form nunca se envía solo
+                 (evita recargar la página al pulsar Enter o un botón interno) -->
+            <form id="formNuevoRequerimiento" class="space-y-5" onsubmit="return false;">
                 
                 <!-- Tipo de Requerimiento (Hidden - Siempre Administrativo) -->
                 <input type="hidden" id="tipoRequerimiento" value="ADMINISTRATIVO">
@@ -258,7 +260,7 @@
                                     <i class="fas fa-search mr-2"></i>
                                     Resultados de búsqueda
                                 </h4>
-                                <button onclick="cerrarResultadosBusqueda()" class="text-orange-700 dark:text-orange-300 hover:text-orange-900 dark:hover:text-orange-100">
+                                <button type="button" onclick="cerrarResultadosBusqueda()" aria-label="Cerrar resultados" class="text-orange-700 dark:text-orange-300 hover:text-orange-900 dark:hover:text-orange-100">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
@@ -442,7 +444,7 @@
                             </div>
                             ${material.descripcion ? `<p class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">${material.descripcion}</p>` : ''}
                         </div>
-                        <button 
+                        <button type="button"
                             onclick="agregarMaterialDesdeResultados(${material.id_inventario})"
                             ${yaSeleccionado ? 'disabled' : ''}
                             class="flex-shrink-0 px-4 py-2 ${yaSeleccionado ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' : 'bg-orange-500 hover:bg-orange-600 text-white'} rounded-lg transition-colors text-sm font-medium">
@@ -802,6 +804,17 @@
             `;
         });
     }
+
+    // Cerrar el modal de requerimiento con Escape (si no hay otro modal encima)
+    document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') return;
+        const modal = document.getElementById('modalNuevoRequerimiento');
+        const modalItem = document.getElementById('modalNuevoItem');
+        const itemAbierto = modalItem && !modalItem.classList.contains('hidden');
+        if (modal && !modal.classList.contains('hidden') && !itemAbierto && !document.querySelector('.swal2-container')) {
+            cerrarModalNuevoRequerimiento();
+        }
+    });
 
     // Cargar al iniciar
     document.addEventListener('DOMContentLoaded', cargarHistorial);

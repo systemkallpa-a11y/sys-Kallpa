@@ -694,7 +694,7 @@ function verDetalle(id) {
     };
 
     document.getElementById('detalle-id').textContent = `Solicitud #${v.id_vacacion}`;
-    document.getElementById('detalle-empleado').textContent = v.empleado || '-';
+    document.getElementById('detalle-empleado').textContent = v.nombre_completo || v.empleado || '-';
     document.getElementById('detalle-area').textContent = `Area: ${v.area || '-'}`;
     document.getElementById('detalle-empresa').textContent = `Empresa: ${v.empresa || '-'}`;
     document.getElementById('detalle-fecha-inicio').textContent = formatearFecha(v.fecha_inicio);

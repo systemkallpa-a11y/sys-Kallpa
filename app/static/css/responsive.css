@@ -102,29 +102,215 @@ html.dark {
     .fixed.inset-0.items-center.justify-center:not(.hidden),
     .fixed.inset-0.items-center.justify-center:not(.hidden) > *,
     #notifications-dropdown:not(.hidden),
-    #user-menu:not(.hidden),
-    #sidebar:not(.hidden) {
+    #user-menu:not(.hidden) {
         animation: none !important;
     }
 }
 
 /* ==========================================================================
-   Sidebar en móvil (cajón lateral)
+   Sidebar
+   - Escritorio: expandido (18rem) <-> compacto solo iconos (4.5rem).
+   - Móvil: cajón que entra/sale con transform (también al cerrar).
+   - .k-sin-transicion: estado inicial sin animar (se quita tras el 1er pintado).
    ========================================================================== */
 
+#sidebar {
+    --k-sidebar-ancho: 18rem;
+    --k-sidebar-compacto: 4.5rem;
+    --k-acento: #7c3aed;           /* violeta de marca (violet-600) */
+    --k-acento-suave: rgba(124, 58, 237, 0.10);
+    --k-acento-texto: #6d28d9;
+    --k-item-texto: #4b5563;
+    --k-item-hover: #f3f4f6;
+}
+html.dark #sidebar {
+    --k-acento: #8b5cf6;           /* violet-500 */
+    --k-acento-suave: rgba(139, 92, 246, 0.16);
+    --k-acento-texto: #c4b5fd;     /* violet-300 */
+    --k-item-texto: #cbd5e1;       /* slate-300 */
+    --k-item-hover: #1e293b;       /* slate-800 */
+}
+
+/* Ítem de primer nivel (grupo) */
+#sidebar .k-item-menu {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    height: 2.75rem;
+    padding: 0 0.875rem;
+    border-radius: 0.625rem;
+    color: var(--k-item-texto);
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background-color var(--k-dur-corta) ease, color var(--k-dur-corta) ease;
+}
+#sidebar .k-item-menu:hover {
+    background: var(--k-item-hover);
+}
+html:not(.dark) #sidebar .k-item-menu:hover { color: #111827; }
+html.dark #sidebar .k-item-menu:hover { color: #fff; }
+#sidebar .k-item-menu.contiene-actual {
+    color: var(--k-acento-texto);
+}
+#sidebar .k-icono {
+    flex-shrink: 0;
+    width: 1.25rem;
+    text-align: center;
+    font-size: 1rem;
+    opacity: 0.85;
+}
+#sidebar .k-item-menu.contiene-actual .k-icono { opacity: 1; color: var(--k-acento); }
+
+/* Flecha del grupo */
+#sidebar .k-chevron {
+    font-size: 0.7rem;
+    opacity: 0.6;
+    transition: transform var(--k-dur-media) var(--k-ease), opacity var(--k-dur-corta) ease;
+}
+#sidebar .k-grupo.abierto .k-chevron { transform: rotate(180deg); }
+
+/* Submenú: animación de altura con grid (0fr -> 1fr) */
+#sidebar .k-submenu {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--k-dur-media) var(--k-ease);
+}
+#sidebar .k-grupo.abierto .k-submenu { grid-template-rows: 1fr; }
+#sidebar .k-submenu-interior {
+    overflow: hidden;
+    min-height: 0;
+    margin-left: 1.5rem;            /* alinea con el centro del icono del grupo */
+    padding-left: 0.5rem;
+    border-left: 1px solid var(--k-borde);
+    opacity: 0;
+    transition: opacity var(--k-dur-corta) ease;
+}
+#sidebar .k-grupo.abierto .k-submenu-interior {
+    opacity: 1;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+}
+
+/* Ítem de submenú */
+#sidebar .k-subitem {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    height: 2.25rem;
+    padding: 0 0.75rem;
+    border-radius: 0.5rem;
+    color: var(--k-item-texto);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background-color var(--k-dur-corta) ease, color var(--k-dur-corta) ease;
+}
+#sidebar .k-subitem:hover { background: var(--k-item-hover); }
+html:not(.dark) #sidebar .k-subitem:hover { color: #111827; }
+html.dark #sidebar .k-subitem:hover { color: #fff; }
+#sidebar .k-icono-sub {
+    flex-shrink: 0;
+    width: 1rem;
+    text-align: center;
+    font-size: 0.8125rem;
+    opacity: 0.7;
+}
+/* Página actual */
+#sidebar .k-subitem.activo {
+    background: var(--k-acento-suave);
+    color: var(--k-acento-texto);
+    font-weight: 600;
+}
+#sidebar .k-subitem.activo .k-icono-sub { opacity: 1; color: var(--k-acento); }
+#sidebar .k-subitem.activo::before {
+    content: '';
+    position: absolute;
+    left: calc(-0.5rem - 1px);      /* sobre la línea guía del submenú */
+    top: 0.5rem;
+    bottom: 0.5rem;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--k-acento);
+}
+
+/* Textos que se ocultan en modo compacto */
+#sidebar .k-etiqueta {
+    transition: opacity var(--k-dur-corta) ease;
+}
+
+/* ---------- Escritorio ---------- */
+@media (min-width: 768px) {
+    #sidebar {
+        position: relative;
+        z-index: 20;
+        width: var(--k-sidebar-ancho);
+        transition: width var(--k-dur-media) var(--k-ease);
+        overflow: hidden;
+    }
+    #sidebar.sidebar-compacto {
+        width: var(--k-sidebar-compacto);
+    }
+    #sidebar.sidebar-compacto .k-etiqueta {
+        opacity: 0;
+        pointer-events: none;
+    }
+    /* En compacto los submenús se pliegan: solo se ven los iconos de los grupos */
+    /* (misma especificidad que ".k-grupo.abierto ..." y declarada después, para ganarle) */
+    #sidebar.sidebar-compacto .k-grupo .k-submenu { grid-template-rows: 0fr; }
+    #sidebar.sidebar-compacto .k-grupo .k-submenu-interior {
+        opacity: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        border-left-color: transparent;
+    }
+    /* El grupo de la página actual se marca con el fondo de acento */
+    #sidebar.sidebar-compacto .k-item-menu.contiene-actual { background: var(--k-acento-suave); }
+    #sidebar.sidebar-compacto .k-sidebar-cabecera { padding-left: 1rem; }
+}
+
+/* ---------- Móvil: cajón ---------- */
 @media (max-width: 767.98px) {
-    #sidebar:not(.hidden) {
-        display: flex;
+    #sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 50;
         width: min(18rem, 85vw);
-        animation: k-cajon var(--k-dur-media) var(--k-ease) both;
+        transform: translateX(-100%);
+        visibility: hidden;
+        box-shadow: none;
+        transition: transform var(--k-dur-media) var(--k-ease),
+                    box-shadow var(--k-dur-media) ease,
+                    visibility 0s linear var(--k-dur-media);
     }
-    #sidebar-overlay:not(.hidden) {
-        animation: k-fundido var(--k-dur-media) ease-out both;
+    #sidebar.abierto-movil {
+        transform: none;
+        visibility: visible;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+        transition: transform var(--k-dur-media) var(--k-ease),
+                    box-shadow var(--k-dur-media) ease,
+                    visibility 0s;
     }
-    /* El logo del sidebar ocupa menos alto en móvil */
-    #sidebar > a:first-child {
-        padding: 1.25rem;
+    #sidebar-overlay {
+        z-index: 45;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--k-dur-media) ease;
     }
+    #sidebar-overlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+
+/* Sin animación en el estado inicial o al cambiar de tamaño de ventana */
+#sidebar.k-sin-transicion,
+#sidebar.k-sin-transicion * {
+    transition: none !important;
 }
 
 /* ==========================================================================

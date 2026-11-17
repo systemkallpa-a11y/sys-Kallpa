@@ -20,83 +20,122 @@ def get_db_connection():
         print(f"Error de conexin: {e}")
         return None
 
+def _hora_a_segundos(valor):
+    """'08:30', '08:30:00', time o timedelta -> segundos; vacío -> None."""
+    if valor is None or valor == '':
+        return None
+    if hasattr(valor, 'total_seconds'):
+        return int(valor.total_seconds())
+    if hasattr(valor, 'hour'):
+        return valor.hour * 3600 + valor.minute * 60 + valor.second
+    partes = [int(p) for p in str(valor).split(':')]
+    return partes[0] * 3600 + partes[1] * 60 + (partes[2] if len(partes) > 2 else 0)
+
+
+def _firma_horario(es_activo, e1, s1, e2, s2):
+    """Lo que define un horario de un día, para saber si cambió."""
+    if int(es_activo or 0) != 1:
+        return (0, None, None, None, None)
+    return (1,) + tuple(_hora_a_segundos(v) for v in (e1, s1, e2, s2))
+
+
 def guardar_horarios_usuario(connection, num_documento, horarios):
-    """Guardar o actualizar horarios de trabajo de un usuario (con 2 turnos por da)"""
+    """Guarda el horario de un usuario como HISTORIAL por día de semana.
+
+    El horario se versiona con fecha_vigencia_inicio / fecha_vigencia_fin y
+    todos los reportes (control de asistencia, Excel, SUNAFIL, Marcación)
+    evalúan cada día con la versión vigente ESE día. Así, si un empleado pasa
+    de entrar a las 08:00 a entrar a las 10:00, los días anteriores se siguen
+    evaluando con el horario de las 08:00 y desde hoy con el de las 10:00.
+
+    Reglas:
+      * Solo se versionan los días cuyo horario cambió; un día igual al
+        vigente no se toca (guardar la ficha sin cambios no crea versiones).
+      * La versión anterior se cierra AYER (fin = hoy - 1) y la nueva rige
+        desde HOY: nunca quedan dos versiones vigentes el mismo día.
+      * Si la versión vigente empezó HOY (el horario se guardó dos veces el
+        mismo día) se corrige en su lugar: todavía no rigió ningún día
+        completo, así que no es historial.
+      * Nunca se borra una versión que ya rigió.
+    Ante un error relanza la excepción para que el llamador haga rollback
+    (si no, el usuario podría quedar con el horario cerrado y sin el nuevo).
+    """
+    cursor = connection.cursor(dictionary=True)
     try:
-        cursor = connection.cursor()
-        
-        # Cerrar vigencia del horario actual (NO eliminar — se conserva como historial)
-        print(f"[HORARIOS] [UPD] Cerrando vigencia de horarios previos para documento {num_documento}")
+        cursor.execute("SELECT CURDATE() AS hoy")
+        hoy = cursor.fetchone()['hoy']
+
+        # Versiones abiertas (vigentes) por día de semana
         cursor.execute("""
-            UPDATE TblHorarioTrabajo
-            SET fecha_vigencia_fin = CURDATE()
-            WHERE num_documento = %s
-              AND fecha_vigencia_fin IS NULL
+            SELECT id_horario, UPPER(dia_semana) AS dia, es_activo,
+                   hora_entrada, hora_salida, hora_entrada2, hora_salida2,
+                   fecha_vigencia_inicio
+              FROM TblHorarioTrabajo
+             WHERE num_documento = %s
+               AND fecha_vigencia_fin IS NULL
+             ORDER BY fecha_vigencia_inicio, id_horario
         """, (num_documento,))
-        
-        print(f"[HORARIOS] [OK] Vigencia cerrada en horarios previos")
-        
-        # Insertar nuevos horarios con vigencia desde hoy
-        print(f"[HORARIOS] [ADD] Insertando horarios nuevos")
+        abiertas = {}
+        for fila in cursor.fetchall():
+            abiertas.setdefault(fila['dia'], []).append(fila)
+
+        cambios = 0
         for horario in horarios:
-            es_activo = horario['es_activo']
             dia_semana = horario['dia_semana']
-            
-            # Si es da laboral
-            if es_activo == 1:
-                # Turno 1
+            es_activo = 1 if int(horario.get('es_activo') or 0) == 1 else 0
+            valores = (
+                (horario.get('hora_entrada') or None) if es_activo else None,
+                (horario.get('hora_salida') or None) if es_activo else None,
+                (horario.get('hora_entrada2') or None) if es_activo else None,
+                (horario.get('hora_salida2') or None) if es_activo else None,
+            )
+            nueva = _firma_horario(es_activo, *valores)
+
+            versiones = abiertas.get(str(dia_semana).upper(), [])
+            actual = versiones[-1] if versiones else None
+            if actual and _firma_horario(actual['es_activo'], actual['hora_entrada'], actual['hora_salida'],
+                                         actual['hora_entrada2'], actual['hora_salida2']) == nueva:
+                continue  # sin cambios en este día
+
+            cambios += 1
+            anteriores = versiones
+            if actual and actual['fecha_vigencia_inicio'] is not None and actual['fecha_vigencia_inicio'] >= hoy:
+                # Guardado otra vez el mismo día: se corrige la versión de hoy
                 cursor.execute("""
-                    INSERT INTO TblHorarioTrabajo (
-                        num_documento,
-                        dia_semana,
-                        hora_entrada,
-                        hora_salida,
-                        hora_entrada2,
-                        hora_salida2,
-                        es_activo,
-                        estado,
-                        fecha_vigencia_inicio,
-                        fecha_vigencia_fin
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, 'ACTIVO', CURDATE(), NULL)
-                """, (
-                    num_documento,
-                    dia_semana,
-                    horario['hora_entrada'],
-                    horario['hora_salida'],
-                    horario['hora_entrada2'],
-                    horario['hora_salida2'],
-                    1
-                ))
-                print(f"[HORARIOS]   - {dia_semana}: T1={horario['hora_entrada']}-{horario['hora_salida']} T2={horario['hora_entrada2']}-{horario['hora_salida2']}")
+                    UPDATE TblHorarioTrabajo
+                       SET es_activo = %s, hora_entrada = %s, hora_salida = %s,
+                           hora_entrada2 = %s, hora_salida2 = %s, estado = 'ACTIVO'
+                     WHERE id_horario = %s
+                """, (es_activo, *valores, actual['id_horario']))
+                anteriores = versiones[:-1]
             else:
-                # Da libre (sin turnos)
                 cursor.execute("""
                     INSERT INTO TblHorarioTrabajo (
-                        num_documento,
-                        dia_semana,
-                        hora_entrada,
-                        hora_salida,
-                        es_activo,
-                        estado,
-                        fecha_vigencia_inicio,
-                        fecha_vigencia_fin
-                    ) VALUES (%s, %s, %s, %s, %s, 'ACTIVO', CURDATE(), NULL)
-                """, (
-                    num_documento,
-                    dia_semana,
-                    None,
-                    None,
-                    0
-                ))
-                print(f"[HORARIOS]   - {dia_semana}: [DIA LIBRE]")
-        
-        print(f"[HORARIOS] [OK] Todos los horarios guardados")
-        cursor.close()
+                        num_documento, dia_semana, hora_entrada, hora_salida,
+                        hora_entrada2, hora_salida2, es_activo, estado,
+                        fecha_vigencia_inicio, fecha_vigencia_fin
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, 'ACTIVO', %s, NULL)
+                """, (num_documento, dia_semana, *valores, es_activo, hoy))
+
+            # La versión anterior queda como historial hasta AYER
+            for previa in anteriores:
+                cursor.execute("""
+                    UPDATE TblHorarioTrabajo
+                       SET fecha_vigencia_fin = %s - INTERVAL 1 DAY
+                     WHERE id_horario = %s
+                """, (hoy, previa['id_horario']))
+
+            detalle = (f"T1={valores[0]}-{valores[1]} T2={valores[2]}-{valores[3]}" if es_activo else "[DIA LIBRE]")
+            print(f"[HORARIOS]   - {dia_semana}: {detalle} (vigente desde {hoy})")
+
+        print(f"[HORARIOS] [OK] documento {num_documento}: {cambios} día(s) con horario nuevo")
         return True
-    
+
     except Error as e:
         print(f"[HORARIOS] [ERROR] Error al guardar horarios: {e}")
-        return False
+        raise
+    finally:
+        cursor.close()
 
 def hash_password(password):
     """Encriptar contrasea usando SHA-256"""
@@ -247,7 +286,13 @@ def obtener_usuario(id_usuario):
         
         # Aplicar conversin recursiva a toda la estructura (usuario + horarios)
         usuario = convert_timedelta(usuario)
-        
+
+        # El <input type="date"> del modal solo acepta YYYY-MM-DD; jsonify enviaría
+        # "Fri, 17 Nov 2000 00:00:00 GMT", el campo quedaría vacío y al guardar se borraría la fecha
+        fecha_nacimiento = usuario.get('fecha_nacimiento')
+        if fecha_nacimiento is not None and hasattr(fecha_nacimiento, 'strftime'):
+            usuario['fecha_nacimiento'] = fecha_nacimiento.strftime('%Y-%m-%d')
+
         # Mostrar horarios en logs despus de la conversin
         print(f"[HORARIOS DE TRABAJO]:")
         print(f"{'='*80}")

@@ -5,10 +5,13 @@
 -- Corrige los datos que dejaron:
 --   * el alta de usuario sin inicio de vigencia (arreglado en
 --     01_sp_CrearUsuarioCompleto_vigencia.sql)
---   * versiones de horario guardadas el mismo día (solapes). Nota: al
---     editar un horario, usuarios.py cierra el anterior con fin = hoy y
---     abre el nuevo con inicio = hoy (comportamiento original, se mantiene
---     por decisión de RR.HH.); los pasos B y C son limpieza opcional.
+--   * versiones de horario guardadas el mismo día (solapes). Desde el
+--     16/11/2026 usuarios.py (guardar_horarios_usuario) cierra la versión
+--     anterior AYER y abre la nueva HOY, solo en los días que cambiaron, y
+--     un segundo guardado el mismo día corrige la versión de hoy: ya no se
+--     generan solapes. Los pasos B y C limpian los que quedaron antes.
+--     Estado al 16/11/2026: 18 solapes, todos de num_documento 1
+--     (guardado doble del 08/11/2026). Aún no aplicado.
 --
 -- Paso A: filas con fecha_vigencia_inicio NULL. Los SP de asistencia
 --         nunca veían estas filas ("SIN HORARIO").

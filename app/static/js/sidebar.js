@@ -1,155 +1,132 @@
-// Mobile sidebar toggle - Wait for DOM to be ready
-document.addEventListener('DOMContentLoaded', function() {
-    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-    const sidebar = document.getElementById('sidebar');
-    const sidebarOverlay = document.getElementById('sidebar-overlay');
-    const desktopSidebarToggle = document.getElementById('sidebar-toggle-desktop');
-    const desktopSidebarIcon = document.getElementById('sidebar-toggle-icon');
-    const SIDEBAR_COLLAPSED_KEY = 'sidebar-colapsado';
-    
-    // Only initialize if elements exist
-    if (!mobileMenuBtn || !sidebar || !sidebarOverlay) {
-        console.error('✗ Mobile menu elements not found. Check HTML structure.');
-        return;
-    }
-    
-    console.log('✓ Mobile menu elements found, initializing...');
+/**
+ * sidebar.js
+ * Controla el sidebar con un solo botón (#mobile-menu-btn, en el header):
+ *  - Escritorio (>= 768px): alterna entre expandido y compacto (solo iconos).
+ *    El estado se recuerda en localStorage ('sidebar-colapsado').
+ *  - Móvil (< 768px): abre/cierra el cajón lateral con su fondo oscuro.
+ * Las animaciones están en responsive.css (sección "Sidebar").
+ */
+(function () {
+    const MQ_ESCRITORIO = window.matchMedia('(min-width: 768px)');
+    const CLAVE_COMPACTO = 'sidebar-colapsado';
 
-    // Mostrar u ocultar el sidebar en escritorio
-    function aplicarSidebarColapsado(colapsado) {
-        sidebar.classList.toggle('sidebar-colapsado', colapsado);
-
-        if (desktopSidebarToggle) {
-            desktopSidebarToggle.classList.toggle('sidebar-colapsado', colapsado);
-            desktopSidebarToggle.setAttribute('aria-expanded', String(!colapsado));
-            desktopSidebarToggle.setAttribute('aria-label', colapsado ? 'Mostrar menú lateral' : 'Ocultar menú lateral');
-        }
-
-        if (desktopSidebarIcon) {
-            desktopSidebarIcon.classList.toggle('fa-chevron-left', !colapsado);
-            desktopSidebarIcon.classList.toggle('fa-chevron-right', colapsado);
-        }
-
-        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, colapsado ? '1' : '0');
+    function guardar(clave, valor) {
+        try { localStorage.setItem(clave, valor); } catch (e) { /* sin localStorage */ }
     }
 
-    if (desktopSidebarToggle) {
-        aplicarSidebarColapsado(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1');
+    document.addEventListener('DOMContentLoaded', function () {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        const boton = document.getElementById('mobile-menu-btn');
+        const botonCerrar = document.getElementById('sidebar-cerrar-movil');
+        if (!sidebar || !overlay || !boton) return;
 
-        desktopSidebarToggle.addEventListener('click', function() {
-            aplicarSidebarColapsado(!sidebar.classList.contains('sidebar-colapsado'));
+        // Activar transiciones después del primer pintado (el estado inicial no se anima)
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () { sidebar.classList.remove('k-sin-transicion'); });
         });
-    }
-    
-    // Ensure sidebar has position fixed for mobile view
-    function updateSidebarPosition() {
-        if (window.innerWidth < 768) {
-            // Móvil: cajón lateral fijo a la izquierda (ancho en responsive.css)
-            sidebar.style.position = 'fixed';
-            sidebar.style.top = '0';
-            sidebar.style.bottom = '0';
-            sidebar.style.left = '0';
-            sidebar.style.zIndex = '40';
-            sidebar.classList.add('md:relative');
-        } else {
-            // Desktop: make sidebar normal
-            sidebar.style.position = '';
-            sidebar.style.top = '';
-            sidebar.style.bottom = '';
-            sidebar.style.left = '';
-            sidebar.style.zIndex = '';
-            sidebar.classList.add('md:relative');
-            sidebar.classList.remove('hidden');
-            sidebarOverlay.classList.add('hidden');
-            mobileMenuBtn.setAttribute('aria-expanded', 'false');
-            mobileMenuBtn.setAttribute('aria-label', 'Abrir menú');
-        }
-    }
-    
-    // Initial setup
-    updateSidebarPosition();
-    
-    // Toggle sidebar on mobile menu button click
-    mobileMenuBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const isMobile = window.innerWidth < 768;
-        if (!isMobile) return;
-        
-        const isHidden = sidebar.classList.contains('hidden');
-        
-        if (isHidden) {
-            sidebar.classList.remove('hidden');
-            sidebarOverlay.classList.remove('hidden');
-            mobileMenuBtn.setAttribute('aria-expanded', 'true');
-            mobileMenuBtn.setAttribute('aria-label', 'Cerrar menú');
-            console.log('✓ Sidebar ABIERTO');
-        } else {
-            sidebar.classList.add('hidden');
-            sidebarOverlay.classList.add('hidden');
-            mobileMenuBtn.setAttribute('aria-expanded', 'false');
-            mobileMenuBtn.setAttribute('aria-label', 'Abrir menú');
-            console.log('✓ Sidebar CERRADO');
-        }
-    });
-    
-    // Close sidebar when clicking overlay
-    sidebarOverlay.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        sidebar.classList.add('hidden');
-        sidebarOverlay.classList.add('hidden');
-        mobileMenuBtn.setAttribute('aria-expanded', 'false');
-        mobileMenuBtn.setAttribute('aria-label', 'Abrir menú');
-        mobileMenuBtn.focus();
-        console.log('✓ Sidebar cerrado por overlay click');
-    });
 
-    // Cerrar sidebar con Escape
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && window.innerWidth < 768 && !sidebar.classList.contains('hidden')) {
-            sidebar.classList.add('hidden');
-            sidebarOverlay.classList.add('hidden');
-            mobileMenuBtn.setAttribute('aria-expanded', 'false');
-            mobileMenuBtn.setAttribute('aria-label', 'Abrir menú');
-            mobileMenuBtn.focus();
+        // ---------- Escritorio: modo compacto ----------
+        function esCompacto() {
+            return sidebar.classList.contains('sidebar-compacto');
         }
-    });
-    
-    // Close sidebar when clicking navigation links (no toggle buttons)
-    sidebar.addEventListener('click', function(e) {
-        const isMobile = window.innerWidth < 768;
-        if (!isMobile) return;
-        
-        // Check if it's a toggle button
-        const toggleButton = e.target.closest('.toggle-submenu');
-        if (toggleButton) {
-            console.log('✓ Toggle button - keep sidebar open');
-            e.stopPropagation();
-            return;
+
+        function aplicarCompacto(compacto) {
+            sidebar.classList.toggle('sidebar-compacto', compacto);
+            guardar(CLAVE_COMPACTO, compacto ? '1' : '0');
+            actualizarBoton();
         }
-        
-        // Find the closest link
-        const link = e.target.closest('a');
-        if (!link) return;
-        
-        // Don't close if it's an anchor link (#)
-        if (link.href.endsWith('#')) {
-            console.log('✓ Anchor link - keep sidebar open');
-            return;
+
+        // ---------- Móvil: cajón ----------
+        function cajonAbierto() {
+            return sidebar.classList.contains('abierto-movil');
         }
-        
-        // Close sidebar for navigation links
-        console.log('✓ Navigation link clicked - cerrando sidebar:', link.textContent.trim());
-        sidebar.classList.add('hidden');
-        sidebarOverlay.classList.add('hidden');
-        mobileMenuBtn.setAttribute('aria-expanded', 'false');
-        mobileMenuBtn.setAttribute('aria-label', 'Abrir menú');
+
+        function abrirCajon() {
+            sidebar.classList.add('abierto-movil');
+            overlay.classList.add('visible');
+            document.body.style.overflow = 'hidden';
+            actualizarBoton();
+            // Llevar el foco dentro del cajón
+            const primerEnlace = sidebar.querySelector('#menu-container a, #menu-container button');
+            (primerEnlace || botonCerrar || sidebar).focus({ preventScroll: true });
+        }
+
+        function cerrarCajon(devolverFoco) {
+            if (!cajonAbierto()) return;
+            sidebar.classList.remove('abierto-movil');
+            overlay.classList.remove('visible');
+            document.body.style.overflow = '';
+            actualizarBoton();
+            if (devolverFoco) boton.focus();
+        }
+
+        // ---------- Estado accesible del botón ----------
+        function actualizarBoton() {
+            if (MQ_ESCRITORIO.matches) {
+                const compacto = esCompacto();
+                boton.setAttribute('aria-expanded', String(!compacto));
+                boton.setAttribute('aria-label', compacto ? 'Expandir menú lateral' : 'Contraer menú lateral');
+                boton.title = compacto ? 'Expandir menú' : 'Contraer menú';
+            } else {
+                const abierto = cajonAbierto();
+                boton.setAttribute('aria-expanded', String(abierto));
+                boton.setAttribute('aria-label', abierto ? 'Cerrar menú' : 'Abrir menú');
+                boton.title = '';
+            }
+        }
+
+        // ---------- Eventos ----------
+        boton.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (MQ_ESCRITORIO.matches) {
+                aplicarCompacto(!esCompacto());
+            } else if (cajonAbierto()) {
+                cerrarCajon(false);
+            } else {
+                abrirCajon();
+            }
+        });
+
+        overlay.addEventListener('click', function () { cerrarCajon(true); });
+        if (botonCerrar) botonCerrar.addEventListener('click', function () { cerrarCajon(true); });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !MQ_ESCRITORIO.matches && cajonAbierto()) {
+                cerrarCajon(true);
+            }
+        });
+
+        // En móvil, al navegar a otra página se cierra el cajón
+        sidebar.addEventListener('click', function (e) {
+            if (MQ_ESCRITORIO.matches) return;
+            const enlace = e.target.closest('a[href]');
+            if (enlace && enlace.getAttribute('href') !== '#') cerrarCajon(false);
+        });
+
+        // Si en modo compacto se pulsa un grupo con submenús, expandir el sidebar
+        // (el grupo se abre desde sidebar-accesos.js)
+        sidebar.addEventListener('k-expandir-sidebar', function () {
+            if (MQ_ESCRITORIO.matches && esCompacto()) aplicarCompacto(false);
+        });
+
+        // Al cambiar entre móvil y escritorio, limpiar el estado del otro modo
+        MQ_ESCRITORIO.addEventListener('change', function () {
+            sidebar.classList.add('k-sin-transicion');
+            if (MQ_ESCRITORIO.matches) {
+                cerrarCajon(false);
+                let guardado = null;
+                try { guardado = localStorage.getItem(CLAVE_COMPACTO); } catch (e) { /* nada */ }
+                sidebar.classList.toggle('sidebar-compacto', guardado === '1');
+            } else {
+                sidebar.classList.remove('sidebar-compacto');
+            }
+            actualizarBoton();
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () { sidebar.classList.remove('k-sin-transicion'); });
+            });
+        });
+
+        actualizarBoton();
     });
-    
-    // Handle window resize
-    window.addEventListener('resize', function() {
-        updateSidebarPosition();
-    });
-});
+})();

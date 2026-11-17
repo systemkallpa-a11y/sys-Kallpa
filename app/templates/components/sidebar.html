@@ -1,73 +1,52 @@
-<!-- Sidebar Navigation -->
-<aside id="sidebar" class="w-72 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 hidden md:flex md:relative flex-col transition-colors duration-300 shadow-lg z-40">
-    
-    <!-- Logo/Brand - SUPER GRANDE con link a Dashboard -->
-    <a href="{{ url_for('main.dashboard') }}" class="block p-8 border-b border-gray-200 dark:border-slate-800 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 hover:from-slate-100 hover:to-white dark:hover:from-slate-700 dark:hover:to-slate-800 transition-all duration-300 cursor-pointer group">
-        <div class="flex items-center justify-center space-x-4">
-            <!-- Logo con efecto de brillo -->
-            <div class="relative">
-                <div class="absolute -inset-1 bg-gradient-to-r from-slate-500 to-slate-300 rounded-2xl opacity-40 group-hover:opacity-70 transition-opacity duration-300"></div>
-                <div class="relative bg-gradient-to-br from-white via-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800 p-3 rounded-2xl shadow-md group-hover:shadow-lg transition-shadow duration-300">
-                    <img src="{{ url_for('static', filename='images/Logo Kallpa.png') }}" alt="Kallpa Logo" width="64" height="64" class="w-12 h-12 md:w-16 md:h-16 transition-transform duration-300 group-hover:scale-105">
-                </div>
-            </div>
-            <!-- Nombre -->
-            <div class="flex-1">
-                <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-600 via-slate-700 to-slate-600 tracking-tight leading-none group-hover:from-slate-700 group-hover:via-slate-800 group-hover:to-slate-700 transition-all">
-                    Kallpa
-                </h1>
-            </div>
-        </div>
-        <!-- Línea decorativa inferior -->
-        <div class="mt-4 h-1 w-full bg-gradient-to-r from-slate-600 to-slate-400 rounded-full opacity-50 group-hover:opacity-75 transition-opacity"></div>
-    </a>
+<!-- Sidebar Navigation
+     - Escritorio: expandido (18rem) o compacto solo iconos (4.5rem), con transición de ancho.
+     - Móvil: cajón lateral que entra/sale deslizándose.
+     - El botón que lo controla es #mobile-menu-btn (header de base.html).
+     Estilos en responsive.css (sección "Sidebar"); lógica en sidebar.js y sidebar-accesos.js. -->
+<aside id="sidebar" aria-label="Menú principal" class="k-sidebar flex flex-col flex-shrink-0 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800">
 
-    <!-- Navigation Menu -->
-    <nav class="flex-1 overflow-y-auto px-4 py-6">
-        
-        <!-- MENU Section -->
-        <div class="mb-6">
-            <h3 class="px-4 mb-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                MENÚ
-            </h3>
-            <div id="menu-container" class="space-y-1">
-                <!-- Los menús se cargarán dinámicamente desde el API -->
-                <div role="status" aria-live="polite" class="px-4 py-3 text-center text-gray-500 dark:text-gray-400 text-sm">
-                    <i class="fas fa-spinner fa-spin mr-2" aria-hidden="true"></i>Cargando men&uacute;s&hellip;
-                </div>
+    <!-- Marca: enlace al Dashboard -->
+    <!-- box-content: 64px + 1px de borde = mismo alto que el header (bordes alineados) -->
+    <div class="k-sidebar-cabecera box-content flex items-center h-16 px-4 border-b border-gray-200 dark:border-slate-800 flex-shrink-0">
+        <a href="{{ url_for('main.dashboard') }}" title="Ir al Dashboard" class="flex items-center gap-3 min-w-0 rounded-lg">
+            <span class="flex-shrink-0 w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm ring-1 ring-black/5">
+                <img src="{{ url_for('static', filename='images/Logo Kallpa.png') }}" alt="" width="32" height="32" class="w-8 h-8 object-contain">
+            </span>
+            <span class="k-etiqueta text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">Kallpa</span>
+        </a>
+        <!-- Cerrar (solo móvil) -->
+        <button type="button" id="sidebar-cerrar-movil" aria-label="Cerrar menú" class="md:hidden ml-auto w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white transition-colors">
+            <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <!-- Navegación (se llena desde sidebar-accesos.js) -->
+    <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4">
+        <div id="menu-container" class="space-y-1" aria-busy="true">
+            <!-- Esqueleto de carga -->
+            <div class="k-esqueleto space-y-2" aria-hidden="true">
+                <div class="h-10 rounded-lg bg-gray-100 dark:bg-slate-800 animate-pulse"></div>
+                <div class="h-10 rounded-lg bg-gray-100 dark:bg-slate-800 animate-pulse"></div>
+                <div class="h-10 rounded-lg bg-gray-100 dark:bg-slate-800 animate-pulse"></div>
+                <div class="h-10 rounded-lg bg-gray-100 dark:bg-slate-800 animate-pulse"></div>
+                <div class="h-10 rounded-lg bg-gray-100 dark:bg-slate-800 animate-pulse"></div>
             </div>
+            <span class="sr-only" role="status">Cargando menú…</span>
         </div>
     </nav>
-
-    <!-- Footer with Logout -->
-    <div class="p-4 border-t border-gray-200 dark:border-slate-800">
-        <a href="{{ url_for('auth.logout') }}" class="flex items-center w-full px-4 py-3 rounded-xl font-medium text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 group">
-            <i class="fas fa-sign-out-alt w-5 text-center text-gray-400 group-hover:text-red-500 transition-colors" aria-hidden="true"></i>
-            <span class="ml-3">Cerrar sesión</span>
-        </a>
-    </div>
 </aside>
 
-<!-- El botón para abrir el menú en móvil (#mobile-menu-btn) está en el header de base.html -->
-
-<!-- Mobile Sidebar Overlay -->
-<div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/50 z-30 md:hidden"></div>
-
-<!-- Script para manejar menús -->
+<!-- Aplicar el estado compacto guardado ANTES de pintar (evita parpadeo y animación al cargar) -->
 <script>
-// Toggle submenu
-function toggleSubmenu(button) {
-    const submenu = button.nextElementSibling;
-    if (!submenu) return;
-
-    const chevron = button.querySelector('.fa-chevron-down');
-    const estaOculto = submenu.classList.toggle('hidden');
-
-    if (chevron) {
-        chevron.style.transform = estaOculto ? 'rotate(0deg)' : 'rotate(180deg)';
-    }
-    button.setAttribute('aria-expanded', String(!estaOculto));
-}
-
-// Resto del código de sidebar.js se carga desde el archivo externo
+(function () {
+    try {
+        if (window.innerWidth >= 768 && localStorage.getItem('sidebar-colapsado') === '1') {
+            document.getElementById('sidebar').classList.add('sidebar-compacto');
+        }
+    } catch (e) { /* sin localStorage: se queda expandido */ }
+    document.getElementById('sidebar').classList.add('k-sin-transicion');
+})();
 </script>
+
+<!-- Fondo oscuro del cajón en móvil -->
+<div id="sidebar-overlay" class="md:hidden fixed inset-0 bg-black/50" aria-hidden="true"></div>

@@ -499,6 +499,11 @@ def obtener_personal_vacaciones():
         for result in cursor.stored_results():
             personal = result.fetchall()
 
+        # Con un estado elegido, el SP igual devuelve al personal sin solicitudes (id_vacacion NULL);
+        # esas filas no corresponden al estado filtrado
+        if estado:
+            personal = [row for row in personal if row.get('id_vacacion') is not None]
+
         # Serializar fechas a string
         for row in personal:
             for key in ('fecha_inicio', 'fecha_fin', 'fecha_solicitud'):

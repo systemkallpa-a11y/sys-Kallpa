@@ -76,21 +76,6 @@ def _time_a_segundos(valor):
         return None
 
 
-def _balance_turno(entrada, salida, hora_entrada, hora_salida):
-    e = _time_a_segundos(entrada)
-    s = _time_a_segundos(salida)
-    he = _time_a_segundos(hora_entrada)
-    hs = _time_a_segundos(hora_salida)
-    if None in (e, s, he, hs):
-        return '-'
-    real_min = int((s - e) / 60)
-    prog_min = int((hs - he) / 60)
-    diff = real_min - prog_min
-    signo = '+' if diff >= 0 else '-'
-    diff = abs(diff)
-    return f"{signo}{diff // 60:02d}:{diff % 60:02d}"
-
-
 def login_required(f):
     """Decorador para proteger rutas que requieren autenticacin"""
     @wraps(f)
@@ -349,13 +334,18 @@ def obtener_historial_marcacion():
                     # Convertir date a string YYYY-MM-DD
                     elif isinstance(value, date):
                         marcacion[key] = value.strftime('%Y-%m-%d')
-                    # Convertir timedelta a string
+                    # Convertir timedelta (columnas TIME) a HH:MM:SS con ceros.
+                    # str(timedelta) da '8:57:07' sin cero inicial, y el frontend
+                    # (dashboard y marcación) mostraba 'Invalid Date' y '8:57:'.
                     elif isinstance(value, timedelta):
-                        marcacion[key] = str(value)
-            
+                        total = int(value.total_seconds())
+                        signo = '-' if total < 0 else ''
+                        total = abs(total)
+                        marcacion[key] = f"{signo}{total // 3600:02d}:{total % 3600 // 60:02d}:{total % 60:02d}"
+
             cursor.close()
             connection.close()
-            
+
             return jsonify({
                 'success': True,
                 'data': marcaciones
@@ -617,43 +607,29 @@ def registrar_marcacion_manual():
                 except (ValueError, IndexError):
                     return -1
 
-            # El día ya no debe tener 4 marcaciones (los 4 slots del detalle)
+            # La casilla destino debe estar libre segun la REGLA UNICA
+            # (vw_casillas_marcacion), la misma que usan el detalle y el reporte.
+            # Las marcas ignoradas (doble clic) o extra no ocupan casilla.
+            casilla = f"{'E' if tipo_marcacion == 'ENTRADA' else 'S'}{turno}"
             cursor.execute("""
-                SELECT tipo_marcacion, TIME(fecha_marcacion) as hora
-                  FROM TblMarcacion
-                 WHERE num_documento = %s AND DATE(fecha_marcacion) = %s
-                 ORDER BY fecha_marcacion ASC
-            """, (num_documento, fecha))
-            existentes = cursor.fetchall()
+                SELECT casilla
+                  FROM vw_casillas_marcacion
+                 WHERE num_documento = %s AND fecha = %s AND casilla IS NOT NULL
+            """, (num_documento, fecha_dt))
+            ocupadas = {fila['casilla'] for fila in cursor.fetchall()}
 
-            if len(existentes) >= 4:
+            if len(ocupadas) >= 4:
                 cursor.close()
                 connection.close()
-                return jsonify({'success': False, 'error': 'Este día ya tiene las 4 marcaciones registradas'}), 409
+                return jsonify({'success': False, 'error': 'Este día ya tiene las 4 casillas registradas'}), 409
 
-            # El slot destino debe seguir vacío: misma regla de turno que
-            # sp_ObtenerDetalleDia en el backend (ver detalle-dia arriba).
-            def turno_de(tipo_e, hora_e, ultima_entrada):
-                base = hora_e if tipo_e == 'ENTRADA' else ultima_entrada
-                if not horario or horario.get('hora_entrada2') is None or horario.get('hora_salida') is None:
-                    return 1
-                if base is None:
-                    return 1 if hora_segundos(hora_e) <= 14 * 3600 else 2
-                return 1 if hora_segundos(str(base)) <= hora_segundos(str(horario['hora_salida'])) else 2
-
-            ultima_entrada = None
-            for marc in existentes:
-                hora_e = marc['hora'] or '00:00:00'
-                if (marc['tipo_marcacion'] == tipo_marcacion
-                        and turno_de(marc['tipo_marcacion'], hora_e, ultima_entrada) == turno):
-                    cursor.close()
-                    connection.close()
-                    return jsonify({
-                        'success': False,
-                        'error': f'Ya existe una {tipo_marcacion.lower()} registrada en el turno {turno} de ese día'
-                    }), 409
-                if marc['tipo_marcacion'] == 'ENTRADA':
-                    ultima_entrada = hora_e
+            if casilla in ocupadas:
+                cursor.close()
+                connection.close()
+                return jsonify({
+                    'success': False,
+                    'error': f'Ya existe una {tipo_marcacion.lower()} registrada en el turno {turno} de ese día'
+                }), 409
 
             # Estado calculado como sp_EditarMarcacion (solo para ENTRADA)
             estado_calculado = 'Registrado'
@@ -919,66 +895,34 @@ def obtener_detalle_dia():
                    END
                    AND fecha_vigencia_inicio <= %s
                    AND (fecha_vigencia_fin IS NULL OR fecha_vigencia_fin >= %s)
-                 ORDER BY fecha_vigencia_inicio DESC
+                 ORDER BY fecha_vigencia_inicio DESC, (fecha_vigencia_fin IS NULL) DESC
                  LIMIT 1
             """, (num_documento, fecha, fecha, fecha))
             horario = cursor.fetchone()
             print(f"[DETALLE_DIA] Horario: {horario}")
 
-            def hora_segundos(valor):
-                partes = str(valor).split(':')
-                try:
-                    return int(partes[0]) * 3600 + int(partes[1]) * 60 + (int(partes[2]) if len(partes) > 2 else 0)
-                except (ValueError, IndexError):
-                    return -1
-
-            def turno_de(marcacion, ultima_entrada):
-                """Misma regla que sp_reporte_asistencia_automatica (v9, lineas 87-95):
-                la ultima ENTRADA que precede decide el turno segun SU horario.
-                En v9 el MAX() usa ROWS UNBOUNDED PRECEDING AND CURRENT ROW, o sea
-                que incluye la fila actual: una ENTRADA se clasifica con SU propia
-                hora (por eso la ENTRADA de la tarde cae en el turno 2)."""
-                hora = marcacion.get('hora') or '00:00:00'
-                base = hora if marcacion.get('tipo_marcacion') == 'ENTRADA' else ultima_entrada
-                if base is None:
-                    return 1 if hora_segundos(hora) <= 14 * 3600 else 2
-                if not horario:
-                    return 1 if hora_segundos(base) <= 14 * 3600 else 2
-                if horario.get('hora_entrada2') is None or horario.get('hora_salida') is None:
-                    return 1
-                return 1 if hora_segundos(base) <= hora_segundos(horario['hora_salida']) else 2
+            # Casillas del dia segun la REGLA UNICA (vw_casillas_marcacion):
+            # la misma que usan el reporte, el modal de edicion y el registro
+            # manual. Lo que el administrador ve aqui es lo que se calcula.
+            cursor.execute("""
+                SELECT id_marcacion, turno, casilla, estado_marca
+                  FROM vw_casillas_marcacion
+                 WHERE num_documento = %s AND fecha = %s
+            """, (num_documento, fecha))
+            por_id = {fila['id_marcacion']: fila for fila in cursor.fetchall()}
 
             # 4 slots fijos: Entrada/Salida de cada turno (1=mañana, 2=tarde)
             claves_slots = [(1, 'ENTRADA'), (1, 'SALIDA'), (2, 'ENTRADA'), (2, 'SALIDA')]
             slots = {clave: None for clave in claves_slots}
-            ultima_entrada = None
 
             for marcacion in marcaciones:
-                hora = marcacion.get('hora') or ''
-                tipo = marcacion.get('tipo_marcacion')
-                turno = turno_de(marcacion, ultima_entrada)
-                clave = (turno, tipo)
-                usar = clave
-                if clave in slots:
-                    # Si el hueco del turno ya esta ocupado y el del otro turno
-                    # esta libre, la marca va al otro turno (asi nunca se omite
-                    # un registro cuando aun hay lugar en las 4 filas).
-                    if slots[clave] is not None:
-                        otro = (2 if clave[0] == 1 else 1, clave[1])
-                        if slots[otro] is None:
-                            usar = otro
-                    actual = slots[usar]
-                    if actual is None or (
-                        tipo == 'ENTRADA'
-                        and hora_segundos(hora) < hora_segundos(actual.get('hora') or '')
-                    ) or (
-                        tipo == 'SALIDA'
-                        and hora_segundos(hora) > hora_segundos(actual.get('hora') or '')
-                    ):
-                        slots[usar] = marcacion
-                marcacion['turno'] = usar[0]
-                if tipo == 'ENTRADA':
-                    ultima_entrada = hora
+                info = por_id.get(marcacion.get('id_marcacion')) or {}
+                marcacion['turno'] = info.get('turno')
+                # USADA | EXTRA | DOBLE_CLIC | REPETIDA
+                marcacion['estado_marca'] = info.get('estado_marca')
+                casilla = info.get('casilla')
+                if casilla:
+                    slots[(int(casilla[1]), 'ENTRADA' if casilla[0] == 'E' else 'SALIDA')] = marcacion
 
             slots_detalle = []
             for clave in claves_slots:
@@ -1055,11 +999,11 @@ def exportar_marcaciones_excel():
     """Exportar marcaciones a Excel: refleja TblMarcacion tal como se registró.
 
     Regla (la marca del usuario es la fuente de verdad, el Excel es su reflejo):
-      * Las marcas del día van en el ORDEN en que se hicieron:
-        1ra ENTRADA -> Entrada 1, la SALIDA siguiente -> Salida 1,
-        la ENTRADA siguiente -> Entrada 2, la SALIDA siguiente -> Salida 2.
-        Si falta una marca de la secuencia, su casilla queda vacía.
-        Ninguna marca se descarta: las que sobran van a "Marcas extra".
+      * Cada marca va a la casilla (Entrada/Salida de cada turno) que le
+        asigna vw_casillas_marcacion: la misma regla del detalle del día y
+        del reporte de control. Si falta una marca, su casilla queda vacía.
+        Ninguna marca se descarta: las que no ocupan casilla (extra o doble
+        clic) van a "Marcas extra".
       * El horario vigente ESE día (no el actual) solo se usa para evaluar:
         tardanza y estado. Nunca decide dónde se muestra una marca.
       * Sin límite de 64 días y sin filas con fecha vacía: hay una fila por
@@ -1113,7 +1057,7 @@ def exportar_marcaciones_excel():
 
             # Marcas del rango, en el orden en que se registraron
             cursor.execute("""
-                SELECT num_documento, tipo_marcacion, fecha_marcacion, tipo_ubicacion
+                SELECT id_marcacion, num_documento, tipo_marcacion, fecha_marcacion, tipo_ubicacion
                   FROM TblMarcacion
                  WHERE fecha_marcacion >= %s
                    AND fecha_marcacion < %s + INTERVAL 1 DAY
@@ -1122,6 +1066,16 @@ def exportar_marcaciones_excel():
             marcas_dia = {}
             for m in cursor.fetchall():
                 marcas_dia.setdefault((m['num_documento'], m['fecha_marcacion'].date()), []).append(m)
+
+            # Casilla de cada marca segun la REGLA UNICA (vw_casillas_marcacion),
+            # la misma del detalle del dia y del reporte de control
+            cursor.execute("""
+                SELECT id_marcacion, casilla
+                  FROM vw_casillas_marcacion
+                 WHERE fecha BETWEEN %s AND %s AND casilla IS NOT NULL
+            """, (f_ini, f_fin))
+            casilla_de = {fila['id_marcacion']: fila['casilla'] for fila in cursor.fetchall()}
+            indice_casilla = {'E1': 0, 'S1': 1, 'E2': 2, 'S2': 3}
 
             cursor.execute("""
                 SELECT num_documento, fecha_inicio, fecha_fin
@@ -1163,22 +1117,15 @@ def exportar_marcaciones_excel():
                         dia += timedelta(days=1)
                         continue
 
-                    # Secuencia: E1, S1, E2, S2 en el orden de registro
+                    # Casillas E1, S1, E2, S2 segun la regla unica. Ninguna marca
+                    # se descarta: las que no ocupan casilla (extra o doble clic)
+                    # van a "Marcas extra".
                     slots = [None, None, None, None]
                     extras = []
-                    idx = 0
                     for m in marcas:
-                        if idx >= 4:
-                            extras.append(m)
-                            continue
-                        esperado = 'ENTRADA' if idx % 2 == 0 else 'SALIDA'
-                        if m['tipo_marcacion'] == esperado:
-                            slots[idx] = m
-                            idx += 1
-                        elif idx + 1 < 4:
-                            # Falta la marca esperada: su casilla queda vacía
-                            slots[idx + 1] = m
-                            idx += 2
+                        casilla = casilla_de.get(m['id_marcacion'])
+                        if casilla:
+                            slots[indice_casilla[casilla]] = m
                         else:
                             extras.append(m)
 
@@ -1188,9 +1135,11 @@ def exportar_marcaciones_excel():
                         for slot, prog in ((slots[0], horario['hora_entrada']),
                                            (slots[2], horario['hora_entrada2'])):
                             if slot and prog is not None:
-                                retraso = segundos(slot['fecha_marcacion'].time()) - segundos(prog)
-                                if retraso > 300:
-                                    tardanza_seg += retraso - 300
+                                # Tolerancia de 5 min por minuto entero: hasta hh:05:59 es
+                                # puntual; desde hh:06 cuenta (minutos de atraso - 5)
+                                minutos_atraso = (segundos(slot['fecha_marcacion'].time()) - segundos(prog)) // 60
+                                if minutos_atraso > 5:
+                                    tardanza_seg += (minutos_atraso - 5) * 60
 
                     en_vacaciones = any(v['num_documento'] == p['num_documento']
                                         and v['fecha_inicio'] <= dia <= v['fecha_fin']
@@ -1487,9 +1436,6 @@ def exportar_control_asistencia_excel():
             for result in cursor.stored_results():
                 registros = result.fetchall()
             
-            # Horario vigente en la fecha de cada fila (no el actual)
-            horarios_vigencia = cargar_horarios(cursor)
-
             cursor.close()
             connection.close()
             
@@ -1522,7 +1468,7 @@ def exportar_control_asistencia_excel():
             )
             
             # ====================================================================
-            # ENCABEZADOS (25 columnas - coincide con el SP)
+            # ENCABEZADOS (29 columnas: las de la tabla de control + justificaciones)
             # ====================================================================
             
             headers = [
@@ -1543,16 +1489,18 @@ def exportar_control_asistencia_excel():
                 'OFI T2 Salida',     # 15
                 'CMP T2 Entrada',    # 16
                 'CMP T2 Salida',     # 17
-                'Min T1',            # 18
-                'Min T2',            # 19
-                'Detalle OFI T1',    # 20
-                'Detalle OFI T2',    # 21
-                'Detalle CMP T1',    # 22
-                'Detalle CMP T2',    # 23
-                'Justificacion ENT T1',  # 24
-                'Justificacion SAL T1',  # 25
-                'Justificacion ENT T2',  # 26
-                'Justificacion SAL T2'   # 27
+                'Detalle OFI T1',    # 18
+                'Detalle OFI T2',    # 19
+                'Detalle CMP T1',    # 20
+                'Detalle CMP T2',    # 21
+                'Justificacion ENT T1',  # 22
+                'Justificacion SAL T1',  # 23
+                'Justificacion ENT T2',  # 24
+                'Justificacion SAL T2',  # 25
+                'Horas Laboradas T1',    # 26 (mismas columnas que la tabla de control)
+                'Horas Laboradas T2',    # 27
+                'Tardanza T1',           # 28
+                'Tardanza T2'            # 29
             ]
             
             for col_num, header in enumerate(headers, 1):
@@ -1612,28 +1560,8 @@ def exportar_control_asistencia_excel():
                 ws.cell(row=row_num, column=16, value=reg.get('H_ENTRADA_CMP_T2', '')).alignment = cell_alignment_center
                 ws.cell(row=row_num, column=17, value=reg.get('H_SALIDA_CMP_T2', '')).alignment = cell_alignment_center
                 
-                # Minutos T1 (columna 18)
-                fila_horario = horario_en_fecha(
-                    horarios_vigencia,
-                    reg.get('DNI_CE'),
-                    date(int(reg['ANO']), int(reg['MES']), int(reg['DIA']))
-                )
-                horario = ((fila_horario['hora_entrada'], fila_horario['hora_salida'],
-                            fila_horario['hora_entrada2'], fila_horario['hora_salida2'])
-                           if fila_horario else (None, None, None, None))
-                entrada_t1 = reg.get('H_ENTRADA_OFI_T1') or reg.get('H_ENTRADA_CMP_T1')
-                salida_t1 = reg.get('H_SALIDA_OFI_T1') or reg.get('H_SALIDA_CMP_T1')
-                entrada_t2 = reg.get('H_ENTRADA_OFI_T2') or reg.get('H_ENTRADA_CMP_T2')
-                salida_t2 = reg.get('H_SALIDA_OFI_T2') or reg.get('H_SALIDA_CMP_T2')
-                min_t1 = _balance_turno(entrada_t1, salida_t1, horario[0], horario[1])
-                ws.cell(row=row_num, column=18, value=min_t1).alignment = cell_alignment_center
-                
-                # Minutos T2 (columna 19)
-                min_t2 = _balance_turno(entrada_t2, salida_t2, horario[2], horario[3])
-                ws.cell(row=row_num, column=19, value=min_t2).alignment = cell_alignment_center
-                
-                # Detalle OFI T1 (columna 20)
-                cell_detalle_ofi_t1 = ws.cell(row=row_num, column=20, value=reg.get('DETALLE_OFI_T1', ''))
+                # Detalle OFI T1 (columna 18)
+                cell_detalle_ofi_t1 = ws.cell(row=row_num, column=18, value=reg.get('DETALLE_OFI_T1', ''))
                 cell_detalle_ofi_t1.alignment = cell_alignment_center
                 if reg.get('DETALLE_OFI_T1') == 'ASISTENCIA':
                     cell_detalle_ofi_t1.fill = verde_fill
@@ -1648,8 +1576,8 @@ def exportar_control_asistencia_excel():
                     cell_detalle_ofi_t1.fill = morado_fill
                     cell_detalle_ofi_t1.font = morado_font
                 
-                # Detalle OFI T2 (columna 21)
-                cell_detalle_ofi_t2 = ws.cell(row=row_num, column=21, value=reg.get('DETALLE_OFI_T2', ''))
+                # Detalle OFI T2 (columna 19)
+                cell_detalle_ofi_t2 = ws.cell(row=row_num, column=19, value=reg.get('DETALLE_OFI_T2', ''))
                 cell_detalle_ofi_t2.alignment = cell_alignment_center
                 if reg.get('DETALLE_OFI_T2') == 'ASISTENCIA':
                     cell_detalle_ofi_t2.fill = verde_fill
@@ -1664,12 +1592,15 @@ def exportar_control_asistencia_excel():
                     cell_detalle_ofi_t2.fill = morado_fill
                     cell_detalle_ofi_t2.font = morado_font
                 
-                # Detalle CMP T1 (columna 22)
-                cell_detalle_cmp_t1 = ws.cell(row=row_num, column=22, value=reg.get('DETALLE_CMP_T1', ''))
+                # Detalle CMP T1 (columna 20)
+                cell_detalle_cmp_t1 = ws.cell(row=row_num, column=20, value=reg.get('DETALLE_CMP_T1', ''))
                 cell_detalle_cmp_t1.alignment = cell_alignment_center
-                if reg.get('DETALLE_CMP_T1') == 'CAMPO':
+                if reg.get('DETALLE_CMP_T1') == 'ASISTENCIA':
                     cell_detalle_cmp_t1.fill = campo_fill
                     cell_detalle_cmp_t1.font = campo_font
+                elif reg.get('DETALLE_CMP_T1') == 'TARDANZA':
+                    cell_detalle_cmp_t1.fill = amarillo_fill
+                    cell_detalle_cmp_t1.font = amarillo_font
                 elif reg.get('DETALLE_CMP_T1') == 'FALTÓ':
                     cell_detalle_cmp_t1.fill = rojo_fill
                     cell_detalle_cmp_t1.font = rojo_font
@@ -1677,12 +1608,15 @@ def exportar_control_asistencia_excel():
                     cell_detalle_cmp_t1.fill = morado_fill
                     cell_detalle_cmp_t1.font = morado_font
                 
-                # Detalle CMP T2 (columna 23)
-                cell_detalle_cmp_t2 = ws.cell(row=row_num, column=23, value=reg.get('DETALLE_CMP_T2', ''))
+                # Detalle CMP T2 (columna 21)
+                cell_detalle_cmp_t2 = ws.cell(row=row_num, column=21, value=reg.get('DETALLE_CMP_T2', ''))
                 cell_detalle_cmp_t2.alignment = cell_alignment_center
-                if reg.get('DETALLE_CMP_T2') == 'CAMPO':
+                if reg.get('DETALLE_CMP_T2') == 'ASISTENCIA':
                     cell_detalle_cmp_t2.fill = campo_fill
                     cell_detalle_cmp_t2.font = campo_font
+                elif reg.get('DETALLE_CMP_T2') == 'TARDANZA':
+                    cell_detalle_cmp_t2.fill = amarillo_fill
+                    cell_detalle_cmp_t2.font = amarillo_font
                 elif reg.get('DETALLE_CMP_T2') == 'FALTÓ':
                     cell_detalle_cmp_t2.fill = rojo_fill
                     cell_detalle_cmp_t2.font = rojo_font
@@ -1690,14 +1624,25 @@ def exportar_control_asistencia_excel():
                     cell_detalle_cmp_t2.fill = morado_fill
                     cell_detalle_cmp_t2.font = morado_font
                 
-                # Justificaciones (columnas 24-27)
-                ws.cell(row=row_num, column=24, value=reg.get('JUSTIFICACION_ENT_T1', '')).alignment = cell_alignment
-                ws.cell(row=row_num, column=25, value=reg.get('JUSTIFICACION_SAL_T1', '')).alignment = cell_alignment
-                ws.cell(row=row_num, column=26, value=reg.get('JUSTIFICACION_ENT_T2', '')).alignment = cell_alignment
-                ws.cell(row=row_num, column=27, value=reg.get('JUSTIFICACION_SAL_T2', '')).alignment = cell_alignment
-                
+                # Justificaciones (columnas 22-25)
+                ws.cell(row=row_num, column=22, value=reg.get('JUSTIFICACION_ENT_T1', '')).alignment = cell_alignment
+                ws.cell(row=row_num, column=23, value=reg.get('JUSTIFICACION_SAL_T1', '')).alignment = cell_alignment
+                ws.cell(row=row_num, column=24, value=reg.get('JUSTIFICACION_ENT_T2', '')).alignment = cell_alignment
+                ws.cell(row=row_num, column=25, value=reg.get('JUSTIFICACION_SAL_T2', '')).alignment = cell_alignment
+
+                # Horas laboradas y tardanzas (columnas 26-29), tal cual las muestra la tabla
+                ws.cell(row=row_num, column=26, value=reg.get('HORAS_LABORADAS_T1') or '-').alignment = cell_alignment_center
+                ws.cell(row=row_num, column=27, value=reg.get('HORAS_LABORADAS_T2') or '-').alignment = cell_alignment_center
+                for col, campo in ((28, 'TARDANZA_T1'), (29, 'TARDANZA_T2')):
+                    valor = reg.get(campo) or '-'
+                    cell_tardanza = ws.cell(row=row_num, column=col, value=valor)
+                    cell_tardanza.alignment = cell_alignment_center
+                    if valor != '-':
+                        cell_tardanza.fill = amarillo_fill
+                        cell_tardanza.font = amarillo_font
+
                 # Aplicar bordes a toda la fila
-                for col in range(1, 28):
+                for col in range(1, 30):
                     ws.cell(row=row_num, column=col).border = border_style
                 
                 row_num += 1
@@ -1723,17 +1668,19 @@ def exportar_control_asistencia_excel():
             ws.column_dimensions['O'].width = 12  # OFI T2 Salida
             ws.column_dimensions['P'].width = 12  # CMP T2 Entrada
             ws.column_dimensions['Q'].width = 12  # CMP T2 Salida
-            ws.column_dimensions['R'].width = 8   # Min T1
-            ws.column_dimensions['S'].width = 8   # Min T2
-            ws.column_dimensions['T'].width = 15  # Detalle OFI T1
-            ws.column_dimensions['U'].width = 15  # Detalle OFI T2
-            ws.column_dimensions['V'].width = 15  # Detalle CMP T1
-            ws.column_dimensions['W'].width = 15  # Detalle CMP T2
-            ws.column_dimensions['X'].width = 25  # Justificacion ENT T1
-            ws.column_dimensions['Y'].width = 25  # Justificacion SAL T1
-            ws.column_dimensions['Z'].width = 25  # Justificacion ENT T2
-            ws.column_dimensions['AA'].width = 25 # Justificacion SAL T2
-            
+            ws.column_dimensions['R'].width = 15  # Detalle OFI T1
+            ws.column_dimensions['S'].width = 15  # Detalle OFI T2
+            ws.column_dimensions['T'].width = 15  # Detalle CMP T1
+            ws.column_dimensions['U'].width = 15  # Detalle CMP T2
+            ws.column_dimensions['V'].width = 25  # Justificacion ENT T1
+            ws.column_dimensions['W'].width = 25  # Justificacion SAL T1
+            ws.column_dimensions['X'].width = 25  # Justificacion ENT T2
+            ws.column_dimensions['Y'].width = 25 # Justificacion SAL T2
+            ws.column_dimensions['Z'].width = 12  # Horas Laboradas T1
+            ws.column_dimensions['AA'].width = 12  # Horas Laboradas T2
+            ws.column_dimensions['AB'].width = 12  # Tardanza T1
+            ws.column_dimensions['AC'].width = 12  # Tardanza T2
+
             # Fijar primera fila (encabezado)
             ws.freeze_panes = 'A2'
             
@@ -1964,15 +1911,16 @@ def exportar_tardanzas_excel():
     try:
         fecha_inicio = request.args.get('fecha_inicio')
         fecha_fin = request.args.get('fecha_fin')
-        empleado = (request.args.get('empleado') or '').strip()
+        # Filtros: fechas + empresa + área (vacío = todas). El nombre del empleado
+        # solo filtra la tabla en pantalla, no esta exportación.
         empresa = (request.args.get('empresa') or '').strip()
         area = (request.args.get('area') or '').strip()
-        
+
         if not fecha_inicio or not fecha_fin:
             return jsonify({'success': False, 'error': 'Se requieren fecha_inicio y fecha_fin'}), 400
-        
+
         print(f"[TARDANZAS_EXCEL] [-] Exportando: {fecha_inicio} al {fecha_fin} "
-              f"(empleado={empleado!r}, empresa={empresa!r}, area={area!r})")
+              f"(empresa={empresa!r}, area={area!r})")
         
         connection = get_db_connection()
         if not connection:
@@ -2032,10 +1980,6 @@ def exportar_tardanzas_excel():
                     continue
                 if area and reg['area'] != area:
                     continue
-                if empleado:
-                    q = empleado.lower()
-                    if q not in reg['nombres'].lower() and q not in dni:
-                        continue
                 registros.append({
                     'empresa': reg['empresa'],
                     'dni_ce': dni,

@@ -1050,12 +1050,11 @@ function exportarTardanzas() {
         return;
     }
 
-    // Enviar los mismos filtros de la pantalla (empleado/empresa/área)
-    // para que el Excel respete lo que se está viendo en la tabla
+    // Filtros de la exportación: fechas + empresa + área (vacío = todas).
+    // El nombre del empleado solo filtra la tabla en pantalla.
     const params = new URLSearchParams({
         fecha_inicio: fechaInicio,
         fecha_fin: fechaFin,
-        empleado: document.getElementById('filtro-empleado').value.trim(),
         empresa: document.getElementById('filtro-empresa').value,
         area: document.getElementById('filtro-area').value
     });
@@ -1066,12 +1065,11 @@ function exportarTardanzas() {
 }
 
 // ============================================================================
-// HORAS LABORADAS - EXPORTAR DIRECTO USANDO LOS FILTROS DE LA PANTALLA
+// HORAS LABORADAS - EXPORTAR POR FECHAS + EMPRESA + ÁREA
 // ============================================================================
 async function exportarHorasLaboradas() {
     const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
     const fechaFin = document.getElementById('filtro-fecha-fin').value;
-    const texto = document.getElementById('filtro-empleado').value.trim();
     const empresa = document.getElementById('filtro-empresa').value;
     const area = document.getElementById('filtro-area').value;
 
@@ -1080,80 +1078,13 @@ async function exportarHorasLaboradas() {
         return;
     }
 
-    // Si NO hay texto, exportar TODOS los empleados
-    if (!texto) {
-        const url = `/api/reportes/control-asistencia/horas-laboradas-excel?fecha_inicio=${encodeURIComponent(fechaInicio)}&fecha_fin=${encodeURIComponent(fechaFin)}&empresa=${encodeURIComponent(empresa)}&area=${encodeURIComponent(area)}`;
+    // Filtros de la exportación: fechas + empresa + área (vacío = todas).
+    // El nombre del empleado solo filtra la tabla en pantalla.
+    const url = `/api/reportes/control-asistencia/horas-laboradas-excel?fecha_inicio=${encodeURIComponent(fechaInicio)}&fecha_fin=${encodeURIComponent(fechaFin)}&empresa=${encodeURIComponent(empresa)}&area=${encodeURIComponent(area)}`;
 
-        console.log(`[HORAS_LABORADAS] Exportando TODOS los empleados: ${fechaInicio} a ${fechaFin}`);
-
-        try {
-            const resp = await fetch(url);
-
-            if (!resp.ok) {
-                let mensaje = 'No hay datos de horas laboradas para exportar';
-                try {
-                    const err = await resp.json();
-                    if (err && err.error) mensaje = err.error;
-                } catch (e) {
-                    // respuesta no JSON
-                }
-                alert(mensaje);
-                return;
-            }
-
-            const blob = await resp.blob();
-            const disposition = resp.headers.get('Content-Disposition') || '';
-            const matchName = disposition.match(/filename="?([^";]+)"?/i);
-            const nombreArchivo = matchName ? matchName[1] : `horas_laboradas_todos_${fechaInicio}_${fechaFin}.xlsx`;
-
-            const enlace = document.createElement('a');
-            enlace.href = URL.createObjectURL(blob);
-            enlace.download = nombreArchivo;
-            document.body.appendChild(enlace);
-            enlace.click();
-            enlace.remove();
-            URL.revokeObjectURL(enlace.href);
-        } catch (error) {
-            console.error('[HORAS_LABORADAS] Error:', error);
-            alert('Error al exportar las horas laboradas');
-        }
-        return;
-    }
-
-    // Si SÍ hay texto, buscar empleado específico
-    const textoLower = texto.toLowerCase();
+    console.log(`[HORAS_LABORADAS] Exportando: ${fechaInicio} a ${fechaFin}, empresa=${empresa || 'TODAS'}, area=${area || 'TODAS'}`);
 
     try {
-        const response = await fetch('/api/marcacion/empleados-activos');
-        const data = await response.json();
-
-        if (!data.success || !data.data) {
-            alert('No se pudo obtener la lista de empleados activos');
-            return;
-        }
-
-        const coincidencias = data.data.filter(emp =>
-            (emp.nombre_completo && emp.nombre_completo.toLowerCase().includes(textoLower)) ||
-            (emp.dni && emp.dni.toString().includes(textoLower))
-        );
-
-        if (coincidencias.length === 0) {
-            alert(`No se encontró ningún empleado con "${texto}"`);
-            return;
-        }
-
-        if (coincidencias.length > 1) {
-            const nombres = coincidencias.slice(0, 5).map(emp => emp.nombre_completo);
-            const resto = coincidencias.length > 5 ? ` (+${coincidencias.length - 5} más)` : '';
-            alert(`Tu búsqueda coincide con ${coincidencias.length} empleados: ${nombres.join(', ')}${resto}. Escribí más específico o su DNI.`);
-            return;
-        }
-
-        const empleado = coincidencias[0];
-        const url = `/api/reportes/control-asistencia/horas-laboradas-excel?fecha_inicio=${encodeURIComponent(fechaInicio)}&fecha_fin=${encodeURIComponent(fechaFin)}&num_documento=${empleado.num_documento}&empresa=${encodeURIComponent(empresa)}&area=${encodeURIComponent(area)}`;
-
-        console.log(`[HORAS_LABORADAS] Exportando: empleado=${empleado.num_documento}, ${fechaInicio} a ${fechaFin}`);
-
         const resp = await fetch(url);
 
         if (!resp.ok) {
@@ -1171,7 +1102,7 @@ async function exportarHorasLaboradas() {
         const blob = await resp.blob();
         const disposition = resp.headers.get('Content-Disposition') || '';
         const matchName = disposition.match(/filename="?([^";]+)"?/i);
-        const nombreArchivo = matchName ? matchName[1] : `horas_laboradas_${empleado.num_documento}.xlsx`;
+        const nombreArchivo = matchName ? matchName[1] : `horas_laboradas_${fechaInicio}_${fechaFin}.xlsx`;
 
         const enlace = document.createElement('a');
         enlace.href = URL.createObjectURL(blob);

@@ -115,9 +115,7 @@ Relación muchos a muchos `TblInventarioProveedor` (ítem ↔ `TblProveedores`).
 
 - Plan de ítems aplicado el 13/11/2026 (partes 1–5: unidades, unificación de
   duplicados y recodificación, secciones, formulario dinámico, kardex):
-  `database_scripts/items_inventario/` con sus `pX_99_revertir.sql` y pruebas
-  manuales (`parte4_prueba_manual.sql`, `parte5_prueba_manual.sql`, se
-  ejecutan dentro de una transacción con `ROLLBACK`).
+  `database_scripts/items_inventario/` con sus `pX_99_revertir.sql`.
 - Esa carpeta es **temporal**: cuando el inventario esté verificado se borra
   junto con las tablas `aux_p*`
   (`database_scripts/mantenimiento/limpieza_tablas_aux_respaldo_20261113.sql`).

@@ -931,9 +931,31 @@
                         };
                     }
                     
+                    // Casilla segun la REGLA UNICA (vw_casillas_marcacion v3), la
+                    // misma que ve RR.HH. en el detalle y el reporte. Las marcas
+                    // EXTRA (casilla null) no ocupan columna.
+                    if ('casilla' in marcacion) {
+                        const casillas = {
+                            E1: ['turno1_entrada', 'turno1_entrada_estado', 'turno1_entrada_minutos'],
+                            S1: ['turno1_salida'],
+                            E2: ['turno2_entrada', 'turno2_entrada_estado', 'turno2_entrada_minutos'],
+                            S2: ['turno2_salida']
+                        };
+                        const destino = casillas[marcacion.casilla];
+                        if (destino) {
+                            marcacionesPorFecha[fecha][destino[0]] = hora;
+                            if (destino.length > 1) {
+                                marcacionesPorFecha[fecha][destino[1]] = estado;
+                                marcacionesPorFecha[fecha][destino[2]] = minutos;
+                            }
+                        }
+                        return;
+                    }
+
+                    // Respaldo (SP v1 sin casilla): corte por hora
                     const horaNum = parseInt(hora.split(':')[0]);
                     const turno = marcacion.turno || (horaNum < 12 ? 1 : 2);
-                    
+
                     if (tipo === 'ENTRADA') {
                         if (turno === 1 && !marcacionesPorFecha[fecha].turno1_entrada) {
                             marcacionesPorFecha[fecha].turno1_entrada = hora;
